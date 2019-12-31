@@ -1,0 +1,7 @@
+﻿<Window x:Class="ShaderEffects.EffectControlWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="EffectControlWindow" Height="300" Width="160" AllowsTransparency="False" Visibility="Visible" WindowStyle="ToolWindow" ShowInTaskbar="False" Topmost="True" MinWidth="160" MinHeight="180" Background="Azure" BorderBrush="Brown">
+    <Grid Name="root" Background="Crimson">
+    </Grid>
+</Window>

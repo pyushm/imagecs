@@ -1,0 +1,39 @@
+﻿<Window x:Class="ShaderEffects.ShaderEditor"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="HLSLTesterWindow" Width="754" Height="418" SizeChanged="ResizeImage">
+    <Grid Name="grid">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="500*"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0" VerticalAlignment="Top" Orientation="Vertical" Margin="2">
+            <StackPanel VerticalAlignment="Top" Margin="2" >
+                <StackPanel VerticalAlignment="Top" Orientation="Horizontal" Margin="1">
+                    <Button Content=" Open " Click="SelectImage" Margin="1,2,2,2" />
+                    <Button Content=" Save " Click="SaveImage" Margin="2" />
+                    <Button Name="applyButton" Content="Apply" Click="ApplyClick" Margin="2" />
+                    <Button Name="editShaderButton" Content="Edit Shader" Click="EditClick" Margin="2" />
+                </StackPanel>
+                <StackPanel VerticalAlignment="Top" Orientation="Horizontal" Margin="1">
+                    <Label Content="Filter"/>
+                    <TextBox Name="filterBox" Margin="1" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Width="20"/>
+                    <Label Content="Edge"/>
+                    <TextBox Name="edgeBox" Margin="1" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Width="20"/>
+                    <Label Content="Level"/>
+                    <TextBox Name="levelBox" Margin="1" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" Width="32"/>
+                </StackPanel>
+                <StackPanel VerticalAlignment="Top" Orientation="Horizontal" Margin="1">
+                    <Label Content="Shader " VerticalAlignment="Top" Margin="0,0,0,1"/>
+                    <ComboBox Name="effectSelectionBox" SelectionChanged="effectSelectionChanged" Margin="0" VerticalAlignment="Top" Width="130" Height="23"/>
+                </StackPanel>
+                <StackPanel VerticalAlignment="Top" Orientation="Horizontal" Margin="2">
+                    <ListBox Name="parameters" Width="120" HorizontalContentAlignment="Right"/>
+                    <StackPanel Name="parameterValues" Width="60" Margin="2" />
+                </StackPanel>
+            </StackPanel>
+            <TextBox Name="resultBox" Margin="1" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" />
+        </StackPanel>
+        <Canvas Grid.Column="1" Name="host" />
+    </Grid>
+</Window>
