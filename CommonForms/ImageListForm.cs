@@ -459,7 +459,9 @@ namespace ImageProcessor
         void MoveOrCopySelected(bool copy, bool selection)
         {
             DirectoryInfo toDirectory = DirectorySelectionForm.GetDirectory();
-            if (toDirectory == null || !toDirectory.Exists)
+            if (toDirectory == null)
+                return;
+            if (!toDirectory.Exists)
             {
                 MessageBox.Show(toDirectory.FullName + " does not exist");
                 return;

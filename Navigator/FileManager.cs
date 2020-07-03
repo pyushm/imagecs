@@ -68,13 +68,6 @@ namespace ImageProcessor
         {
             if (stopFlag || adjustmentType == ImageAdjustmentType.None)
                 return;
-            if (adjustmentType == ImageAdjustmentType.Resize)
-            {
-                ReportResults("Resizing encrypted images NOT IMPLEMENTED");
-                //ReportStatus("Resizing images in " + directory.FullName);
-                //ReduceImageFile(filesToProcess);
-                return;
-            }
             if (sync)
                 ReportStatus(adjustmentType.ToString() + " in " + directory.FullName);
             if (adjustmentType == ImageAdjustmentType.Mangle && relativePath.Length > 0 && !ImageFileName.IsMangled(directory.Name))
@@ -84,12 +77,26 @@ namespace ImageProcessor
                     directory.MoveTo(Path.Combine(directory.Parent.FullName, newDirName));
             }
             FileInfo[] filesToProcess = directory.GetFiles();
+            bool resezeError = false;
             foreach (FileInfo file in filesToProcess)
             {
                 try
                 {
                     if (stopFlag)
                         break;
+                    if (adjustmentType == ImageAdjustmentType.Resize)
+                    {
+                        ImageFileInfo ifi = new ImageFileInfo(file);
+                        if (ifi.IsEncryptedImage)
+                            resezeError = true;
+                        else
+                        {
+                            string ret = BitmapAccess.ResizeImage(file.FullName, ifi.IsExact, 2000);
+                            if (ret.Length > 0)
+                                ReportResults(ret);
+                        }
+                        continue;
+                    }
                     string name = file.Name;   // name with extension
                     if (adjustmentType == ImageAdjustmentType.Mangle && ImageFileName.InfoMode(name) == null)
                         name = ImageFileName.FSMangle(name);
@@ -118,7 +125,7 @@ namespace ImageProcessor
                                         ReportResults(warnings);
                                 }
                             }
-                            else
+                            else if (adjustmentType == ImageAdjustmentType.Mangle)
                                 file.MoveTo(newFileName);
                         }
                         catch (Exception ex)
@@ -135,6 +142,8 @@ namespace ImageProcessor
                 {
                     throw new Exception(file.ToString());
                 }
+                if (resezeError)
+                    ReportResults("Resizing encrypted images NOT IMPLEMENTED");
             }
         }
         public void Rename(DirectoryInfo directory, RenameType renameType)
@@ -156,7 +165,7 @@ namespace ImageProcessor
             foreach (FileInfo file in filesToProcess)
             {
                 string name = file.Name;   // name with extension
-                name = ImageFileName.NameWithoutTempPrefix(name);
+                //name = ImageFileName.NameWithoutTempPrefix(name);
                 if (ImageFileName.InfoMode(name) != null)
                     continue;
                 name = ImageFileName.FSUnMangle(name);

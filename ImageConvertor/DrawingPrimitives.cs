@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace ImageProcessor
 {
-    public enum MouseOperations
+    public enum MouseOperation
     {   // Mouse action indexes: 0-3 - control points: TL=0, TR=1, BR=2, BL=3; 4-7 control lines: Top=4, Right=5, Bottom=6, Left=7  
         Left = 7,
         Bottom = 6,
@@ -25,7 +25,8 @@ namespace ImageProcessor
         Scale = -5,            // scale image (MouseButton.Middle)
         Add = -6,              // add point
         Stroke = -7,           // stroke editing 
-        ViewPoint = -8,        // distortion view position 
+        ViewPoint = -8,        // 3d view distortion 
+        Morph = -9,            // local shift distortion 
     }
     public abstract class Primitive          // primitive elements which can be drawn with pen and brush
     {
@@ -414,21 +415,21 @@ namespace ImageProcessor
         protected static Vector[] controls = new Vector[] { new Vector(-1, -1), new Vector(1, -1), new Vector(1, 1), new Vector(-1, 1) };
         static int Ncontrols = controls.Length; // number of control points;
         protected Point[] iLoc = new Point[Ncontrols]; // indicators' locations
-        public static bool IsLineOperation(MouseOperations mouseAction) { return (int)mouseAction >= Ncontrols; }
+        public static bool IsLineOperation(MouseOperation mouseAction) { return (int)mouseAction >= Ncontrols; }
         public static bool IsControlOperation(int mouseActionInd) { return mouseActionInd >= 0; }
         public void MoveCenter(Vector d) { Center.X += d.X; Center.Y += d.Y; changed = true; }
-        public virtual MouseOperations OperationFromPoint(Point p)  // finds MouseOperation from point
+        public virtual MouseOperation OperationFromPoint(Point p)  // finds MouseOperation from point
         {
-            if (Math.Abs(p.X - Center.X) < mSize && Math.Abs(p.Y - Center.Y) < mSize)
-                return MouseOperations.OpCenter;
+            if ((p - Center).LengthSquared < 2 * mSize * mSize)
+                return MouseOperation.OpCenter;
             for (int i = 0; i < controls.Length; i++)
             {   // vortex index
                 if ((p - iLoc[i]).LengthSquared < 2 * mSize * mSize)
-                    return (MouseOperations)i;
+                    return (MouseOperation)i;
             }
             return OperationFromLine(p);
         }
-        public virtual MouseOperations OperationFromLine(Point p)   // finds MouseOperation from line
+        public virtual MouseOperation OperationFromLine(Point p)   // finds MouseOperation from line
         {
             if (Mouse.LeftButton == MouseButtonState.Pressed)
             {
@@ -451,17 +452,17 @@ namespace ImageProcessor
                     }
                 }
                 if(ind != int.MaxValue)
-                    return (MouseOperations)(ind + controls.Length);
+                    return (MouseOperation)(ind + controls.Length);
             }
             return OperationFromMouse;
         }
-        public static MouseOperations OperationFromMouse
+        public static MouseOperation OperationFromMouse
         {
             get
             {
-                return  Mouse.RightButton == MouseButtonState.Pressed ? MouseOperations.Rotate :
-                        Mouse.LeftButton == MouseButtonState.Pressed ? MouseOperations.Move :
-                        Mouse.MiddleButton == MouseButtonState.Pressed ? MouseOperations.Scale : MouseOperations.None;
+                return  Mouse.RightButton == MouseButtonState.Pressed ? MouseOperation.Rotate :
+                        Mouse.LeftButton == MouseButtonState.Pressed ? MouseOperation.Move :
+                        Mouse.MiddleButton == MouseButtonState.Pressed ? MouseOperation.Scale : MouseOperation.None;
             }
         }
         public double RadiansFromPoints(Point current, Point old)  // angle between vectors in degrees
@@ -481,6 +482,56 @@ namespace ImageProcessor
                 g.DrawEllipse(brush, null, iLoc[i], mSize, mSize);
             Cross c = new Cross(Center);
             c.Draw(g, brush, pen);
+        }
+    }
+    public class MorthPoint
+    {
+        public Vector Shift;
+        public Point Center;
+        public Size Size;
+        public double Angle = 0;
+        public MorthPoint(Point center, double radius) { Center = center; Size = new Size(radius, radius); }
+    }
+    public class MorphControl : MouseAction // morph point control
+    {
+        MorthPoint morthPoint;
+        public MorphControl(MorthPoint mp) { morthPoint = mp; Center = mp.Center; }
+        Point shiftPos { get { return morthPoint.Size.Width * morthPoint.Shift + Center; } } // shift indicator location in canvas coordinates
+        public override MouseOperation OperationFromPoint(Point p)  // finds MouseOperation from point
+        {
+            if ((p - shiftPos).LengthSquared < 2 * mSize * mSize)
+                return MouseOperation.Morph;
+            return base.OperationFromPoint(p);
+        }
+        public Vector SetShift(Point p) { return morthPoint.Shift = (p - Center) / morthPoint.Size.Width; }
+        public void SetMorphArea(MouseOperation mouseAction, Point current, Point old)
+        {
+            int mouseActionInd = (int)mouseAction;
+            if (mouseActionInd < 0 || mouseActionInd >= iLoc.Length)
+                return;
+            if (mouseActionInd == 0)    // angle not implemented
+                return;
+            if (mouseActionInd == 1)
+            {
+                Center += (current - old);
+                morthPoint.Center = Center;
+                return;
+            }
+            var r = ScaleFromPoints(current, old);
+            morthPoint.Size.Height *= r;
+            morthPoint.Size.Width *= r;
+        }
+        public override void Draw(DrawingContext g, Brush brush, Pen pen)   // draws votexes
+        {
+            double a = morthPoint.Angle + Math.PI/4;
+            double w = morthPoint.Size.Width;
+            double h = morthPoint.Size.Height;
+            for (int i = 0; i < controls.Length; i++)
+                iLoc[i] = new Point((Math.Cos(a) * w * controls[i].X - Math.Sin(a) * h * controls[i].Y) + Center.X,
+                                    (Math.Sin(a) * w * controls[i].X + Math.Cos(a) * h * controls[i].Y) + Center.Y);
+            g.DrawEllipse(brush, pen, Center, w, h);
+            g.DrawEllipse(brush, null, shiftPos, mSize, mSize);
+            base.Draw(g, brush, pen);
         }
     }
     public class CropRect : MouseAction
@@ -505,7 +556,7 @@ namespace ImageProcessor
             double offsetY = h / 2 - Center.Y * scale;
             ToDrawing = new MatrixTransform(scale, 0, 0, scale, offsetX, offsetY);
         }
-        public bool Update(MouseOperations mouseAction, Point d)
+        public bool Update(MouseOperation mouseAction, Point d)
         {
             int mouseActionInd = (int)mouseAction;
             if (mouseActionInd < iLoc.Length)
@@ -517,7 +568,7 @@ namespace ImageProcessor
             if (mouseActionInd == 3) left = (int)d.X;
             return true;
         }
-        public override MouseOperations OperationFromLine(Point p) { return Scaled ? base.OperationFromLine(p) : OperationFromMouse; }
+        public override MouseOperation OperationFromLine(Point p) { return Scaled ? base.OperationFromLine(p) : OperationFromMouse; }
         public override void Draw(DrawingContext g, Brush brush, Pen pen)
         {
             for (int i = 0; i < controls.Length; i++)
@@ -539,8 +590,9 @@ namespace ImageProcessor
         //       | sinF   cosF |      | h  1 |      | 0  s |      |  0   a |
         // S & R are non-distortion transforms; A & H are distortion transforms
         // scale, rotate, aspect, and shear operations leave center in place
+        public Vector ViewDistortion { get; protected set; }
         Matrix matrix = new Matrix();
-        double size = 80;        // input quadrant size
+        protected double quadrantSize = 80; // input quadrant size
         public double RenderScale = 1;  // active layer render scale
         double xFlip = 1;               // normal =1; flipped =-1:
         double angle = 0;               // in radians
@@ -548,7 +600,6 @@ namespace ImageProcessor
         double aspect = 1;
         public double Flip { get { return xFlip; } }
         public double Angle { get { return angle; } set { angle = value; changed = true; } }
-        public double AngleDegrees { get { return angle * 180 / Math.PI; } set { angle = value/ 180* Math.PI; changed = true; } }
         public double Shear { get { return shear; } set { shear = value; changed = true; } }
         public double Aspect { get { return aspect; } set { aspect = value; changed = true; } }
         public MatrixControl() { }
@@ -593,20 +644,20 @@ namespace ImageProcessor
             Vector v = new Vector(c * dx + s * dy, -s * dx + c * dy);
             MoveCenter(v);
         }
-        public double ApplyShearAndAspect(MouseOperations mouseAction, Vector d)
+        public double SetShearAndAspect(MouseOperation mouseAction, Vector d)
         {
             int mouseActionInd = (int)mouseAction;
-            if (mouseActionInd<0)
+            if (mouseActionInd<0) // only vortexes or lines processed
                 return 0;
             double inc;
-            if (mouseActionInd < iLoc.Length)
+            if (mouseActionInd < iLoc.Length)   // vortexes
             {
                 Vector loc = iLoc[mouseActionInd] - Center;
                 inc = d * loc / loc.LengthSquared;
                 shear += xFlip * inc * (1 - 2 * (mouseActionInd % 2));
                 shear = Math.Max(-0.9, Math.Min(0.9, shear));
             }
-            else
+            else // lines
             {
                 mouseActionInd -= iLoc.Length;
                 int next = mouseActionInd == iLoc.Length - 1 ? 0 : mouseActionInd + 1;
@@ -618,7 +669,7 @@ namespace ImageProcessor
             //Debug.WriteLine(" Aspect=" + aspect.ToString() + " Shear=" + shear.ToString());
             return inc;
         }
-        public bool ApplyShearAndAspect(MouseOperations mouseAction, double inc)
+        public bool ApplyShearAndAspectIncrement(MouseOperation mouseAction, double inc)
         {
             int mouseActionInd = (int)mouseAction;
             if (mouseActionInd < 0)
@@ -631,6 +682,7 @@ namespace ImageProcessor
             //Debug.WriteLine(" Aspect=" + aspect.ToString() + " Shear=" + shear.ToString());
             return true;
         }
+        public virtual Vector SetViewDistortion(Point p) { return new Vector(); }
         void UpdateMatrix()
         {
             double ca = Math.Cos(angle);
@@ -648,8 +700,8 @@ namespace ImageProcessor
             matrix.OffsetY = Center.Y - matrix.M12 * Center.X - matrix.M22 * Center.Y;
             //Debug.WriteLine("scale=" + RenderScale.ToString() + " angle=" + angle.ToString() + " aspect=" + aspect.ToString() + " shear=" + shear.ToString());
             for (int i = 0; i < controls.Length; i++)
-                iLoc[i] = new Point((matrix.M11 * controls[i].X + matrix.M21 * controls[i].Y) * size + Center.X,
-                                    (matrix.M12 * controls[i].X + matrix.M22 * controls[i].Y) * size + Center.Y);
+                iLoc[i] = new Point((matrix.M11 * controls[i].X + matrix.M21 * controls[i].Y) * quadrantSize + Center.X,
+                                    (matrix.M12 * controls[i].X + matrix.M22 * controls[i].Y) * quadrantSize + Center.Y);
             changed = false;
         }
         public override void Draw(DrawingContext g, Brush brush, Pen pen)
@@ -667,20 +719,20 @@ namespace ImageProcessor
                 RenderScale.ToString("f2") + " angle=" + angle.ToString("f2") + " shear=" + shear.ToString("f2") + " aspect=" + aspect.ToString("f2");
         }
     }
-    //public class DistortionControl : MatrixControl
-    //{
-    //    public Point ViewPoint;       // center indicator location in canvas coordinates
-    //    public void MoveViewPoint(Vector d) { ViewPoint.X += d.X; ViewPoint.Y += d.Y; }
-    //    public override MouseOperations OperationFromPoint(Point p)  // finds MouseOperation from point
-    //    {
-    //        if (Math.Abs(p.X - ViewPoint.X) < mSize && Math.Abs(p.Y - ViewPoint.Y) < mSize)
-    //            return MouseOperations.OpCenter;
-    //        return base.OperationFromPoint(p);
-    //    }
-    //    public override void Draw(DrawingContext g, Brush brush, Pen pen)   // draws votexes
-    //    {
-    //        base.Draw(g, brush, pen);
-    //        g.DrawEllipse(brush, null, ViewPoint, mSize, mSize);
-    //    }
-    //}
+    public class DistortionControl : MatrixControl  // saving in VisualLayerData NOT IMPLEMENTED
+    {
+        public override Vector SetViewDistortion(Point p) { return ViewDistortion = (p - Center)/ quadrantSize; }
+        Point distortionPos { get { return quadrantSize * ViewDistortion + Center; } } // view point indicator location in canvas coordinates
+        public override MouseOperation OperationFromPoint(Point p)  // finds MouseOperation from point
+        {
+            if ((p - distortionPos).LengthSquared < 2 * mSize * mSize)
+                return MouseOperation.ViewPoint;
+            return base.OperationFromPoint(p);
+        }
+        public override void Draw(DrawingContext g, Brush brush, Pen pen)   // draws votexes
+        {
+            base.Draw(g, brush, pen);
+            g.DrawEllipse(brush, null, distortionPos, mSize, mSize);
+        }
+    }
 }

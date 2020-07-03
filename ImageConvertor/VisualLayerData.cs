@@ -89,7 +89,7 @@ namespace ImageProcessor
             data = d;
         }
         public void SetData(byte[] d) { data = d; }
-        public BitmapAccess GetImage() { return mode == VisualLayerType.Bitmap ? new BitmapAccess(new MemoryStream(data), 0) : null; }
+        public BitmapAccess GetImageAccess() { return mode == VisualLayerType.Bitmap ? new BitmapAccess(new MemoryStream(data), 0, "") : null; }
         public List<FlexiblePolygon> GetStrokes()
         {
             if (mode != VisualLayerType.Drawing)

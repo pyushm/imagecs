@@ -357,10 +357,6 @@ namespace ImageProcessor
             this.saturationControl.Size = new System.Drawing.Size(120, 68);
             this.saturationControl.TabIndex = 21;
             this.saturationControl.Title = "Saturation";
-            this.saturationControl.ValueLocations = new System.Drawing.Point[] {
-        new System.Drawing.Point(43, -65536),
-        new System.Drawing.Point(43, -16744448),
-        new System.Drawing.Point(43, -16776961)};
             // 
             // brightnessControl
             // 
@@ -371,10 +367,6 @@ namespace ImageProcessor
             this.brightnessControl.Size = new System.Drawing.Size(120, 85);
             this.brightnessControl.TabIndex = 29;
             this.brightnessControl.Title = "Brightness";
-            this.brightnessControl.ValueLocations = new System.Drawing.Point[] {
-        new System.Drawing.Point(43, 0),
-        new System.Drawing.Point(43, 45),
-        new System.Drawing.Point(43, 100)};
             // 
             // deleteButton
             // 
@@ -472,6 +464,9 @@ namespace ImageProcessor
             host.Child = canvas;
             panel.Controls.Add(host);
             InitializeComponent();
+            saturationControl.Colors = new Color[] { Color.Red, Color.Green, Color.Blue };
+            saturationControl.ControlPoints = new float[] { 50, 50, 50 };
+            brightnessControl.ControlPoints = new float[] { 50, 0, 50, 50, 50, 100 };
             viewingAreaOffset = panel.Location.X;
             panel.Size = new System.Drawing.Size(ClientSize.Width - viewingAreaOffset, ClientSize.Height);
             nextImageButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles.NavigateTo(true)); };

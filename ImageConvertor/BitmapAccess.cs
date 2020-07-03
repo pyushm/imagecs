@@ -41,6 +41,7 @@ namespace ImageProcessor
                     return true;
             return false;
         }
+        public string Path { get; private set; }
         protected WriteableBitmap source; // image source
         protected int bytespp;          // all supported formats have exact number of bytes per pixel in rawImage
         protected bool isIndexed;
@@ -57,15 +58,16 @@ namespace ImageProcessor
         public static BitmapAccess LoadImage(string fullPath, bool encrypted)
         {
             byte[] imageBytes = DataAccess.ReadFile(fullPath, encrypted);
-            return new BitmapAccess(new MemoryStream(imageBytes), 0);
+            return new BitmapAccess(new MemoryStream(imageBytes), 0, fullPath);
         }
         public static BitmapAccess LoadThumbnail(string fullPath, bool encrypted)
         {
             byte[] imageBytes = DataAccess.ReadFile(fullPath, encrypted);
-            return new BitmapAccess(new MemoryStream(imageBytes), 200);
+            return new BitmapAccess(new MemoryStream(imageBytes), 200, fullPath);
         }
-        public BitmapAccess(MemoryStream dataStream, int maxWidth)
+        public BitmapAccess(MemoryStream dataStream, int maxWidth, string path)
         {   // loading image from memory array
+            Path = path;
             BitmapImage bi = new BitmapImage();
             if (dataStream.Length > 0)
             {
@@ -105,6 +107,7 @@ namespace ImageProcessor
         //}
         public BitmapAccess(BitmapSource bs, BitmapOrigin origin)
         {
+            Path = "";
             if (bs == null)
                 throw new ArgumentNullException("bitmap = null");
             Initialize(new WriteableBitmap(bs), null);
@@ -269,12 +272,12 @@ namespace ImageProcessor
             {
                 for (int j = beginRow; j < endRow; j++)
                 {
-                    int fromRow = (j - beginRow) * scale;
+                    int fromRow = (j - y0) * scale;
                     uint* fromRowPtr = (uint*)from.BackBuffer + fromRow * from.PixelWidth;
                     uint* toPtr = (uint*)to.BackBuffer + beginCol + j * to.PixelWidth;
                     for (int i = beginCol; i < endCol; i++)
                     {
-                        uint* fromPtr = fromRowPtr + (i - beginCol) * scale;
+                        uint* fromPtr = fromRowPtr + (i - x0) * scale;
                         if (*fromPtr > 0)
                             *toPtr = *fromPtr;
                         toPtr++;
@@ -544,8 +547,8 @@ namespace ImageProcessor
             int w = Width;
             unsafe
             {
-                //foreach(var chank in chanks)
-                Parallel.ForEach(chanks, (chank) =>
+                foreach(var chank in chanks)
+                //Parallel.ForEach(chanks, (chank) =>
                 {
                     byte a = 0, r, g, b;
                     byte* ptr0 = (byte*)chank.FromData;
@@ -590,8 +593,8 @@ namespace ImageProcessor
                         ptrn0 += bmn.BackBufferStride;
                         ptr0 += source.BackBufferStride;
                     }
-                    //}
-                });
+                }
+                //});
             }
             bmn.Unlock();
             //TimeSpan t = DateTime.Now - to;
@@ -724,6 +727,25 @@ namespace ImageProcessor
             ByteMatrix[] bma = CreateColorMatrixes();    // b, g, r, a
             string[] ca = new string[] { "blue ", "green ", "red ", "alpha " };
             return ind>=0 && ind<4 ? ca[ind] + bma[ind].ToString() : "";
+        }
+        public static string ResizeImage(string fullPath, bool exact, double maxSize)
+        {
+            BitmapAccess ba = LoadImage(fullPath, false);
+            double scalex = maxSize / ba.Width;
+            double scaley = maxSize / ba.Height;
+            if (scalex >= 1 && scaley >= 1)
+                return ""; // image already smaller than maxSize
+            double scale = scalex > scaley ? scaley : scalex;
+            try
+            {
+                var bs = new TransformedBitmap(ba.Source, new ScaleTransform(scale, scale));
+                BitmapEncoder baseEncoder = exact ? (BitmapEncoder)new PngBitmapEncoder() : new JpegBitmapEncoder();
+                baseEncoder.Frames.Add(BitmapFrame.Create(bs));
+                FileInfo fi = new FileInfo(fullPath);
+                using (Stream stm = fi.Open(FileMode.Create, FileAccess.Write, FileShare.None)) { baseEncoder.Save(stm); }
+                return "";
+            }
+            catch(Exception ex) { return fullPath + Environment.NewLine + ex.Message; }
         }
         public override string ToString() { return PixelFormat.ToString() + ' ' + Width + 'x' + Height; }
         static public void DebugSave(string path, BitmapSource bs)

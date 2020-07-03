@@ -6,29 +6,25 @@ using System.Windows.Forms;
 
 namespace CustomControls
 {
-    public partial class RangeControl : MultiIndicatorControl
+    public class RangeControl : MultiIndicatorControl
     {   // allows selecting function specifying range of values
         protected override int PointDimension { get { return 2; } }
-        [Category("Appearance"), Description("Amount and initial positions (.X:0-100, .Y:0-100) of control points")]
-        public override Point[] ValueLocations
+        public RangeControl()   { }
+        //protected override Point[] IndicatorLocations(Point[] vals)
+        //{
+        //    Point[] iil = new Point[nPoints];
+        //    for (int i = 0; i < nPoints; i++)
+        //        iil[i] = new Point(SetX(leftOffset + border.Width * vals[i].X / 100), SetY(border.Bottom - vals[i].Y * border.Height / 100));
+        //    return iil;
+        //}
+        public override float[] ControlPoints
         {
             set
             {
-                if (value.Length < 2)
-                    throw new Exception("At least 2 points required for Grayscale control. Enterred " + value.Length);
-                Initialize(value);
+                Initialize(value.Length / PointDimension);
+                SetValues(value);
+                initialLoc = (Point[])iLoc.Clone();
             }
-        }
-        public RangeControl()           
-        {
-            InitializeComponent();
-        }
-        protected override Point[] IndicatorLocations(Point[] vals)
-        {
-            Point[] iil = new Point[nPoints];
-            for (int i = 0; i < nPoints; i++)
-                iil[i] = new Point(SetX(leftOffset + border.Width * vals[i].X / 100), SetY(border.Bottom - vals[i].Y * border.Height / 100));
-            return iil;
         }
         protected override void SetBrushes()// sets control background brushes
         {

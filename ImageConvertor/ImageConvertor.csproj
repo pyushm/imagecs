@@ -109,7 +109,6 @@
     <Compile Include="DrawingPrimitives.cs" />
     <Compile Include="FlexiblePolygon.cs" />
     <Compile Include="GradientColor.cs" />
-    <Compile Include="Morph.cs" />
     <Compile Include="VisualLayerData.cs" />
   </ItemGroup>
   <ItemGroup>

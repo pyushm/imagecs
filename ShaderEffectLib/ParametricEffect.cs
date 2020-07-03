@@ -268,11 +268,7 @@ namespace ShaderEffects
                     new FloatInput("Distortion", 0),    // view point distortion strength (height / distance)
                     new FloatInput("ViewX", 0),         // view point X relative to center as a fraction of image width (-0.5 - left; 0 - Center; 0.5 - right)
                     new FloatInput("ViewY", 0),         // view point Y relative to center as a fraction of image height (-0.5 - top; 0 - Center; 0.5 - bottom)
-                    new FloatInput("Aspect", 0) });        // .Width / .Height
-                ////new FloatInput("offX", 1),          // horisontal shift
-                ////    new FloatInput("offY", 1),          // vertical shift           
-                ////    new FloatInput("scaleX", 1),        // horisontal scale
-                ////    new FloatInput("scaleY", 1) });     // vertical scale           
+                    new FloatInput("Aspect", 0) });     // .Width / .Height
                 inputProperties = RegisterParameters(typeof(ViewPointEffect), inputs);
             }
             catch (Exception ex)
@@ -281,7 +277,6 @@ namespace ShaderEffects
             }
         }
         public ViewPointEffect() : base(EffectType.ViewPoint, inputProperties) { }
-        public ViewPointEffect(IntSize imSize) : base(EffectType.GradientContrast, inputProperties) { pixelSize = imSize; }
         public override DependencyProperty[] Parameters { get { return inputProperties; } }
         public override void SetParameters(ColorTransform trasform, double strength, double x, double y)
         {
@@ -295,7 +290,7 @@ namespace ShaderEffects
         }
     }
     public class MorphEffect : ParametricEffect
-    {   // not functional
+    {  
         static protected InputGroup inputs = new InputGroup();
         static readonly DependencyProperty[] inputProperties;
         static MorphEffect()
@@ -303,29 +298,33 @@ namespace ShaderEffects
             try
             {
                 inputs.AddGroup(new InputGroup() {
-                    new FloatInput("Distortion", 0),    // view point distortion strength (height / distance)
-                    new FloatInput("ViewX", 0),         // view point X relative to center as a fraction of image width (-0.5 - left; 0 - Center; 0.5 - right)
-                    new FloatInput("ViewY", 0),         // view point Y relative to center as a fraction of image height (-0.5 - top; 0 - Center; 0.5 - bottom)
-                    new FloatInput("Aspect", 0) });        // .Width / .Height       
-                inputProperties = RegisterParameters(typeof(ViewPointEffect), inputs);
+                    new FloatInput("Size", 0),          // morph distortion circle radius
+                    new FloatInput("CenterX", 0.5),     // morph center point X 
+                    new FloatInput("CenterY", 0.5),     // morph center point Y
+                    new FloatInput("Aspect", 0),        // .Width / .Height       
+                    new FloatInput("ShiftX", 0),        // horisontal shift
+                    new FloatInput("ShiftY", 0) });     // vertical shift      
+                inputProperties = RegisterParameters(typeof(MorphEffect), inputs);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.Message);
             }
         }
-        public MorphEffect() : base(EffectType.ViewPoint, inputProperties) { }
-        public MorphEffect(IntSize imSize) : base(EffectType.GradientContrast, inputProperties) { pixelSize = imSize; }
+        public MorphEffect() : base(EffectType.Morph, inputProperties) { }
         public override DependencyProperty[] Parameters { get { return inputProperties; } }
-        public override void SetParameters(ColorTransform trasform, double strength, double x, double y)
+        public override void SetParameters(ColorTransform trasform, double size, double x, double y) // x,y: => centerPixel+shift/size (sift<size)
         {
             Debug.Assert(trasform.BrightnessValues.Length == 6);
             int i = 0;
-            SetParameter(inputProperties[i++], strength);
-            SetParameter(inputProperties[i++], x);
-            SetParameter(inputProperties[i++], y);
+            int px = (int)x;
+            int py = (int)y;
+            SetParameter(inputProperties[i++], size);
+            SetParameter(inputProperties[i++], (double)px / pixelSize.Width);
+            SetParameter(inputProperties[i++], (double)py / pixelSize.Height);
             SetParameter(inputProperties[i++], (double)pixelSize.Width / pixelSize.Height);
-            //Debug.Write("ViewPointEffect parameters" + Environment.NewLine + ToParameterString(inputProperties));
+            SetParameter(inputProperties[i++], x - px);
+            SetParameter(inputProperties[i++], y - py);
         }
     }
     public class GradientContrastEffect : ParametricEffect  // sharpness layer

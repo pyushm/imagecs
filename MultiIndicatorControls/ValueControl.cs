@@ -1,35 +1,32 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Text;
 using System.Windows.Forms;
 
 namespace CustomControls
 {
-    public partial class ValueControl : MultiIndicatorControl
+    public class ValueControl : MultiIndicatorControl
     {   // allows selecting several individual values 
         protected override int PointDimension { get { return 1; } }
-        [Category("Appearance"), Description("Amount and initial values (.X:0-100)")]
-        public override Point[] ValueLocations  
+        public Color[] Colors { get; set; }     // control background
+        public ValueControl()    { }
+        //protected override Point[] IndicatorLocations(Point[] vals)
+        //{
+        //    Point[] iil = new Point[nPoints];
+        //    for (int i = 0; i < nPoints; i++)
+        //        iil[i] = new Point(SetX(leftOffset + border.Width * vals[i].X / 100), iArea[i].Y + iArea[i].Height / 2);
+        //    return iil;
+        //}
+        public override float[] ControlPoints
         {
             set
             {
-                Initialize(value);
+                Initialize(value.Length / PointDimension);
+                SetValues(value);
                 for (int i = 0; i < nPoints; i++)
-                    colorPoints[i] = Color.FromArgb(value[i].Y);
+                    iLoc[i].Y = iArea[i].Y + iArea[i].Height / 2;
+                initialLoc = (Point[])iLoc.Clone();
             }
-        }
-        public ValueControl()               
-        {
-            InitializeComponent();
-        }
-        protected override Point[] IndicatorLocations(Point[] vals)
-        {
-            Point[] iil = new Point[nPoints];
-            for (int i = 0; i < nPoints; i++)
-                iil[i] = new Point(SetX(leftOffset + border.Width * vals[i].X / 100), iArea[i].Y + iArea[i].Height / 2);
-            return iil;
         }
         protected override void SetBrushes()// sets control background brushes
         {
@@ -46,10 +43,10 @@ namespace CustomControls
             {
                 int y = border.Y + i * iah+1;
                 iArea[i] = new Rectangle(border.X, y, border.Width, iah);
-                if (title == "Saturation")
+                if (Colors != null && i < Colors.Length)
                 {
-                    c = MixColors(g, colorPoints[i], (offset+range+1)/2);
-                    cc = MixColors(g, colorPoints[i], (offset+1)/2);
+                    c = MixColors(g, Colors[i], (offset+range+1)/2);
+                    cc = MixColors(g, Colors[i], (offset+1)/2);
                     iBrush[i] = new LinearGradientBrush(new Point(leftOffset - 1, 0), new Point(Width, 0), c, cc);
                 }
                 else

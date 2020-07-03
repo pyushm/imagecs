@@ -16,7 +16,7 @@ namespace ImageProcessor
         FlexiblePolygon activeStroke = null;
         int activePointInd = -1;
         int singlePointInd = -1;        // index of single moved point
-        MouseOperations editOperation;
+        MouseOperation editOperation;
         public BitmapAccess BackgroundImage { set { SetEdgeDetector(value); } }
         public FlexiblePolygonEditor(DrawingPanel panel_) { panel = panel_; }
         MenuItem CreateMenuItem(string title, ClickHandler handler)
@@ -77,29 +77,29 @@ namespace ImageProcessor
             {   // single left click on point adds point to selected and starts moving selected points  
                 activeStroke.AddProperty(ind, PointProperties.Selected);
                 singlePointInd = ind;
-                editOperation = MouseOperations.Move;
+                editOperation = MouseOperation.Move;
                 Mouse.OverrideCursor = Cursors.Pen;
                 //Debug.WriteLine("move point "+ss.ToPropertiesString());
             }
             return true;
         }
-        internal MouseOperations MouseDown(MouseButtonEventArgs e, FlexiblePolygon[] ss, Point canvasPoint)
+        internal MouseOperation MouseDown(MouseButtonEventArgs e, FlexiblePolygon[] ss, Point canvasPoint)
         {
-            editOperation = MouseOperations.None;
+            editOperation = MouseOperation.None;
             activePointInd = -1;
             ProcessStrokes(e, ss, canvasPoint);
             //Debug.WriteLine("SE down " + editOperation.ToString());
-            return editOperation == MouseOperations.None ? MouseOperations.None : MouseOperations.Stroke;
+            return editOperation == MouseOperation.None ? MouseOperation.None : MouseOperation.Stroke;
         }
         internal void MouseMove(MouseEventArgs e, Vector canvasShift)
         {
-            if (editOperation == MouseOperations.Move)
+            if (editOperation == MouseOperation.Move)
             {
                 if(panel.Selection != null)
                 {
                     Vector shift = panel.Selection.FromDrawing.Value.Transform(canvasShift);
                     if (panel.Selection.MoveSelectedPoints(shift))
-                        editOperation = MouseOperations.None;
+                        editOperation = MouseOperation.None;
                 }
                 //foreach (FlexiblePolygon ss in panel.Polygons)
                 //{
@@ -112,7 +112,7 @@ namespace ImageProcessor
         }
         internal void MouseUp(MouseButtonEventArgs e, Point mp)
         {
-            if (editOperation == MouseOperations.Move)
+            if (editOperation == MouseOperation.Move)
             {   // ends operation
                 if (panel.Selection != null && singlePointInd >= 0)
                 {
@@ -127,7 +127,7 @@ namespace ImageProcessor
                 //        singlePointInd = -1;
                 //    }
                 //}
-                editOperation = MouseOperations.None;
+                editOperation = MouseOperation.None;
             }
             Mouse.OverrideCursor = Cursors.Arrow;
             //Debug.WriteLine("SE up " + editOperation.ToString());
@@ -154,6 +154,8 @@ namespace ImageProcessor
         }
         bool EdgeCorrection(ref Point p, Vector edgeDirection)
         {   // finds max grad on the line [p-n, p+n] within range
+            if (img == null)
+                return false;
             edgeDirection.Normalize();
             Vector n = new Vector(edgeDirection.Y, -edgeDirection.X);
             Point sp = p - n * range;                  // search point

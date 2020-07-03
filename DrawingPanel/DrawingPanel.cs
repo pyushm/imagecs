@@ -35,8 +35,9 @@ namespace ImageProcessor
         Size previousHostSize;
         string loadedFilePath = "";
         bool mouseDown;                 // true between mouseDown and MouseUp events
-        MouseOperations mouseAction;    // support of mouse control manipulations
+        MouseOperation mouseAction;     // support of mouse control manipulations
         VisualLayer tools = new VisualLayer("tools");
+        MorphControl morphControl = null;
         public string FrameSizeString   { get { string s = frameLayoutSize.ToString();
                                           return CropRectangle != null ?  s + " selection: " + CropRectangle.ToString() : s; } }
         IntSize frameLayoutSize
@@ -179,6 +180,7 @@ namespace ImageProcessor
             Height = Math.Max(hostH, frameLayoutSize.Height * scale);
             Point center = getBackgroundCenter();
             Transform prev = BackgroundLayer.RenderTransform;
+
             double prevAngle = getBackgroundAngle();
             //Debug.WriteLine("---------->>> Resize INIT="+init + " W=" + hostW + " H=" + hostH + "matrixControlSet ="+ matrixControlSet);
             if (!firstTime)
@@ -339,6 +341,8 @@ namespace ImageProcessor
             tools.Clear();
             if (panelHolder.ToolMode == ToolMode.Distortion)
                 tools.AddVisual(ActiveLayer.MatrixControl.ToVisual(toolBrush, toolPen));
+            else if (panelHolder.ToolMode == ToolMode.Morph)
+                tools.AddVisual(morphControl.ToVisual(toolBrush, toolPen));
             if (collectedPolygon != null)
             {
                 collectedPolygon.ToDrawing = (MatrixTransform)ActiveLayer.RenderTransform;
@@ -420,7 +424,7 @@ namespace ImageProcessor
                             return DataAccess.Warning;
                         try
                         {
-                            vl = vlda[ind].IsBitmap ? (VisualLayer)new BitmapLayer(vlda[ind].Name, vlda[ind].GetImage()) :
+                            vl = vlda[ind].IsBitmap ? (VisualLayer)new BitmapLayer(vlda[ind].Name, vlda[ind].GetImageAccess()) :
                                  vlda[ind].IsDrawing ? new DrawingLayer(vlda[ind].Name, vlda[ind].PixelSize, vlda[ind].GetStrokes()) : null;
                         }
                         catch (Exception ex)
@@ -446,7 +450,19 @@ namespace ImageProcessor
                 return ex.Message;
             }
             tools.Clear();
-            BackgroundLayer = LayerCount > 0 ? Children[0] as VisualLayer : null;
+            ActiveLayer = BackgroundLayer = LayerCount > 0 ? Children[0] as VisualLayer : null;
+            //Debug.WriteLine(BackgroundLayer.Name + (replaceDuration < 0.6 ? "  View" : "  Edit"));
+            if (BackgroundLayer != null)
+            {
+                var mp = BackgroundLayer.GetLastMorthPoint();
+                if (mp == null)
+                {
+                    double x = BackgroundLayer.LayoutSize.Width / 2;
+                    double y = BackgroundLayer.LayoutSize.Height / 2;
+                    mp = new MorthPoint(new Point(x, y), Math.Min(x, y) / 10);
+                }
+                morphControl = new MorphControl(mp);
+            }
             return BackgroundLayer == null ? "BackgroundLayer failure" : "";
         }
         public string SaveLayers(string fileName, BitmapEncoder bitmapEncoder)
@@ -590,17 +606,17 @@ namespace ImageProcessor
             {
                 switch (mouseAction)
                 {
-                    case MouseOperations.Bottom:
-                    case MouseOperations.Left:
-                    case MouseOperations.Top:
-                    case MouseOperations.Right: return Cursors.Hand;
-                    case MouseOperations.Rotate: return Cursors.No;
-                    case MouseOperations.Scale: return Cursors.SizeAll;
-                    case MouseOperations.OpCenter:
-                    case MouseOperations.VortexBL:
-                    case MouseOperations.VortexBR:
-                    case MouseOperations.VortexTL:
-                    case MouseOperations.VortexTR: return Cursors.Cross;
+                    case MouseOperation.Bottom:
+                    case MouseOperation.Left:
+                    case MouseOperation.Top:
+                    case MouseOperation.Right: return Cursors.Hand;
+                    case MouseOperation.Rotate: return Cursors.No;
+                    case MouseOperation.Scale: return Cursors.SizeAll;
+                    case MouseOperation.OpCenter:
+                    case MouseOperation.VortexBL:
+                    case MouseOperation.VortexBR:
+                    case MouseOperation.VortexTL:
+                    case MouseOperation.VortexTR: return Cursors.Cross;
                 }
                 return Cursors.Arrow;
             }
@@ -618,24 +634,26 @@ namespace ImageProcessor
                 FlexiblePolygon[] ss = sl != null ? sl.Polygons.ToArray() : new FlexiblePolygon[] { Selection };
                 mouseAction = strokeEditor.MouseDown(e, ss, position);
             }
-            if (!strokeEdit || mouseAction == MouseOperations.None)
+            if (!strokeEdit || mouseAction == MouseOperation.None)
             {
-                mouseAction = MouseOperations.None;
+                mouseAction = MouseOperation.None;
                 if (panelHolder.ToolMode == ToolMode.RectSelection || panelHolder.ToolMode == ToolMode.FreeSelection && collectedPolygon != null)
                 {
                     collectedPolygon.Clear();
                     collectedPolygon.Add(collectedPolygon.FromDrawing.Transform(position));
                     mouseAction = MouseAction.OperationFromMouse;
-                    if (mouseAction == MouseOperations.Rotate)
-                        mouseAction = MouseOperations.Add;
+                    if (mouseAction == MouseOperation.Rotate)
+                        mouseAction = MouseOperation.Add;
                 }
                 else if (panelHolder.ToolMode == ToolMode.Crop && CropRectangle != null)
                     mouseAction = CropRectangle.OperationFromLine(CropRectangle.FromDrawing.Transform(position));
                 else if (panelHolder.ToolMode == ToolMode.InfoImage)
                     mouseAction = MouseAction.OperationFromMouse;
-                else if ((panelHolder.ToolMode == ToolMode.Distortion || panelHolder.ToolMode == ToolMode.None) && IsActiveLayerVisible)
+                else if (IsActiveLayerVisible)
                     mouseAction = panelHolder.ToolMode == ToolMode.Distortion ? ActiveLayer.MatrixControl.OperationFromPoint(position) :
-                                     panelHolder.ToolMode == ToolMode.None ? MouseAction.OperationFromMouse : MouseOperations.None;
+                        panelHolder.ToolMode == ToolMode.Morph ? morphControl.OperationFromPoint(position) :
+                        panelHolder.ToolMode == ToolMode.None ?  MouseAction.OperationFromMouse :
+                        MouseOperation.None;
             }
             Mouse.OverrideCursor = ActionCursor;
             //Debug.WriteLine("DP down " + mouseAction.ToString());
@@ -643,30 +661,41 @@ namespace ImageProcessor
         }
         protected override void OnMouseMove(MouseEventArgs e)
         {
-            if (MenuMode || !mouseDown || mouseAction == MouseOperations.None)
+            if (MenuMode || !mouseDown || mouseAction == MouseOperation.None)
                 return;
             Point position = e.GetPosition(this);   // position in canvas coordinates
             Vector lastShift = position - SavedPosition;
             if (lastShift.Length < 2)
                 return;
-            if (strokeEdit && mouseAction == MouseOperations.Stroke)
+            if (strokeEdit && mouseAction == MouseOperation.Stroke)
                 strokeEditor.MouseMove(e, lastShift);
-            else if (mouseAction == MouseOperations.Add && collectedPolygon != null)
+            else if (mouseAction == MouseOperation.Add && collectedPolygon != null)
                 collectedPolygon.Add(collectedPolygon.FromDrawing.Transform(position));
             else if (MouseAction.IsLineOperation(mouseAction) && CropRectangle != null && CropRectangle.Update(mouseAction, CropRectangle.FromDrawing.Transform(position)))
                 panelHolder.CropRectangleUpdated();
             else if (IsActiveLayerVisible)
             {
-                if (mouseAction == MouseOperations.OpCenter)
-                {
+                if (mouseAction == MouseOperation.OpCenter)
                     ActiveLayer.MatrixControl.MoveCenter(lastShift);
-                    if (ActiveLayer.DerivativeType == EffectType.ViewPoint)
+                if (mouseAction == MouseOperation.ViewPoint && ActiveLayer.DerivativeType == EffectType.ViewPoint)
+                {
+                    DistortionControl dc = ActiveLayer.MatrixControl as DistortionControl;
+                    if (dc != null)
                     {
-                        panelHolder.SetViewPosition(ActiveLayer.MatrixControl.Center.X/ BackgroundLayer.LayoutSize.Width-0.5, 
-                            ActiveLayer.MatrixControl.Center.Y / BackgroundLayer.LayoutSize.Height-0.5);
+                        Vector vd = dc.SetViewDistortion(position);
+                        panelHolder.SetViewPosition(vd.X, vd.Y);
                     }
                 }
-                else if (mouseAction == MouseOperations.Move)
+                if (mouseAction == MouseOperation.Morph && ActiveLayer.DerivativeType == EffectType.Morph)
+                {
+                    DistortionControl dc = ActiveLayer.MatrixControl as DistortionControl;
+                    if (dc != null)
+                    {
+                        Vector vd = dc.SetViewDistortion(position);
+                        panelHolder.SetViewPosition(vd.X, vd.Y);
+                    }
+                }
+                else if (mouseAction == MouseOperation.Move)
                 {
                     Matrix t = ActiveLayer.RenderTransform.Value;
                     t.Translate(lastShift.X, lastShift.Y);
@@ -677,7 +706,7 @@ namespace ImageProcessor
                         for (int i = 1; i < LayerCount; i++)
                             (Children[i] as VisualLayer)?.Translate(lastShift);
                 }
-                else if (mouseAction == MouseOperations.Scale)
+                else if (mouseAction == MouseOperation.Scale)
                 {
                     double sc = ActiveLayer.MatrixControl.ScaleFromPoints(position, SavedPosition);
                     ActiveLayer.MatrixControl.RenderScale *= sc;
@@ -685,7 +714,7 @@ namespace ImageProcessor
                         for (int i = 1; i < LayerCount; i++)
                             (Children[i] as VisualLayer)?.MatrixControl.ScaleAt(sc, BackgroundLayer.MatrixControl.Center);
                 }
-                else if (mouseAction == MouseOperations.Rotate)
+                else if (mouseAction == MouseOperation.Rotate)
                 {
                     double rad = ActiveLayer.MatrixControl.RadiansFromPoints(position, SavedPosition);
                     ActiveLayer.MatrixControl.RotateAngle(rad);
@@ -697,14 +726,14 @@ namespace ImageProcessor
                 {
                     //Debug.WriteLine("active b " + ActiveLayer.MatrixControl.ToString());
                     //Debug.WriteLine(mouseAction.ToString() + ' ' + lastShift.X.ToString("f6") + ' ' + lastShift.Y.ToString("f6"));
-                    double inc = ActiveLayer.MatrixControl.ApplyShearAndAspect(mouseAction, lastShift);
+                    double inc = ActiveLayer.MatrixControl.SetShearAndAspect(mouseAction, lastShift);
                     //Debug.WriteLine("active a " + ActiveLayer.MatrixControl.ToString());
                     if (ActiveLayer == BackgroundLayer)
                         for (int i = 1; i < LayerCount; i++)
                         {
                             //Debug.WriteLine(i.ToString() + " layerB " + (Children[i] as VisualLayer)?.MatrixControl.ToString());
                             //Debug.WriteLine(mouseAction.ToString() + ' ' + lastShift.X.ToString("f6") + ' ' + lastShift.Y.ToString("f6"));
-                            (Children[i] as VisualLayer)?.MatrixControl.ApplyShearAndAspect(mouseAction, inc);
+                            (Children[i] as VisualLayer)?.MatrixControl.ApplyShearAndAspectIncrement(mouseAction, inc);
                             //Debug.WriteLine(i.ToString() + " layerA " + (Children[i] as VisualLayer)?.MatrixControl.ToString());
                         }
                 }
@@ -727,7 +756,7 @@ namespace ImageProcessor
             Point position = e.GetPosition(this);   // position in canvas coordinates
             if (MenuMode)
                 return;
-            if (strokeEdit && mouseAction == MouseOperations.Stroke)
+            if (strokeEdit && mouseAction == MouseOperation.Stroke)
                 strokeEditor.MouseUp(e, position);
             else
                 ActionEnd(position);
@@ -738,7 +767,7 @@ namespace ImageProcessor
                 return;
             mouseDown = false;
             Mouse.OverrideCursor = Cursors.Arrow;
-            if (mouseAction == MouseOperations.Add && collectedPolygon != null)
+            if (mouseAction == MouseOperation.Add && collectedPolygon != null)
             {
                 collectedPolygon.Close(collectedPolygon.FromDrawing.Transform(position));
                 if (!collectedPolygon.IsEmpty)

@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Collections.Generic;
 using System.Windows.Media.Imaging;
 using System.IO;
 using System.Diagnostics;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Runtime.Serialization;
 using ShaderEffects;
+using System.Windows.Media.Media3D;
 
 namespace ImageProcessor
 {
@@ -28,8 +31,37 @@ namespace ImageProcessor
         protected VisualLayerType type;       // bitmap derivative 
         protected ColorTransform colorTransform = new ColorTransform();
         public MatrixControl MatrixControl { get; private set; }
-        public List<MorthPoint> morthPoints = new List<MorthPoint>();
+        public void InitializeTransforms(VisualLayer renderSrc)
+        {
+            MatrixControl = renderSrc.MatrixControl.Clone();
+            RenderTransform = renderSrc.RenderTransform.Clone();
+        }
+        public void InitializeTransforms(double w, double h, double scale, MatrixControl matrixControl)
+        {
+            if (scale < 0)      // auto scale limited by -scale
+                scale = Math.Min(Math.Min(w / LayoutSize.Width, h / LayoutSize.Height), -scale);
+            double offsetX = w / 2 - LayoutSize.Width * scale / 2;
+            double offsetY = h / 2 - LayoutSize.Height * scale / 2;
+            RenderTransform = new MatrixTransform(scale, 0, 0, scale, offsetX, offsetY);
+            if (matrixControl == null)
+            {
+                //MatrixControl = new MatrixControl();
+                MatrixControl = new DistortionControl();
+                MatrixControl.Center = new Point(w / 2, h / 2);
+                MatrixControl.RenderScale = scale;
+            }
+            else
+            {
+                //MatrixControl.MoveCenter(new Vector(w / 2 - MatrixControl.Center.X, h / 2 - MatrixControl.Center.Y));
+                UpdateRenderTransform();
+                Matrix m = RenderTransform.Value;
+                m.Translate(MatrixControl.Center.X - w / 2, MatrixControl.Center.Y - h / 2);
+                RenderTransform = new MatrixTransform(m);
+            }
+        }
         public virtual void SetEffectParameters(double weight, double middle, double resolution) { }
+        internal void SetStoredMatrixContro(VisualLayerData stored) { MatrixControl = stored.MatrixControl; }
+        public void SetScale(double s) { MatrixControl.RenderScale = s; }
         public virtual EffectType DerivativeType { get { return EffectType.None; } }
         bool deleting = false;      // marked for delayed deletion (do not display in layer list)
         public string Name          { get; set; }
@@ -55,7 +87,6 @@ namespace ImageProcessor
             return children[index];
         }
         protected override Size MeasureCore(Size s) { return LayoutSize.Size; }
-        internal void SetStoredMatrixContro(VisualLayerData stored) { MatrixControl = stored.MatrixControl; }
         public VisualLayerData CreateVisualLayerData(byte[] data) { return new VisualLayerData(Type, Name, LayoutSize, MatrixControl, data); }
         public byte[] SerializeImage(BitmapEncoder bitmapEncoder)
         {
@@ -93,34 +124,6 @@ namespace ImageProcessor
                 rtb.Render(GetVisualChild(i));
         }
         public virtual bool TransformColor() { return false; }
-        public void SetScale(double s) { MatrixControl.RenderScale = s; }
-        public void InitializeTransforms(VisualLayer renderSrc)
-        {
-            MatrixControl = renderSrc.MatrixControl.Clone();
-            RenderTransform = renderSrc.RenderTransform.Clone();
-        }
-        public void InitializeTransforms(double w, double h, double scale, MatrixControl matrixControl)
-        {
-            if (scale < 0)      // auto scale limited by -scale
-                scale = Math.Min(Math.Min(w / LayoutSize.Width, h / LayoutSize.Height), -scale);
-            double offsetX = w / 2 - LayoutSize.Width * scale / 2;
-            double offsetY = h / 2 - LayoutSize.Height * scale / 2;
-            RenderTransform = new MatrixTransform(scale, 0, 0, scale, offsetX, offsetY);
-            if (matrixControl == null)
-            {
-                MatrixControl = DerivativeType == EffectType.ViewPoint ? new DistortionControl() : new MatrixControl();
-                MatrixControl.Center = new Point(w / 2, h / 2);
-                MatrixControl.RenderScale = scale;
-            }
-            else
-            {
-                //MatrixControl.MoveCenter(new Vector(w / 2 - MatrixControl.Center.X, h / 2 - MatrixControl.Center.Y));
-                UpdateRenderTransform();
-                Matrix m = RenderTransform.Value;
-                m.Translate(MatrixControl.Center.X - w / 2, MatrixControl.Center.Y - h / 2);
-                RenderTransform = new MatrixTransform(m);
-            }
-        }
         public void UpdateRenderTransform() // RenderTransform built from MatrixControl and keeps MatrixControl.Center at the same location
         {
             Matrix rm = RenderTransform.Value;
@@ -151,8 +154,6 @@ namespace ImageProcessor
             m.Translate(v.X, v.Y);
             RenderTransform = new MatrixTransform(m);
         }
-        public MorthPoint GetLastMorthPoint() { int nmp = morthPoints.Count; return nmp > 0 ? morthPoints[nmp - 1] : null; }
-        public void AddMorthPoint(MorthPoint mp) { morthPoints.Add(mp); }
         public override string ToString() { return string.Format("mode={0} name={1} size={2}x{3}", type, Name, LayoutSize.Width, LayoutSize.Height); }
         public string ToTransformString() { return "MatrixControl: " + MatrixControl.ToString() + " RenderTransform: " + RenderTransform.Value.ToString(); }
     }
@@ -212,7 +213,7 @@ namespace ImageProcessor
                     ByteMatrix filter = ByteMatrix.CreateConeFilter(transparentEdge);
                     transparencyMask = transparencyMask.SmoothingWithMidlevelCut(filter, 120);
                     //Debug.WriteLine("transparencyMask *******" + Environment.NewLine + transparencyMask.ToString());
-                    image.UpdateTransparency(transparencyMask); // works only for Pbgra32
+                    image.UpdateTransparency(transparencyMask);
                 }
                 Color borderColor = image.BorderColor();
                 if (borderColor != ColorTransform.ColorNull)
@@ -248,7 +249,6 @@ namespace ImageProcessor
             ParametricEffect cae = Effect as ParametricEffect;
             if (cae != null)
                 cae.SetParameters(colorTransform, strength, level, size);
-            Debug.WriteLine("SetEffectParameters: image=" + image.Path);
         }
         protected DrawingVisual CreateImageDrawing()
         {
@@ -294,6 +294,60 @@ namespace ImageProcessor
             if (cae != null)
                 cae.SetParameters(colorTransform, strength, level, size);
             derivativeEffect.SetParameters(colorTransform, strength, level, size);
+        }
+    }
+    public class Bitmap3DLayer : BitmapLayer
+    {
+        Viewport3D derivative;
+        public Bitmap3DLayer(string name, BitmapAccess ba, int edge) : base(name)
+        {
+            try
+            {
+                type = VisualLayerType.Derivative;
+                LayoutSize = new IntSize(ba.Width, ba.Height);
+                derivative = CreateProjection(ba.Source, 0.2, 0);
+                children.Add(derivative);
+                Effect = new ColorAdjustmentEffect();
+                SetEffectParameters(0, 0, 1);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+        }
+        public override void SetEffectParameters(double strength, double level, double size)
+        {
+            ParametricEffect cae = Effect as ParametricEffect;
+            if (cae != null)
+                cae.SetParameters(colorTransform, strength, level, size);
+        }
+        static public Viewport3D CreateProjection(BitmapSource imageSource, double distortionX, double distortionY)
+        {
+            double cameraDistance = 1;
+            double viewHalfSize = 1;
+            double h = imageSource.PixelHeight;
+            double w = imageSource.PixelWidth;
+            double xs = h < w ? 0 : h / w / 2 - 0.5;
+            double ys = h < w ? w / h / 2 - 0.5 : 0;
+            distortionY /= 1 + ys;
+            distortionX /= 1 + xs;
+            double distortion = Math.Sqrt(distortionX * distortionX + distortionY * distortionY);
+            Rect viewRect = new Rect(-viewHalfSize, -viewHalfSize, 2 * viewHalfSize, 2 * viewHalfSize);
+            double angleOfView = 360 * Math.Atan(viewHalfSize / cameraDistance) / Math.PI; // smaller angle - less you see in the port
+            Vector3D rotationAxis = new Vector3D(distortionY / distortion, distortionX / distortion, 0);
+            Viewport3D ivp = new Viewport3D() { Camera = new PerspectiveCamera(new Point3D(0, 0, cameraDistance), new Vector3D(0, 0, -1), new Vector3D(0, 1, 0), angleOfView) };
+            double rotationAngle = 180 * Math.Atan(cameraDistance * distortion * 0.5 / viewHalfSize) / Math.PI;
+            var r3d = new RotateTransform3D() { Rotation = new AxisAngleRotation3D(rotationAxis, rotationAngle) };
+            var viewPosition = new Point3DCollection(new Point3D[] { new Point3D(viewRect.Left, viewRect.Bottom, 0), new Point3D(viewRect.Left, viewRect.Top, 0),
+                                                                     new Point3D(viewRect.Right, viewRect.Top, 0), new Point3D(viewRect.Right, viewRect.Bottom, 0) });
+            var texturePosition = new PointCollection(new Point[] { new Point(-xs, -ys), new Point(-xs, 1 + ys), new Point(1 + xs, 1 + ys), new Point(1 + xs, -ys) });
+            var mg3d = new MeshGeometry3D() { Positions = viewPosition, TextureCoordinates = texturePosition, TriangleIndices = new Int32Collection { 0, 1, 2, 0, 2, 3 } };
+            var im = new DiffuseMaterial();
+            im.SetValue(Viewport2DVisual3D.IsVisualHostMaterialProperty, true);
+            var i3d = new Viewport2DVisual3D() { Geometry = mg3d, Transform = r3d, Material = im, Visual = new Image() { Source = imageSource } };
+            ivp.Children.Add(i3d);
+            ivp.Children.Add(new ModelVisual3D() { Content = new AmbientLight(Colors.White) });
+            return ivp;
         }
     }
 }

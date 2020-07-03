@@ -58,14 +58,8 @@
     <Compile Include="ValueControl.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="ValueControl.designer.cs">
-      <DependentUpon>ValueControl.cs</DependentUpon>
-    </Compile>
     <Compile Include="RangeControl.cs">
       <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="RangeControl.designer.cs">
-      <DependentUpon>RangeControl.cs</DependentUpon>
     </Compile>
     <Compile Include="MultiIndicatorControl.cs">
       <SubType>Component</SubType>

@@ -9,12 +9,11 @@ namespace CustomControls
     {
         protected string title;
         protected int nPoints;                  // number of control points
-        protected Point[] initialVals;          // initial indicator values
+        protected Point[] initialLoc;           // initial indicators' locations
         protected Point[] iLoc;                 // indicators' locations
         protected Point sliderLoc;              // location of slider indicator 
         protected Rectangle[] iArea;            // indicators' area rectangles
         protected Brush[] iBrush;               // indicators' area brushes
-        protected Color[] colorPoints;          // color control points
         protected Pen pen = new Pen(Color.Black);
         protected Brush textBrush = new SolidBrush(Color.Black);
         protected int topOffset;                // top offset of indicators area
@@ -42,9 +41,7 @@ namespace CustomControls
         [Category("Behavior"), Description("Minimal output value")]
         public float Offset { get { return offset; } set { offset = value; } }
         [Category("Appearance"), Description("The type of color conrol")]
-        public string Title { get { return title; } set { title = value; /*SetBrushes();*/ } }
-        [Category("Appearance"), Description("Default location of conrol points")]
-        public virtual Point[] ValueLocations   { get { return new Point[0]; } set { } }
+        public string Title { get { return title; } set { title = value; } }
         public float[] Values
         {
             get
@@ -93,18 +90,16 @@ namespace CustomControls
                 SetBrushes();
                 for (int i = 0; i < arrow.Length; i++)
                     arrow[i] = new Point((int)(arrow[i].X * factor.Width + 0.5), (int)(arrow[i].Y * factor.Height + 0.5));
-                Point[] il = IndicatorLocations(initialVals);
                 for (int i = 0; i < nPoints; i++)
-                    iLoc[i] = il[i];
+                    iLoc[i] = initialLoc[i];
             }
             if ((specified & BoundsSpecified.Location) == BoundsSpecified.Location)
                 Location = new Point((int)(Location.X * factor.Width), (int)(Location.Y * factor.Height));
         }
         public void Reset()
         {
-            Point[] iil = IndicatorLocations(initialVals);
             for (int i = 0; i < nPoints; i++)
-                iLoc[i] = iil[i];
+                iLoc[i] = initialLoc[i];
             ResetSlider();
             Invalidate();
         }
@@ -127,15 +122,12 @@ namespace CustomControls
             valueChangeTimer.Tick += new EventHandler(ValidateSameValue);
         }
         ~MultiIndicatorControl()		        { valueChangeTimer.Dispose(); }
-        protected void Initialize(Point[] vals)    
+        public void Initialize(int np)    
         {
-            int length = vals.Length;
-            nPoints = length;
+            nPoints = np;
             iLoc = new Point[nPoints];
-            initialVals = (Point[])vals.Clone();
             iLocPrev = new Point[nPoints];
             iLocLast = new Point[nPoints];
-            colorPoints = new Color[nPoints];
             topOffset = (int)(Font.Height*1.25);
             leftOffset = (int)(Font.Height * 1.6);
             bottomOffset = (int)(Font.Height * 0.95);
@@ -144,7 +136,8 @@ namespace CustomControls
             border = new Rectangle(leftOffset, topOffset, iaw, iah);
             ratio = (float)iaw / iah;
             SetBrushes();
-            Reset();
+            ResetSlider();
+            Invalidate();
         }
         protected int SetX(int v)               { if (v > border.Right) return border.Right; if (v < border.Left) return border.Left; return v; }
         protected int SetY(int v)               { if (v > border.Bottom) return border.Bottom; if (v < border.Top) return border.Top; return v; }
@@ -174,8 +167,9 @@ namespace CustomControls
             }
             return border.Location;
         }
-        protected abstract void SetIndicatorValues(Point loc);
-        protected abstract Point[] IndicatorLocations(Point[] vals);
+        public abstract float[] ControlPoints { set; }
+        protected abstract void SetIndicatorValues(Point p);
+        //protected abstract Point[] IndicatorLocations(Point[] vals);
         protected virtual void SetBrushes() { }
         protected void DrawCommonElements(Graphics g)
         {
