@@ -271,34 +271,54 @@ namespace ImageProcessor
     public class Polygon : Primitive  
     {   // fixed point set, no closing needed   
         static PolygonBuilder builder = new PolygonBuilder();
-        protected List<Point> poly = new List<Point>();
         public IntSize Target   { get; }// added points are limited to inside target rectangle {0,0,w,h}
-        public List<Point> Poly { get { return poly; } set { poly = value; } }
+        public List<Point> Poly { get; set; } = new List<Point>();
         public bool IsClosed    { get { return First == Last; } }
-        public Point First      { get { return Count>0 ? poly[0] : new Point(); } }
+        public Point First      { get { return Count>0 ? Poly[0] : new Point(); } }
         public Point Last       { get; private set; }
         public bool IsEmpty     { get { return Count < 3; } }
-        public int Count        { get { return poly.Count; } }
+        public int Count        { get { return Poly.Count; } }
         public double TotalLength()
         {
             double l = 0;
             for (int i = 1; i < Count; i++)
-                l += (poly[i] - poly[i - 1]).Length;
+                l += (Poly[i] - Poly[i - 1]).Length;
             return l;
         }
-        public Point this[int i] { get { return poly[i]; } set { poly[i] = value; } }
+        public Point this[int i] { get { return Poly[i]; } set { Poly[i] = value; } }
         public Polygon(IntSize range) { Target = range; Last = new Point(-10, -10); }
         public Polygon(Polygon points)
         {
-            poly = points.poly;
-            Last = Count > 0 ? poly[Count-1] : new Point(-10, -10);
+            Poly = points.Poly;
+            Last = Count > 0 ? Poly[Count-1] : new Point(-10, -10);
             Target = points.Target;
         }
         public Polygon(List<Point> points, IntSize range)
         {
-            poly = points;
-            Last = Count > 0 ? poly[Count - 1] : new Point(-10, -10);
+            Poly = points;
+            Last = Count > 0 ? Poly[Count - 1] : new Point(-10, -10);
             Target = range;
+        }
+        public void SetRectangle(Point p)
+        {
+            int x = p.X < 0 ? -1 : p.X > Target.Width ? 1 : 0;
+            int y = p.Y < 0 ? -1 : p.Y > Target.Height ? 1 : 0;
+            if (x != 0 && y != 0)
+                return;
+            if (x != 0 || y != 0)
+            {
+                if (x == 0)
+                    p.Y = y > 0 ? Target.Height : 0;
+                else
+                    p.X = x > 0 ? Target.Width : 0;
+            }
+            Point p0 = Poly[0];
+            Poly = new List<Point>(5);
+            Poly.Add(p0);
+            Poly.Add(new Point(p0.X, p.Y));
+            Poly.Add(p);
+            Poly.Add(new Point(p.X, p0.Y));
+            Poly.Add(p0);
         }
         public void Add(Point p)
         {
@@ -308,25 +328,18 @@ namespace ImageProcessor
             int y = p.Y < 0 ? -1 : p.Y > Target.Height ? 1 : 0;
             if (x != 0 && y != 0)
                 return;
-            if (x == 0)
+            if (x != 0 || y != 0)
             {
-                if (y > 0)
-                    p.Y = Target.Height;
-                if (y < 0)
-                    p.Y = 0;
+                if (x == 0)
+                    p.Y = y > 0 ? Target.Height : 0;
+                else
+                    p.X = x > 0 ? Target.Width : 0;
             }
-            else
-            {
-                if (x > 0)
-                    p.X = Target.Width;
-                if (x < 0)
-                    p.X = 0;
-            }
-            poly.Add(p);
+            Poly.Add(p);
             Last = p;
         }
         public void Close(Point p) { Add(p); Add(First); }
-        public void Clear()     { poly.Clear(); }
+        public void Clear()     { Poly.Clear(); }
         public Int32Rect IntRect(int border)
         {
             if (IsEmpty)
@@ -335,7 +348,7 @@ namespace ImageProcessor
             int minY = int.MaxValue;
             int maxX = int.MinValue;
             int maxY = int.MinValue;
-            foreach (var p in poly)
+            foreach (var p in Poly)
             {
                 if (minX > p.X)
                     minX = (int)p.X;
@@ -365,7 +378,7 @@ namespace ImageProcessor
             {
                 l[0] = 0;
                 for (int i = 1; i < Count; i++)
-                    l[i] = l[i - 1] + (poly[i] - poly[i - 1]).Length;
+                    l[i] = l[i - 1] + (Poly[i] - Poly[i - 1]).Length;
             }
             return l;
         }
@@ -373,7 +386,7 @@ namespace ImageProcessor
         {
             if (IsEmpty)
                 return;
-            Point[] points = poly.ToArray();
+            Point[] points = Poly.ToArray();
             ToDrawing.Value.Transform(points);
             PathSegment ps = new PolyLineSegment(points, true); // true will draw poly line
             Geometry geom = new PathGeometry(new PathFigure[] { new PathFigure(points[0], new PathSegment[] { ps }, false) });
@@ -382,14 +395,14 @@ namespace ImageProcessor
         public string ToPointString()
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("points=" + poly.Count);
-            for (int i = 0; i < poly.Count; i++)
+            sb.AppendLine("points=" + Poly.Count);
+            for (int i = 0; i < Poly.Count; i++)
             {
                 sb.Append(i);
                 sb.Append(' ');
-                sb.Append(poly[i].X.ToString("f1"));
+                sb.Append(Poly[i].X.ToString("f1"));
                 sb.Append(',');
-                sb.AppendLine(poly[i].Y.ToString("f1"));
+                sb.AppendLine(Poly[i].Y.ToString("f1"));
             }
             return sb.ToString();
         }

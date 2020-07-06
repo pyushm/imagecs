@@ -14,7 +14,6 @@ namespace ImageProcessor
     public class ImageViewForm : Form, IPanelHolder
     {
         private System.ComponentModel.Container components = null;
-        private Panel panel = new System.Windows.Forms.Panel();
         DrawingPanel canvas;
         float dpiScaleX = 1;
         float dpiScaleY = 1;
@@ -58,6 +57,7 @@ namespace ImageProcessor
         private Button deleteButton;
         private Button nextImageButton;
         private Button previousImageButton;
+        private Panel panel;
         private CheckBox resizeBox;
         protected override void Dispose(bool disposing)
         {
@@ -100,18 +100,12 @@ namespace ImageProcessor
             this.nextImageButton = new System.Windows.Forms.Button();
             this.previousImageButton = new System.Windows.Forms.Button();
             this.resizeBox = new System.Windows.Forms.CheckBox();
+            this.panel = new System.Windows.Forms.Panel();
             ((System.ComponentModel.ISupportInitialize)(this.angleCtrl)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.scaleCtrl)).BeginInit();
             this.groupBox5.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // panel
-            // 
-            this.panel.Location = new System.Drawing.Point(143, 0);
-            this.panel.Name = "panel";
-            this.panel.Size = new System.Drawing.Size(200, 100);
-            this.panel.TabIndex = 24;
             // 
             // label2
             // 
@@ -350,6 +344,7 @@ namespace ImageProcessor
             // 
             // saturationControl
             // 
+            this.saturationControl.Colors = null;
             this.saturationControl.Location = new System.Drawing.Point(3, 128);
             this.saturationControl.Name = "saturationControl";
             this.saturationControl.Offset = -0.4F;
@@ -407,11 +402,19 @@ namespace ImageProcessor
             this.resizeBox.UseVisualStyleBackColor = true;
             this.resizeBox.CheckedChanged += new System.EventHandler(this.resizeBox_CheckedChanged);
             // 
+            // panel
+            // 
+            this.panel.Location = new System.Drawing.Point(139, 12);
+            this.panel.Name = "panel";
+            this.panel.Size = new System.Drawing.Size(973, 988);
+            this.panel.TabIndex = 84;
+            // 
             // ImageViewForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1110, 1000);
+            this.ClientSize = new System.Drawing.Size(1387, 1250);
+            this.Controls.Add(this.panel);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.angleCtrl);
             this.Controls.Add(this.label1);
@@ -431,7 +434,6 @@ namespace ImageProcessor
             this.Controls.Add(this.nextImageButton);
             this.Controls.Add(this.previousImageButton);
             this.Controls.Add(this.resizeBox);
-            this.Controls.Add(this.panel);
             this.KeyPreview = true;
             this.MinimumSize = new System.Drawing.Size(628, 648);
             this.Name = "ImageViewForm";
@@ -457,13 +459,13 @@ namespace ImageProcessor
         #endregion
         public ImageViewForm(ImageListForm parentListForm)    
         {
+            InitializeComponent();
             canvas = new DrawingPanel(this);
             ElementHost host = new ElementHost();
             host.Dock = DockStyle.Fill;
             host.Name = "host";
             host.Child = canvas;
             panel.Controls.Add(host);
-            InitializeComponent();
             saturationControl.Colors = new Color[] { Color.Red, Color.Green, Color.Blue };
             saturationControl.ControlPoints = new float[] { 50, 50, 50 };
             brightnessControl.ControlPoints = new float[] { 50, 0, 50, 50, 50, 100 };

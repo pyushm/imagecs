@@ -41,7 +41,6 @@ namespace ImageProcessor
         private ValueControl saturationControl;
         private RangeControl brightnessControl;
         private RangeControl transperancyControl;
-        private Panel panel = new System.Windows.Forms.Panel();
         private ListView layerListView;
         private ColumnHeader typeColumn;
         private ColumnHeader nameColumn;
@@ -66,6 +65,7 @@ namespace ImageProcessor
         private ValueControl strengthControl;
         private ValueControl levelControl;
         private Label label1;
+        private Panel panel;
         private ValueControl resolutionControl;
 
         double SelectedStrength { get { return strengthControl.Values[0]; } }   // [0:1]
@@ -104,9 +104,19 @@ namespace ImageProcessor
             this.brightnessControl = new CustomControls.RangeControl();
             this.label7 = new System.Windows.Forms.Label();
             this.edgeGapBox = new System.Windows.Forms.ComboBox();
+            this.panel = new System.Windows.Forms.Panel();
             saveSameLocationButton = new System.Windows.Forms.Button();
             this.layerGroupBox.SuspendLayout();
             this.SuspendLayout();
+            // 
+            // saveSameLocationButton
+            // 
+            saveSameLocationButton.Location = new System.Drawing.Point(50, 2);
+            saveSameLocationButton.Name = "saveSameLocationButton";
+            saveSameLocationButton.Size = new System.Drawing.Size(87, 20);
+            saveSameLocationButton.TabIndex = 33;
+            saveSameLocationButton.Text = "Save to same";
+            saveSameLocationButton.Click += new System.EventHandler(this.saveSameLocation_Click);
             // 
             // label5
             // 
@@ -134,15 +144,6 @@ namespace ImageProcessor
             this.modeGroupBox.TabIndex = 31;
             this.modeGroupBox.TabStop = false;
             this.modeGroupBox.Text = "Mouse mode";
-            // 
-            // saveSameLocationButton
-            // 
-            saveSameLocationButton.Location = new System.Drawing.Point(50, 2);
-            saveSameLocationButton.Name = "saveSameLocationButton";
-            saveSameLocationButton.Size = new System.Drawing.Size(87, 20);
-            saveSameLocationButton.TabIndex = 33;
-            saveSameLocationButton.Text = "Save to same";
-            saveSameLocationButton.Click += new System.EventHandler(this.saveSameLocation_Click);
             // 
             // saveButton
             // 
@@ -304,11 +305,19 @@ namespace ImageProcessor
             this.edgeGapBox.TabIndex = 43;
             this.edgeGapBox.SelectedIndexChanged += new System.EventHandler(this.TransformChanged);
             // 
+            // panel
+            // 
+            this.panel.Location = new System.Drawing.Point(143, 2);
+            this.panel.Name = "panel";
+            this.panel.Size = new System.Drawing.Size(968, 998);
+            this.panel.TabIndex = 45;
+            // 
             // ImageEditForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1110, 1000);
+            this.ClientSize = new System.Drawing.Size(1387, 1250);
+            this.Controls.Add(this.panel);
             this.Controls.Add(this.label7);
             this.Controls.Add(this.edgeGapBox);
             this.Controls.Add(this.layerGroupBox);
@@ -339,13 +348,13 @@ namespace ImageProcessor
         public ImageEditForm()              
         {
             suspendUpdate = true;
+            InitializeComponent();
             canvas = new DrawingPanel(this);
             ElementHost host = new ElementHost();
             host.Dock = DockStyle.Fill;
             host.Name = "host";
             host.Child = canvas;
             panel.Controls.Add(host);
-            InitializeComponent();
             saturationControl.Colors = new Color[] { Color.Red, Color.Green, Color.Blue };
             saturationControl.ControlPoints = new float[] { 50, 50, 50 };
             brightnessControl.ControlPoints = new float[] { 50, 0, 50, 50, 50, 100 };
@@ -480,7 +489,7 @@ namespace ImageProcessor
             imageInfo = info;
             string warn = canvas.LoadFile(imageInfo, replaceSpan);
             if (warn.Length > 0)
-                System.Windows.MessageBox.Show(warn, "loading " + imageInfo.FSPath + " failed"); 
+                System.Windows.MessageBox.Show(warn, "loading " + imageInfo.FSPath + " failed");
             UpdateLayerList(0);
             RescaleCanvas(true);
             Text = imageInfo.RealName + "  " + canvas.FrameSizeString;
@@ -498,13 +507,13 @@ namespace ImageProcessor
         {
             if (selectedIndex == ind)
                 return false;
-            selectedIndex = ind;
             SetLayerListColors();
             VisualLayer oldActiveLayer = canvas.ActiveLayer;
             if (!canvas.SetActiveLayer(ind))
                 return false;
-            if (oldActiveLayer == null || oldActiveLayer.Type != canvas.ActiveLayer.Type)
+            if (selectedIndex < 0 || oldActiveLayer.Type != canvas.ActiveLayer.Type)
                 CreateToolButtons(canvas.ActiveLayer);
+            selectedIndex = ind;
             ResetColorControls();
             suspendUpdate = true;
             layerGroupBox.Text = canvas.ActiveLayer.Name;

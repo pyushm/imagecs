@@ -637,7 +637,7 @@ namespace ImageProcessor
             if (!strokeEdit || mouseAction == MouseOperation.None)
             {
                 mouseAction = MouseOperation.None;
-                if (panelHolder.ToolMode == ToolMode.RectSelection || panelHolder.ToolMode == ToolMode.FreeSelection && collectedPolygon != null)
+                if ((panelHolder.ToolMode == ToolMode.RectSelection || panelHolder.ToolMode == ToolMode.FreeSelection) && collectedPolygon != null)
                 {
                     collectedPolygon.Clear();
                     collectedPolygon.Add(collectedPolygon.FromDrawing.Transform(position));
@@ -669,8 +669,10 @@ namespace ImageProcessor
                 return;
             if (strokeEdit && mouseAction == MouseOperation.Stroke)
                 strokeEditor.MouseMove(e, lastShift);
-            else if (mouseAction == MouseOperation.Add && collectedPolygon != null)
+            else if (mouseAction == MouseOperation.Add && collectedPolygon != null && panelHolder.ToolMode == ToolMode.FreeSelection)
                 collectedPolygon.Add(collectedPolygon.FromDrawing.Transform(position));
+            else if (mouseAction == MouseOperation.Add && collectedPolygon != null && panelHolder.ToolMode == ToolMode.RectSelection)
+                collectedPolygon.SetRectangle(collectedPolygon.FromDrawing.Transform(position));
             else if (MouseAction.IsLineOperation(mouseAction) && CropRectangle != null && CropRectangle.Update(mouseAction, CropRectangle.FromDrawing.Transform(position)))
                 panelHolder.CropRectangleUpdated();
             else if (IsActiveLayerVisible)
@@ -769,13 +771,21 @@ namespace ImageProcessor
             Mouse.OverrideCursor = Cursors.Arrow;
             if (mouseAction == MouseOperation.Add && collectedPolygon != null)
             {
-                collectedPolygon.Close(collectedPolygon.FromDrawing.Transform(position));
                 if (!collectedPolygon.IsEmpty)
                 {
-
-                    double len = Math.Sqrt(frameLayoutSize.Width + frameLayoutSize.Height) / 2;
-                    Polygon src = collectedPolygon.CreateShortPolygon(len);
-                    Selection = new FlexiblePolygon(src);
+                    bool rect = panelHolder.ToolMode == ToolMode.RectSelection;
+                    if (rect)
+                    {
+                        collectedPolygon.SetRectangle(collectedPolygon.FromDrawing.Transform(position));
+                        Selection = FlexiblePolygon.CreateFromRect(collectedPolygon);
+                    }
+                    else
+                    {
+                        collectedPolygon.Close(collectedPolygon.FromDrawing.Transform(position));
+                        double len = Math.Sqrt(frameLayoutSize.Width + frameLayoutSize.Height) / 2;
+                        Polygon src = collectedPolygon.CreateShortPolygon(len);
+                        Selection = new FlexiblePolygon(src);
+                    }
                     double l = Selection.TotalLength() / Selection.Count;
                     Int32Rect ir = Selection.IntRect(0);
                     if (!ir.IsEmpty)

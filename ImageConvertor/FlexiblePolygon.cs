@@ -170,6 +170,12 @@ namespace ImageProcessor
             double y = c0 * p0.Y + c1 * p1.Y + c2 * p2.Y + c3 * p3.Y;
             return new Point(x, y);
         }
+        public static FlexiblePolygon CreateFromRect(Polygon controlPoints)
+        {
+            Polygon poly = new Polygon(controlPoints.Target);
+            poly.Poly.AddRange(controlPoints.Poly);
+            return new FlexiblePolygon(poly, PointProperties.Sharp);
+        }
         public FlexiblePolygon(StorePointDecoder spd, IntSize sz) : base(spd.poly, sz)
         {
             InitPoly();
@@ -180,25 +186,25 @@ namespace ImageProcessor
         public FlexiblePolygon(Polygon controlPoints, Color color, double thickness) : base(controlPoints)
         {
             InitPoly();
-            for (int i = 0; i < poly.Count; i++)
+            for (int i = 0; i < Poly.Count; i++)
                 proprties.Add(PointProperties.Normal);
             SetPen(color, thickness);
         }
-        public FlexiblePolygon(Polygon controlPoints) : base(controlPoints)
+        public FlexiblePolygon(Polygon controlPoints, int pp = PointProperties.Normal) : base(controlPoints)
         {
             InitPoly();
-            for (int i = 0; i < poly.Count; i++)
-                proprties.Add(PointProperties.Normal);
+            for (int i = 0; i < Poly.Count; i++)
+                proprties.Add(pp);
         }
         void InitPoly()
         {
-            Closed = poly.Count > 0 && poly[0] == poly[poly.Count - 1];
+            Closed = Poly.Count > 0 && Poly[0] == Poly[Poly.Count - 1];
             if (Closed)
-                poly.RemoveAt(poly.Count - 1);
-            proprties = new List<PointProperties>(poly.Count);
+                Poly.RemoveAt(Poly.Count - 1);
+            proprties = new List<PointProperties>(Poly.Count);
         }
-        public void AddPoint(int i, Point p) { poly.Insert(i, p); proprties.Insert(i, PointProperties.Normal); }
-        public void RemovePoint(int ind) { poly.RemoveAt(ind); proprties.RemoveAt(ind); }
+        public void AddPoint(int i, Point p) { Poly.Insert(i, p); proprties.Insert(i, PointProperties.Normal); }
+        public void RemovePoint(int ind) { Poly.RemoveAt(ind); proprties.RemoveAt(ind); }
         public void AddProperty(int ind, int prop) { proprties[ind] = proprties[ind].Add(prop); }
         public void AddProperty(int prop) { for (int i = 0; i < proprties.Count; i++) AddProperty(i, prop); }
         public void RemoveProperty(int ind, int prop) { proprties[ind] = proprties[ind].Remove(prop); }
@@ -208,8 +214,8 @@ namespace ImageProcessor
         public PointProperties Property(int ind) { return proprties[ind]; }
         public int HitPointTest(Point tp)
         {
-            for (int i = 0; i < poly.Count; i++)
-                if ((tp - ToDrawing.Value.Transform(poly[i])).Length < Smoother.MarkerSize)
+            for (int i = 0; i < Poly.Count; i++)
+                if ((tp - ToDrawing.Value.Transform(Poly[i])).Length < Smoother.MarkerSize)
                     return i;
             return -1;
         }
@@ -225,7 +231,7 @@ namespace ImageProcessor
         int ContourPoints(List<Point> pl, Point tp)
         {
             if (pl != null)
-                PathGeometry = Smoother.BezierPath(this, poly.ToArray()); // in image coordinates
+                PathGeometry = Smoother.BezierPath(this, Poly.ToArray()); // in image coordinates
             int ind = pathOffsetInd;
             if (PathGeometry == null)
                 return -1;
@@ -259,16 +265,16 @@ namespace ImageProcessor
         public bool MoveSelectedPoints(Vector d)
         {
             List<int> selected = new List<int>();
-            for (int i = 0; i < poly.Count; i++)
+            for (int i = 0; i < Poly.Count; i++)
                 if (proprties[i].Has(PointProperties.Selected))
                     selected.Add(i);
             if (selected.Count == 1)
             {
                 int si = selected[0];
-                poly[si] += d;
-                Point siCanvas = ToDrawing.Value.Transform(poly[si]);
-                for (int i = 0; i < poly.Count; i++)
-                    if (i != si && (siCanvas - ToDrawing.Value.Transform(poly[i])).LengthSquared < Smoother.l2max)
+                Poly[si] += d;
+                Point siCanvas = ToDrawing.Value.Transform(Poly[si]);
+                for (int i = 0; i < Poly.Count; i++)
+                    if (i != si && (siCanvas - ToDrawing.Value.Transform(Poly[i])).LengthSquared < Smoother.l2max)
                     {
                         RemovePoint(si);
                         return true;
@@ -276,10 +282,10 @@ namespace ImageProcessor
                 return false;
             }
             for (int s = 0; s < selected.Count; s++)
-                poly[selected[s]] += d;
+                Poly[selected[s]] += d;
             return false;
         }
-        bool ValidIndex(int ind) { return ind >= 0 && ind < poly.Count; }
+        bool ValidIndex(int ind) { return ind >= 0 && ind < Poly.Count; }
         public override void Draw(DrawingContext g, Brush brush, Pen pen)
         {
             if (Pen == null)
@@ -292,16 +298,16 @@ namespace ImageProcessor
         public string ToPropertiesString()
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("points=" + poly.Count + " proprties=" + proprties.Count);
-            for (int i = 0; i < Math.Min(proprties.Count, poly.Count); i++)
+            sb.AppendLine("points=" + Poly.Count + " proprties=" + proprties.Count);
+            for (int i = 0; i < Math.Min(proprties.Count, Poly.Count); i++)
             {
                 sb.Append(i);
                 sb.Append(' ');
                 sb.Append(proprties[i].ToString());
                 sb.Append("-p=");
-                sb.Append(poly[i].X.ToString("f1"));
+                sb.Append(Poly[i].X.ToString("f1"));
                 sb.Append(',');
-                sb.AppendLine(poly[i].Y.ToString("f1"));
+                sb.AppendLine(Poly[i].Y.ToString("f1"));
             }
             return sb.ToString();
         }
