@@ -197,6 +197,7 @@ namespace ImageProcessor
         public BitmapLayer(string name) : base(name) { }    // for derivation
         public BitmapLayer(string name, BitmapAccess ba) : base(name) { SetImage(ba, -1); }
         public BitmapLayer(string name, BitmapAccess ba, int edge) : base(name) { SetImage(ba, edge); }
+        public void UpdateImage() { image = new BitmapAccess(Image.Source.Clone(), Image.Origin); }
         public void SetImage(BitmapAccess ba, int transparentEdge)
         {
             if (ba == null)
@@ -220,7 +221,7 @@ namespace ImageProcessor
                     bool borderSet = false;
                     colorTransform = new ColorTransform(borderColor);
                     transparencyMask = new ByteMatrix(0, 0);
-                    image = image.AdjustedPArgbImage(colorTransform, transparencyMask, ref borderSet);
+                    image = new BitmapAccess(image.AdjustedPArgbImage(colorTransform, transparencyMask, ref borderSet), image.Origin);
                     if (borderSet)
                     {
                         ByteMatrix filter = ByteMatrix.CreateConeFilter(transparentEdge);

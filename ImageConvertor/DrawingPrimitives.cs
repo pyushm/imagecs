@@ -312,7 +312,7 @@ namespace ImageProcessor
                 else
                     p.X = x > 0 ? Target.Width : 0;
             }
-            Point p0 = Poly[0];
+            Point p0 = Count > 0 ? Poly[0] : p;
             Poly = new List<Point>(5);
             Poly.Add(p0);
             Poly.Add(new Point(p0.X, p.Y));

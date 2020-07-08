@@ -219,19 +219,8 @@ namespace ImageProcessor
                     return i;
             return -1;
         }
-        public int HitContourTest(Point tp) { return ContourPoints(null, tp); }
-        public Polygon Contour()
+        public int HitContourTest(Point tp)
         {
-            List<Point> pl = new List<Point>();
-            ContourPoints(pl, new Point());
-            Polygon pol = new Polygon(this);
-            pol.Poly = pl;
-            return pol;
-        }
-        int ContourPoints(List<Point> pl, Point tp)
-        {
-            if (pl != null)
-                PathGeometry = Smoother.BezierPath(this, Poly.ToArray()); // in image coordinates
             int ind = pathOffsetInd;
             if (PathGeometry == null)
                 return -1;
@@ -240,29 +229,59 @@ namespace ImageProcessor
                 Point p0 = pf.StartPoint;
                 for (int i = 0; i < pf.Segments.Count; i++)
                 {
-                    BezierSegment segm = (BezierSegment)pf.Segments[i];
-                    pl?.Add(p0);
-                    Point p3 = segm.Point3;
-                    double d = (p3 - p0).Length;
-                    int n = (int)(d / (pl == null ? Smoother.MarkerSize : Smoother.BezierPointsDistance));
-                    if (n < 2)
-                        continue;
-                    double dt = 1.0 / n;
-                    if (pl != null)
+                    Point pend = new Point();
+                    if (pf.Segments[i] is BezierSegment)
+                    {
+                        BezierSegment segm = pf.Segments[i] as BezierSegment;
+                        pend = segm.Point3;
+                        double d = (pend - p0).Length;
+                        int n = (int)(d / Smoother.MarkerSize);
+                        if (n < 2)
+                            continue;
+                        double dt = 1.0 / n;
                         for (double t = dt; t < 1; t += dt)
-                            pl.Add(BezierPoint(p0, segm, t));
-                    for (double t = dt; t < 1; t += dt)
-                        if ((BezierPoint(p0, segm, t) - tp).LengthSquared < Smoother.l2max)
-                            return ind < Count ? ind : ind - Count;
+                            if ((BezierPoint(p0, segm, t) - tp).LengthSquared < Smoother.l2max)
+                                return ind < Count ? ind : ind - Count;
+                    }
                     ind++;
-                    p0 = p3;
+                    p0 = pend;
                 }
-                //ind++;
-                pl?.Add(p0);
             }
             return -1;
         }
-        public bool MoveSelectedPoints(Vector d)
+        public Polygon Contour()
+        {
+            List<Point> pl = new List<Point>();
+            PathGeometry = Smoother.SmoothPath(this, Poly.ToArray()); // in image coordinates
+            foreach (PathFigure pf in PathGeometry.Figures)
+            {
+                Point p0 = pf.StartPoint;
+                pl.Add(p0);
+                for (int i = 0; i < pf.Segments.Count; i++)
+                {
+                    if (pf.Segments[i] is BezierSegment)
+                    {
+                        BezierSegment segm = pf.Segments[i] as BezierSegment;
+                        double d = (segm.Point3 - p0).Length;
+                        int n = (int)(d / Smoother.BezierPointsDistance);
+                        if (n < 2)
+                            continue;
+                        double dt = 1.0 / n;
+                        if (pl != null)
+                            for (double t = 0; t < 1; t += dt)
+                                pl.Add(BezierPoint(p0, segm, t));
+                        p0 = segm.Point3;
+                    }
+                    else if (pf.Segments[i] is LineSegment)
+                        p0 = (pf.Segments[i] as LineSegment).Point;
+                }
+                pl.Add(p0);
+            }
+            Polygon pol = new Polygon(this);
+            pol.Poly = pl;
+            return pol;
+        }
+            public bool MoveSelectedPoints(Vector d)
         {
             List<int> selected = new List<int>();
             for (int i = 0; i < Poly.Count; i++)
@@ -357,20 +376,20 @@ namespace ImageProcessor
         {
             smoothness = smoothness_;
             MarkerSize = markerSize_;
-            l2max = 2 * MarkerSize * MarkerSize;
+            l2max = MarkerSize * MarkerSize;
         }
         public void DrawPoly(DrawingContext g, FlexiblePolygon curve, bool showMarkers)
         {
             Point[] points = curve.Poly.ToArray();
             if(curve.ToDrawing != null)
                 curve.ToDrawing.Value.Transform(points);
-            curve.PathGeometry = BezierPath(curve, points); // points, proprties, closed); // in canvas coordinates
+            curve.PathGeometry = SmoothPath(curve, points); // points, proprties, closed); // in canvas coordinates
             g.DrawGeometry(null, curve.Pen, curve.PathGeometry);
             if(showMarkers)
                 for (int i = 0; i < curve.Poly.Count; i++)
                     DrawMarker(g, points[i], curve.Property(i), curve.Pen);
         }
-        internal PathGeometry BezierPath(FlexiblePolygon curve, Point[] points)
+        internal PathGeometry SmoothPath(FlexiblePolygon curve, Point[] points)
         {
             List<PathFigure> paths = new List<PathFigure>();
             int nPoints = points.Length;
@@ -403,12 +422,16 @@ namespace ImageProcessor
             for (int i = beginInd + 1; i < last; i++)
             {
                 int ind = i < nPoints ? i : i - nPoints;
-                pc.Add(points[ind]);
+                Point end = points[ind];
+                pc.Add(end);
                 if (curve.Property(ind).Has(PointProperties.Sharp))
                 {
-                    paths.Add(new PathFigure(begin, CubicSpline(pc.ToArray(), false), false));
+                    if(pc.Count == 2)
+                        paths.Add(new PathFigure(begin, new LineSegment[] { new LineSegment(end, true)}, false));
+                    else
+                        paths.Add(new PathFigure(begin, CubicSpline(pc.ToArray(), false), false));
                     pc.Clear();
-                    begin = points[ind];
+                    begin = end;
                     pc.Add(begin);
                 }
             }

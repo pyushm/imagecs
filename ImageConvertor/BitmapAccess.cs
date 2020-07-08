@@ -215,10 +215,7 @@ namespace ImageProcessor
                 return Colors.Black;
             return GetPixel(i, j);
         }
-        public Color GetColor(Point pt)
-        {
-            return GetColorFromPixel(new Point(pt.X * source.DpiX / 96, pt.Y * source.DpiY / 96));
-        }
+        public Color GetColor(Point pt) { return GetColorFromPixel(new Point(pt.X * source.DpiX / 96, pt.Y * source.DpiY / 96)); }
         public void UpdateTransparency(ByteMatrix mask)
         {
             if (PixelFormat != PixelFormats.Pbgra32 || mask == null)
@@ -259,7 +256,11 @@ namespace ImageProcessor
             WriteableBitmap from = src.Source;
             WriteableBitmap to = Source;
             if (from == null || to == null || bytespp < 4 || from.Format != PixelFormats.Pbgra32)
-                return;
+            {
+                bool borderSet = false;
+                if (PixelFormat != PixelFormats.Pbgra32)
+                    source = to = AdjustedPArgbImage(null, null, ref borderSet);
+            }
             from.Lock();
             to.Lock();
             int h = from.PixelHeight / scale;
@@ -527,17 +528,11 @@ namespace ImageProcessor
                 newColors[3] = transparency;
             return CreateFromColorMatrixes(newColors);
         }
-        public BitmapAccess ToPArgbImage()
+        public WriteableBitmap AdjustedPArgbImage(ColorTransform transform, ByteMatrix mask, ref bool transparencySet)
         {
-            bool transparencySet = false;
-            return AdjustedPArgbImage(new ColorTransform(), null, ref transparencySet);
-        }
-        public BitmapAccess AdjustedPArgbImage(ColorTransform transform, ByteMatrix mask, ref bool transparencySet)
-        {
-            if (transform.IsIdentical && (PixelFormat == PixelFormats.Pbgra32 || PixelFormat == PixelFormats.Bgra32))
-                return Clone();
-            bool makeTransparent = transform.IsColorSet;
-            bool alphaIgnored = makeTransparent || (PixelFormat != PixelFormats.Pbgra32 && PixelFormat != PixelFormats.Bgra32);
+            if ((transform == null || transform.IsIdentical) && (PixelFormat == PixelFormats.Pbgra32 || PixelFormat == PixelFormats.Bgra32))
+                return source.Clone();
+            bool alphaIgnored = (transform != null && transform.IsColorSet) || (PixelFormat != PixelFormats.Pbgra32 && PixelFormat != PixelFormats.Bgra32);
             WriteableBitmap bmn = new WriteableBitmap(Width, Height, 96, 96, PixelFormats.Pbgra32, null);
             bmn.Lock();
             if (mask != null)
@@ -578,7 +573,7 @@ namespace ImageProcessor
                             }
                             if (alphaIgnored)
                                 a = byte.MaxValue;
-                            transform.Apply(ref a, ref r, ref g, ref b);
+                            transform?.Apply(ref a, ref r, ref g, ref b);
                             if (mask != null)
                             {
                                 mask[i, j] = a;
@@ -600,7 +595,7 @@ namespace ImageProcessor
             //TimeSpan t = DateTime.Now - to;
             //Console.WriteLine("AdjustedPArgbImage=" + t.TotalMilliseconds);
             transparencySet = flag;
-            return new BitmapAccess(bmn, BitmapOrigin.Memory);
+            return bmn;
         }
         public System.Drawing.Bitmap ConverToBitmap()
         {

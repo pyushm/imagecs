@@ -603,8 +603,9 @@ namespace ImageProcessor
                 BitmapAccess src = srcLayer.Image;
                 System.Windows.Point c = srcLayer.MatrixControl.Center;
                 c = canvas.FromCanvas.Transform(c);
-                bl.SetImage(bl.Image.ToPArgbImage(), 0);
                 bl.Image.Overwrite(src, (int)c.X - src.Width / 2, (int)c.Y - src.Height / 2, scale);
+                bl.UpdateImage();
+                bl.RedrawImage();
                 UpdateLayerList(canvas.RemoveActiveLayer());
             }
         }

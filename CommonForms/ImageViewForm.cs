@@ -566,13 +566,13 @@ namespace ImageProcessor
                     else
                         System.Windows.MessageBox.Show(warn, "loading " + imageInfo.FSPath + " failed");
                 }
-                canvas.SetActiveLayer(0);
                 backgroundLayer = canvas.BackgroundLayer;
                 sameTransformButton.Checked = false;
                 if(!colorTransform.IsIdentical)
                     previousColorTransform.CopyFrom(colorTransform);
                 colorTransform.Set();
                 SetInitialState();
+                canvas.SetActiveLayer(0);
                 SetWindowTitle();
                 ResetColorControls();
                 ShowGeometryTransformParameters();
