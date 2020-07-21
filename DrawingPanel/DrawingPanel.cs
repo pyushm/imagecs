@@ -339,7 +339,7 @@ namespace ImageProcessor
             if (ActiveLayer == null)
                 return;
             tools.Clear();
-            if (panelHolder.ToolMode == ToolMode.Distortion)
+            if (panelHolder.ToolMode == ToolMode.Distortion3D)
                 tools.AddVisual(ActiveLayer.MatrixControl.ToVisual(toolBrush, toolPen));
             else if (panelHolder.ToolMode == ToolMode.Morph)
                 tools.AddVisual(morphControl.ToVisual(toolBrush, toolPen));
@@ -650,7 +650,7 @@ namespace ImageProcessor
                 else if (panelHolder.ToolMode == ToolMode.InfoImage)
                     mouseAction = MouseAction.OperationFromMouse;
                 else if (IsActiveLayerVisible)
-                    mouseAction = panelHolder.ToolMode == ToolMode.Distortion ? ActiveLayer.MatrixControl.OperationFromPoint(position) :
+                    mouseAction = panelHolder.ToolMode == ToolMode.Distortion3D ? ActiveLayer.MatrixControl.OperationFromPoint(position) :
                         panelHolder.ToolMode == ToolMode.Morph ? morphControl.OperationFromPoint(position) :
                         panelHolder.ToolMode == ToolMode.None ?  MouseAction.OperationFromMouse :
                         MouseOperation.None;

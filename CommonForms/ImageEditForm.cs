@@ -35,8 +35,8 @@ namespace ImageProcessor
             Gap45 = 45,
             Gap70 = 70,
         }
-        string[] imageModes = new string[] { ToolMode.None.ToString(), ToolMode.Distortion.ToString(), ToolMode.Morph.ToString(), ToolMode.FreeSelection.ToString(), ToolMode.Crop.ToString() };
-        string[] drawingeModes = new string[] { ToolMode.None.ToString(), ToolMode.Distortion.ToString(), ToolMode.StrokeEdit.ToString() };
+        string[] imageModes = new string[] { ToolMode.None.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.Morph.ToString() };//, ToolMode.FreeSelection.ToString(), ToolMode.Crop.ToString() };
+        string[] drawingeModes = new string[] { ToolMode.None.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.StrokeEdit.ToString() };
         private System.ComponentModel.Container components = null;
         private ValueControl saturationControl;
         private RangeControl brightnessControl;
@@ -54,6 +54,7 @@ namespace ImageProcessor
         float dpiScaleY = 1;
         int viewingAreaOffset;				// viewing area offset from left of client rectangle
         ImageFileInfo imageInfo;            // image file info
+        string savePath = null;
         // image processing members
         public ToolMode ToolMode { get; private set; } // mouse mode
         int selectedIndex;                  // index of selected layer in layerListView
@@ -367,7 +368,6 @@ namespace ImageProcessor
             panel.Size = new System.Drawing.Size(ClientSize.Width - viewingAreaOffset, ClientSize.Height);
             selectedIndex = -1;       // nothing selected
             KeyDown += CaptureKeyboard;
-            //saveSameLocationButton.Enabled = false;
             scaleBox.Items.AddRange(Enum.GetNames(typeof(ImageScale)));
             edgeGapBox.Items.AddRange(Enum.GetNames(typeof(EdgeGap)));
             scaleBox.SelectedIndex = 0;
@@ -380,12 +380,13 @@ namespace ImageProcessor
                 new MenuItem("Edges", delegate(object s, EventArgs e) { AddEffectLayer("Edge", new EdgeEffect()); }),
                 new MenuItem("Drawing", delegate(object s, EventArgs e) { UpdateLayerList(canvas.AddStrokeLayer("Drawing")); } ),
                 new MenuItem("Sharpness", delegate (object s, EventArgs e) { AddEffectLayer("Sharpness", new GradientContrastEffect()); }),
-                new MenuItem("ViewPoint", delegate (object s, EventArgs e) { AddEffectLayer("ViewPoint", new ViewPointEffect()); }),
+                //new MenuItem("ViewPoint", delegate (object s, EventArgs e) { AddEffectLayer("ViewPoint", new ViewPointEffect()); }),
                 new MenuItem("Remove odd", delegate (object s, EventArgs e) { AddNoOddsLayer(); }),
                 new MenuItem("To background", delegate (object s, EventArgs e) { CopyToBackground(1); }),
                 new MenuItem("To back 1/2", delegate (object s, EventArgs e) { CopyToBackground(2); }),
                 new MenuItem("Delete", new EventHandler(DeleteLayer)) });
             layerListView.ContextMenu = selectMenu;
+            layerListView.HideSelection = false;
             suspendUpdate = false;
             Load += ImageEditForm_Load;
         }
@@ -507,7 +508,6 @@ namespace ImageProcessor
         {
             if (selectedIndex == ind)
                 return false;
-            SetLayerListColors();
             VisualLayer oldActiveLayer = canvas.ActiveLayer;
             if (!canvas.SetActiveLayer(ind))
                 return false;
@@ -540,29 +540,12 @@ namespace ImageProcessor
                 lvi.Checked = l.Visibility == Visibility.Visible;
                 lvi.Tag = l;
                 layerListView.Items.Add(lvi);
+                lvi.EnsureVisible();
+                layerListView.Select();
             }
             SetActiveLayer(newIndex);
             userInput = true;
             return l;
-        }
-        void SetLayerListItemColor(ListViewItem lvi)
-        {
-            //Debug.WriteLine(lvi.Index.ToString()+" checked=" + lvi.Checked+" active="+ (lvi.Index == activeIndex));
-            if (lvi.Index == selectedIndex)
-            {
-                lvi.ForeColor = Color.White;
-                lvi.BackColor = Color.DarkBlue;
-            }
-            else
-            {
-                lvi.ForeColor = Color.Black;
-                lvi.BackColor = Color.White;
-            }
-        }
-        void SetLayerListColors()
-        {
-            foreach (ListViewItem lvi in layerListView.Items)
-                SetLayerListItemColor(lvi);
         }
         void AddEffectLayer(string name, ParametricEffect effect)
         {
@@ -632,28 +615,27 @@ namespace ImageProcessor
                 Debug.WriteLine(ex.Message);
             }
         }
-        int GetThickness()                  // retrieves tool thickness
-        {
-            try
-            {
-                NumericUpDown ic = (NumericUpDown)modeGroupBox.Controls["ThicknessInput"];
-                return (int)ic.Value;
-            }
-            catch { return 1; }
-        }
-        Color SetFromMediaColor(System.Windows.Media.Color nc)
-        {
-            return Color.FromArgb(nc.A, nc.R, nc.G, nc.B);
-        }
+        //int GetThickness()                  // retrieves tool thickness
+        //{
+        //    try
+        //    {
+        //        NumericUpDown ic = (NumericUpDown)modeGroupBox.Controls["ThicknessInput"];
+        //        return (int)ic.Value;
+        //    }
+        //    catch { return 1; }
+        //}
+        //Color SetFromMediaColor(System.Windows.Media.Color nc)
+        //{
+        //    return Color.FromArgb(nc.A, nc.R, nc.G, nc.B);
+        //}
         System.Windows.Media.Color SetMediaColor(Color nc)
         {
             return System.Windows.Media.Color.FromArgb(nc.A, nc.R, nc.G, nc.B);
         }
         void RescaleCanvas(bool initial) { canvas.Resize(initial, DisplayScale, panel.Width / dpiScaleX, panel.Height / dpiScaleY); }
-        void saveSameLocation_Click(object s, EventArgs e)
-        {
-        }
-        void saveButton_Click(object s, EventArgs e)
+        void saveSameLocation_Click(object s, EventArgs e) { save(savePath == null ? Path.GetDirectoryName(imageInfo.FSPath) : savePath); }
+        void saveButton_Click(object s, EventArgs e) { save(Path.GetDirectoryName(imageInfo.FSPath)); }
+        void save(string dir)
         {
             if (DisplayScale != 0)
             {   // to ensure that all background image saved
@@ -664,11 +646,12 @@ namespace ImageProcessor
             saveAsDialog.Filter = "regular|*.jpe|Exact|*.exa|MultiLayer|*.drw"; // safe format relies on this order 
             saveAsDialog.FilterIndex = imageInfo.IsMultiLayer ? 3 : imageInfo.IsExact ? 2 : 1;
             saveAsDialog.RestoreDirectory = true;
-            saveAsDialog.InitialDirectory = Path.GetDirectoryName(imageInfo.FSPath);
+            saveAsDialog.InitialDirectory = dir;
             if (saveAsDialog.ShowDialog() == DialogResult.OK)
             {
                 try
                 {
+                    savePath = Path.GetDirectoryName(saveAsDialog.FileName);
                     ImageFileInfo info = new ImageFileInfo(new FileInfo(ImageFileName.FSMangle(saveAsDialog.FileName)));
                     BitmapEncoder bitmapEncoder = info.IsExact ? (BitmapEncoder)new PngBitmapEncoder() : new JpegBitmapEncoder();
                     if (bitmapEncoder as JpegBitmapEncoder != null)
@@ -733,7 +716,6 @@ namespace ImageProcessor
                 SetActiveLayer(e.ItemIndex);
                 userInput = true;
             }
-            SetLayerListColors();
         }
         void TransformChanged(object o, EventArgs e)
         {
@@ -797,10 +779,7 @@ namespace ImageProcessor
         {
             if (canvas.ActiveLayer == null)
                 return;
-            MessageBoxResult res = System.Windows.MessageBox.Show("Are you sure you want to delete layer '" + canvas.ActiveLayer.Name + "'?",
-                "Delete headers warning", MessageBoxButton.YesNo);
-            if (res == MessageBoxResult.Yes)
-                UpdateLayerList(canvas.RemoveActiveLayer());
+            UpdateLayerList(canvas.RemoveActiveLayer());
         }
         void scaleBox_SelectedIndexChanged(object s, EventArgs e) { if (userInput) RescaleCanvas(true); }
         #region not ready

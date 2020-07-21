@@ -404,16 +404,16 @@ namespace ImageProcessor
             // 
             // panel
             // 
-            this.panel.Location = new System.Drawing.Point(139, 12);
+            this.panel.Location = new System.Drawing.Point(139, 0);
             this.panel.Name = "panel";
-            this.panel.Size = new System.Drawing.Size(973, 988);
+            this.panel.Size = new System.Drawing.Size(967, 988);
             this.panel.TabIndex = 84;
             // 
             // ImageViewForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1387, 1250);
+            this.ClientSize = new System.Drawing.Size(1382, 1237);
             this.Controls.Add(this.panel);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.angleCtrl);
@@ -471,10 +471,10 @@ namespace ImageProcessor
             brightnessControl.ControlPoints = new float[] { 50, 0, 50, 50, 50, 100 };
             viewingAreaOffset = panel.Location.X;
             panel.Size = new System.Drawing.Size(ClientSize.Width - viewingAreaOffset, ClientSize.Height);
-            nextImageButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles.NavigateTo(true)); };
-            previousImageButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles.NavigateTo(false)); };
-            nextSetButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles.NavigateToGroup(true)); };
-            previousSetButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles.NavigateToGroup(false)); };
+            nextImageButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles?.NavigateTo(true)); };
+            previousImageButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles?.NavigateTo(false)); };
+            nextSetButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles?.NavigateToGroup(true)); };
+            previousSetButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles?.NavigateToGroup(false)); };
             scaleCtrl.ValueChanged += delegate (object sender, EventArgs e) { GeometryTransformChanged(); };
             angleCtrl.ValueChanged += delegate (object sender, EventArgs e) { GeometryTransformChanged(); };
             saturationControl.ValueChanged += delegate (object sender, EventArgs e) { ColorTransformChanged(); };
@@ -502,6 +502,8 @@ namespace ImageProcessor
                 imageFiles = null;
                 nextImageButton.Enabled = false;
                 previousImageButton.Enabled = false;
+                nextSetButton.Enabled = false;
+                previousSetButton.Enabled = false;
             }
             saveTypeBox.DropDownClosed += new EventHandler(SaveTypeChanged);
             Load += ImageViewForm_Load;

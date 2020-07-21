@@ -13,13 +13,12 @@ namespace ImageProcessor
     public enum ToolMode
     {
         None,       // no tool - basic geometry transform
-        Distortion,
+        Distortion3D,
         FreeSelection,
         RectSelection,
         StrokeEdit,
         InfoImage,
         Crop,
-        Color,
         Morph,
     }
     public class VisualLayer : UIElement
