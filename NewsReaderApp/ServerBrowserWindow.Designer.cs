@@ -32,14 +32,14 @@
             this.checkServerBtn = new System.Windows.Forms.Button();
             this.newServerBox = new System.Windows.Forms.TextBox();
             this.serverList = new System.Windows.Forms.ListView();
-            this.columnHeader1 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader2 = new System.Windows.Forms.ColumnHeader();
+            this.columnHeader1 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader2 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.groupListlabel = new System.Windows.Forms.Label();
             this.groupList = new System.Windows.Forms.ListView();
-            this.columnHeader3 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader4 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader5 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader6 = new System.Windows.Forms.ColumnHeader();
+            this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader6 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.SuspendLayout();
             // 
             // statusBox
@@ -74,6 +74,7 @@
             this.columnHeader1,
             this.columnHeader2,
             this.columnHeader5});
+            this.serverList.HideSelection = false;
             this.serverList.Location = new System.Drawing.Point(12, 71);
             this.serverList.Name = "serverList";
             this.serverList.Size = new System.Drawing.Size(354, 136);
@@ -92,6 +93,11 @@
             this.columnHeader2.Text = "Result";
             this.columnHeader2.Width = 100;
             // 
+            // columnHeader5
+            // 
+            this.columnHeader5.Text = "Headers";
+            this.columnHeader5.Width = 52;
+            // 
             // groupListlabel
             // 
             this.groupListlabel.AutoSize = true;
@@ -107,9 +113,10 @@
             this.columnHeader3,
             this.columnHeader4,
             this.columnHeader6});
+            this.groupList.HideSelection = false;
             this.groupList.Location = new System.Drawing.Point(12, 241);
             this.groupList.Name = "groupList";
-            this.groupList.Size = new System.Drawing.Size(354, 375);
+            this.groupList.Size = new System.Drawing.Size(355, 646);
             this.groupList.TabIndex = 5;
             this.groupList.UseCompatibleStateImageBehavior = false;
             this.groupList.View = System.Windows.Forms.View.Details;
@@ -124,11 +131,6 @@
             this.columnHeader4.Text = "Max ID";
             this.columnHeader4.Width = 100;
             // 
-            // columnHeader5
-            // 
-            this.columnHeader5.Text = "Headers";
-            this.columnHeader5.Width = 52;
-            // 
             // columnHeader6
             // 
             this.columnHeader6.Text = "Articles";
@@ -138,15 +140,15 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(372, 620);
+            this.ClientSize = new System.Drawing.Size(379, 899);
             this.Controls.Add(this.statusBox);
             this.Controls.Add(this.groupList);
             this.Controls.Add(this.groupListlabel);
             this.Controls.Add(this.serverList);
             this.Controls.Add(this.newServerBox);
             this.Controls.Add(this.checkServerBtn);
-            this.MaximumSize = new System.Drawing.Size(380, 647);
-            this.MinimumSize = new System.Drawing.Size(380, 647);
+            this.MaximumSize = new System.Drawing.Size(395, 938);
+            this.MinimumSize = new System.Drawing.Size(395, 938);
             this.Name = "ServerBrowserWindow";
             this.Text = "Server Browser";
             this.ResumeLayout(false);

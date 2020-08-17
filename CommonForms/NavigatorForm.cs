@@ -186,7 +186,7 @@ namespace ImageProcessor
             // 
             this.oldTextBox.Location = new System.Drawing.Point(137, 47);
             this.oldTextBox.Name = "oldTextBox";
-            this.oldTextBox.Size = new System.Drawing.Size(182, 20);
+            this.oldTextBox.Size = new System.Drawing.Size(215, 20);
             this.oldTextBox.TabIndex = 5;
             // 
             // changeNameButton
@@ -376,18 +376,21 @@ namespace ImageProcessor
             // 
             // label5
             // 
-            this.label5.Location = new System.Drawing.Point(325, 79);
+            this.label5.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.label5.Location = new System.Drawing.Point(355, 76);
+            this.label5.Margin = new System.Windows.Forms.Padding(1);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(57, 21);
+            this.label5.Size = new System.Drawing.Size(27, 21);
             this.label5.TabIndex = 39;
             this.label5.Text = "new";
             this.label5.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // label1
             // 
-            this.label1.Location = new System.Drawing.Point(325, 48);
+            this.label1.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.label1.Location = new System.Drawing.Point(355, 44);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(57, 21);
+            this.label1.Size = new System.Drawing.Size(27, 21);
             this.label1.TabIndex = 38;
             this.label1.Text = "old";
             this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -396,7 +399,7 @@ namespace ImageProcessor
             // 
             this.newTextBox.Location = new System.Drawing.Point(137, 79);
             this.newTextBox.Name = "newTextBox";
-            this.newTextBox.Size = new System.Drawing.Size(182, 20);
+            this.newTextBox.Size = new System.Drawing.Size(214, 20);
             this.newTextBox.TabIndex = 37;
             // 
             // directoryNameBox
@@ -412,7 +415,7 @@ namespace ImageProcessor
             this.renameDirBtn.Name = "renameDirBtn";
             this.renameDirBtn.Size = new System.Drawing.Size(125, 21);
             this.renameDirBtn.TabIndex = 35;
-            this.renameDirBtn.Text = "Change directory name";
+            this.renameDirBtn.Text = "New directory name";
             // 
             // tabPage3
             // 

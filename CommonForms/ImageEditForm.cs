@@ -380,7 +380,7 @@ namespace ImageProcessor
                 new MenuItem("Edges", delegate(object s, EventArgs e) { AddEffectLayer("Edge", new EdgeEffect()); }),
                 new MenuItem("Drawing", delegate(object s, EventArgs e) { UpdateLayerList(canvas.AddStrokeLayer("Drawing")); } ),
                 new MenuItem("Sharpness", delegate (object s, EventArgs e) { AddEffectLayer("Sharpness", new GradientContrastEffect()); }),
-                //new MenuItem("ViewPoint", delegate (object s, EventArgs e) { AddEffectLayer("ViewPoint", new ViewPointEffect()); }),
+                new MenuItem("ViewPoint", delegate (object s, EventArgs e) { AddEffectLayer("Morth", new MorphEffect()); }),
                 new MenuItem("Remove odd", delegate (object s, EventArgs e) { AddNoOddsLayer(); }),
                 new MenuItem("To background", delegate (object s, EventArgs e) { CopyToBackground(1); }),
                 new MenuItem("To back 1/2", delegate (object s, EventArgs e) { CopyToBackground(2); }),

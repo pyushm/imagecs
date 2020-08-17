@@ -497,56 +497,6 @@ namespace ImageProcessor
             c.Draw(g, brush, pen);
         }
     }
-    public class MorthPoint
-    {
-        public Vector Shift;
-        public Point Center;
-        public Size Size;
-        public double Angle = 0;
-        public MorthPoint(Point center, double radius) { Center = center; Size = new Size(radius, radius); }
-    }
-    public class MorphControl : MouseAction // morph point control
-    {
-        MorthPoint morthPoint;
-        public MorphControl(MorthPoint mp) { morthPoint = mp; Center = mp.Center; }
-        Point shiftPos { get { return morthPoint.Size.Width * morthPoint.Shift + Center; } } // shift indicator location in canvas coordinates
-        public override MouseOperation OperationFromPoint(Point p)  // finds MouseOperation from point
-        {
-            if ((p - shiftPos).LengthSquared < 2 * mSize * mSize)
-                return MouseOperation.Morph;
-            return base.OperationFromPoint(p);
-        }
-        public Vector SetShift(Point p) { return morthPoint.Shift = (p - Center) / morthPoint.Size.Width; }
-        public void SetMorphArea(MouseOperation mouseAction, Point current, Point old)
-        {
-            int mouseActionInd = (int)mouseAction;
-            if (mouseActionInd < 0 || mouseActionInd >= iLoc.Length)
-                return;
-            if (mouseActionInd == 0)    // angle not implemented
-                return;
-            if (mouseActionInd == 1)
-            {
-                Center += (current - old);
-                morthPoint.Center = Center;
-                return;
-            }
-            var r = ScaleFromPoints(current, old);
-            morthPoint.Size.Height *= r;
-            morthPoint.Size.Width *= r;
-        }
-        public override void Draw(DrawingContext g, Brush brush, Pen pen)   // draws votexes
-        {
-            double a = morthPoint.Angle + Math.PI/4;
-            double w = morthPoint.Size.Width;
-            double h = morthPoint.Size.Height;
-            for (int i = 0; i < controls.Length; i++)
-                iLoc[i] = new Point((Math.Cos(a) * w * controls[i].X - Math.Sin(a) * h * controls[i].Y) + Center.X,
-                                    (Math.Sin(a) * w * controls[i].X + Math.Cos(a) * h * controls[i].Y) + Center.Y);
-            g.DrawEllipse(brush, pen, Center, w, h);
-            g.DrawEllipse(brush, null, shiftPos, mSize, mSize);
-            base.Draw(g, brush, pen);
-        }
-    }
     public class CropRect : MouseAction
     {
         double left=0;
@@ -607,18 +557,17 @@ namespace ImageProcessor
         Matrix matrix = new Matrix();
         protected double quadrantSize = 80; // input quadrant size
         public double RenderScale = 1;  // active layer render scale
-        double xFlip = 1;               // normal =1; flipped =-1:
         double angle = 0;               // in radians
         double shear = 0;
         double aspect = 1;
-        public double Flip { get { return xFlip; } }
+        public double Flip { get; private set; } = 1;
         public double Angle { get { return angle; } set { angle = value; changed = true; } }
         public double Shear { get { return shear; } set { shear = value; changed = true; } }
         public double Aspect { get { return aspect; } set { aspect = value; changed = true; } }
         public MatrixControl() { }
         public MatrixControl(double flip, double scale, double angle_, double aspect_, double shear_, Point center)
         {
-            xFlip = flip;
+            Flip = flip;
             RenderScale = scale;
             angle = angle_;
             aspect = aspect_;
@@ -630,14 +579,14 @@ namespace ImageProcessor
             MatrixControl src = new MatrixControl();
             src.Center = Center;
             src.RenderScale = RenderScale; 
-            src.xFlip = xFlip;
+            src.Flip = Flip;
             src.angle = angle;
             src.shear = shear;
             src.aspect = aspect;
             return src;
         }
-        public void FlipX() { xFlip = -xFlip; changed = true; }
-        public void FlipY() { xFlip = -xFlip; angle += Math.PI; changed = true; }
+        public void FlipX() { Flip = -Flip; changed = true; }
+        public void FlipY() { Flip = -Flip; angle += Math.PI; changed = true; }
         public void RotateRight() { angle -= Math.PI/2; changed = true; }
         public void RotateLeft() { angle += Math.PI/2; changed = true; }
         public Matrix GeometryMatrix { get { if (changed) UpdateMatrix(); return matrix; } }
@@ -667,7 +616,7 @@ namespace ImageProcessor
             {
                 Vector loc = iLoc[mouseActionInd] - Center;
                 inc = d * loc / loc.LengthSquared;
-                shear += xFlip * inc * (1 - 2 * (mouseActionInd % 2));
+                shear += Flip * inc * (1 - 2 * (mouseActionInd % 2));
                 shear = Math.Max(-0.9, Math.Min(0.9, shear));
             }
             else // lines
@@ -688,7 +637,7 @@ namespace ImageProcessor
             if (mouseActionInd < 0)
                 return false;
             if (mouseActionInd < iLoc.Length)
-                shear += xFlip * inc * (1 - 2 * (mouseActionInd % 2));
+                shear += Flip * inc * (1 - 2 * (mouseActionInd % 2));
             else
                 aspect /= 1 - inc * (1 - 2 * (mouseActionInd % 2));
             changed = true;
@@ -705,8 +654,8 @@ namespace ImageProcessor
             //             | cos/a-h*sin*a  h*cos/a-sin*a |   | M11  M21 |
             //     M=R*A*H=|                              | = |          |
             //             | h*cos*a+sin/a  cos*a+h*sin/a |   | M12  M22 |
-            matrix.M11 = xFlip * (ca / aspect + sa * shear * aspect) * shc;
-            matrix.M12 = xFlip * (ca * shear * aspect - sa / aspect) * shc;
+            matrix.M11 = Flip * (ca / aspect + sa * shear * aspect) * shc;
+            matrix.M12 = Flip * (ca * shear * aspect - sa / aspect) * shc;
             matrix.M21 = (ca * shear / aspect + sa * aspect) * shc;
             matrix.M22 = (ca * aspect - sa * shear / aspect) * shc;
             matrix.OffsetX = Center.X - matrix.M11 * Center.X - matrix.M21 * Center.Y;
@@ -728,7 +677,7 @@ namespace ImageProcessor
         }
         public override string ToString()
         {
-            return "center=[" + Center.X.ToString("f1") + ',' + Center.Y.ToString("f1") + "] flip=" + (xFlip > 0 ? 'N' : 'Y') + " scale=" +
+            return "center=[" + Center.X.ToString("f1") + ',' + Center.Y.ToString("f1") + "] flip=" + (Flip > 0 ? 'N' : 'Y') + " scale=" +
                 RenderScale.ToString("f2") + " angle=" + angle.ToString("f2") + " shear=" + shear.ToString("f2") + " aspect=" + aspect.ToString("f2");
         }
     }
@@ -746,6 +695,56 @@ namespace ImageProcessor
         {
             base.Draw(g, brush, pen);
             g.DrawEllipse(brush, null, distortionPos, mSize, mSize);
+        }
+    }
+    public class MorthPoint
+    {
+        public Vector Shift;
+        public Point Center;
+        public Size Size;
+        public double Angle = 0;
+        public MorthPoint(Point center, double radius) { Center = center; Size = new Size(radius, radius); }
+    }
+    public class MorphControl : MatrixControl // morph point control
+    {
+        MorthPoint morthPoint;
+        public MorphControl(MorthPoint mp) { morthPoint = mp; Center = mp.Center; }
+        Point shiftPos { get { return morthPoint.Size.Width * morthPoint.Shift + Center; } } // shift indicator location in canvas coordinates
+        public override MouseOperation OperationFromPoint(Point p)  // finds MouseOperation from point
+        {
+            if ((p - shiftPos).LengthSquared < 2 * mSize * mSize)
+                return MouseOperation.Morph;
+            return base.OperationFromPoint(p);
+        }
+        public Vector SetShift(Point p) { return morthPoint.Shift = (p - Center) / morthPoint.Size.Width; }
+        public void SetMorphArea(MouseOperation mouseAction, Point current, Point old)
+        {
+            int mouseActionInd = (int)mouseAction;
+            if (mouseActionInd < 0 || mouseActionInd >= iLoc.Length)
+                return;
+            if (mouseActionInd == 0)    // angle not implemented
+                return;
+            if (mouseActionInd == 1)
+            {
+                Center += (current - old);
+                morthPoint.Center = Center;
+                return;
+            }
+            var r = ScaleFromPoints(current, old);
+            morthPoint.Size.Height *= r;
+            morthPoint.Size.Width *= r;
+        }
+        public override void Draw(DrawingContext g, Brush brush, Pen pen)   // draws votexes
+        {
+            double a = morthPoint.Angle + Math.PI / 4;
+            double w = morthPoint.Size.Width;
+            double h = morthPoint.Size.Height;
+            for (int i = 0; i < controls.Length; i++)
+                iLoc[i] = new Point((Math.Cos(a) * w * controls[i].X - Math.Sin(a) * h * controls[i].Y) + Center.X,
+                                    (Math.Sin(a) * w * controls[i].X + Math.Cos(a) * h * controls[i].Y) + Center.Y);
+            g.DrawEllipse(brush, pen, Center, w, h);
+            g.DrawEllipse(brush, null, shiftPos, mSize, mSize);
+            base.Draw(g, brush, pen);
         }
     }
 }

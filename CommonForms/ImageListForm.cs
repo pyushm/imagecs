@@ -425,7 +425,7 @@ namespace ImageProcessor
         void EmptyDirHandler()
         {
             DirectoryInfo directory = sourceDir.DirInfo;
-            if (directory.GetDirectories().Length > 0)
+            if (!directory.Exists || directory.GetDirectories().Length > 0)
                 return;
             FileInfo[] files = directory.GetFiles();
             foreach(FileInfo fi in files)

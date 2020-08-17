@@ -21,7 +21,7 @@ namespace ImageProcessor
         #region Private Members
         static public int MatchRange = 100;  // maximum match difference percentage included into search results
         static ImageHash.Comparer imageInfoComparer = new ImageHash.Comparer(56);
-        string textPattern;
+        string[] textPatterns;   // 1 item - search for pattern in string; >1 - serch exact string for each item (1 extra char at the end allowed)
         static DirectoryInfo[] specialDirectories;
         SoundLike soundPattern;
         int searchDaysOld = int.MaxValue;
@@ -127,7 +127,8 @@ namespace ImageProcessor
         public SearchResult GenerateSearchList(SearchMode mode, DirectoryInfo start, string name, string daysOld)
         {
             soundPattern = mode == SearchMode.Sound ? new SoundLike(name) : null;
-            textPattern = mode == SearchMode.File || mode == SearchMode.Name ? name.ToLower() : null;
+            string textPattern = mode == SearchMode.File || mode == SearchMode.Name ? name.ToLower() : null;
+            textPatterns = textPattern.Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (mode == SearchMode.Image)
             {
                 if (activeImageName == null)
@@ -298,21 +299,48 @@ namespace ImageProcessor
             if (relativePath.Length == 0)
                 return;
             int totalDif = 0;
-            if (textPattern != null && textPattern.Length>0) // by name
+            if (textPatterns != null && textPatterns.Length>0) // by name
             {
-                int dif = int.MaxValue;
-                string item = ImageFileName.UnMangleText(dirNode.Name.ToLower());
-                string[] fields = item.Split(new char[] { ImageFileInfo.multiNameChar, ImageFileInfo.synonymChar });
-                foreach (string field in fields)
+                if (textPatterns.Length == 1)
                 {
-                    int ind = field.IndexOf(textPattern);
-                    if (ind < 0)
-                        continue;
-                    dif = (ind > 0 ? 10 : 0) + Math.Min(dif, 100 * Math.Abs(field.Length - textPattern.Length)) / (field.Length + textPattern.Length);
+                    string textPattern = textPatterns[0];
+                    int dif = int.MaxValue;
+                    string item = ImageFileName.UnMangleText(dirNode.Name.ToLower());
+                    string[] fields = item.Split(new char[] { ImageFileInfo.multiNameChar, ImageFileInfo.synonymChar });
+                    foreach (string field in fields)
+                    {
+                        int ind = field.IndexOf(textPattern);
+                        if (ind < 0)
+                            continue;
+                        dif = (ind > 0 ? 10 : 0) + Math.Min(dif, 100 * Math.Abs(field.Length - textPattern.Length)) / (field.Length + textPattern.Length);
+                    }
+                    if (dif == int.MaxValue)
+                        return;
+                    totalDif += dif;
                 }
-                if (dif == int.MaxValue)
-                    return;
-                totalDif += dif;
+                else
+                {
+                    int dif = int.MaxValue;
+                    foreach(string textPattern in textPatterns)
+                    {
+                        string item = ImageFileName.UnMangleText(dirNode.Name.ToLower());
+                        string[] fields = item.Split(new char[] { ImageFileInfo.multiNameChar, ImageFileInfo.synonymChar });
+                        foreach (string field in fields)
+                        {
+                            if(field.IndexOf(textPattern) != 0)
+                                continue;
+                            if (field.Length - textPattern.Length < 2)
+                            {
+                                dif = 0;
+                                break;
+                            }
+                        }
+                        if (dif == 0)
+                            break;
+                    }
+                    if (dif == int.MaxValue)
+                        return;
+                }
             }
             if (soundPattern != null && soundPattern != null)     // by sound
             {
@@ -373,22 +401,28 @@ namespace ImageProcessor
             bool matchingDirNotAdded = true;
             foreach (FileInfo file in files)
             {
-                int relevance = 0;
+                int difference = 0;
                 if (searchDaysOld != int.MaxValue) // by date
                 {
                     int difDays = (DateTime.Today - dirNode.LastWriteTime).Days;
                     if (difDays > searchDaysOld)
                         continue;
                     else
-                        relevance += difDays;
+                        difference += difDays;
                 }
                 string fn = ImageFileName.FSUnMangle(file.Name).ToLower();
                 string fnne = Path.GetFileNameWithoutExtension(fn);
-                if (textPattern != null) // by name
+                if (textPatterns != null) // by name
                 {
-                    if(!fnne.Contains(textPattern))
-                        continue;
-                    relevance += fnne.Length - textPattern.Length;
+                    int dif = int.MaxValue;
+                    foreach (string textPattern in textPatterns)
+                    {
+                        if (fnne.Contains(textPattern))
+                            dif = Math.Min(dif, fnne.Length - textPattern.Length);
+                    }
+                    if (textPatterns.Length > 1 && dif > 1)
+                        dif = int.MaxValue;
+                    difference += dif;
                 }
                 if (matchingDirNotAdded)
                 {
@@ -396,7 +430,7 @@ namespace ImageProcessor
                     matchingDirNotAdded = false;
                 }
                 //matchingDir?.AddFile((relativePath.Length == 0 ? fn : relativePath + '/' + fn), relevance);
-                matchingDir?.AddFile(fn, relevance);
+                matchingDir?.AddFile(fn, difference);
             }
         }
         #endregion

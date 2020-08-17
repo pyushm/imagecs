@@ -541,33 +541,35 @@ namespace ImageProcessor
         }
         public string SaveSingleImage(string fileName, int maxSize, BitmapEncoder bitmapEncoder, bool encrypt)
         {
-            try
+            byte[] data = SerializeImage(maxSize, bitmapEncoder);
+            FileInfo fi = new FileInfo(fileName);
+            bool originalSaved = true;
+            if (fi.Exists)
             {
-                byte[] data = SerializeImage(maxSize, bitmapEncoder);
-                FileInfo fi = new FileInfo(fileName);
-                if (fi.Exists)
+                try
                 {
+                    File.SetAttributes(lastImageFile, FileAttributes.Normal);
                     File.Delete(lastImageFile);
                     fi.MoveTo(lastImageFile);
+                    File.SetAttributes(lastImageFile, FileAttributes.Normal);
                 }
-                if (!DataAccess.WriteFile(fileName, data, encrypt))
+                catch
                 {
-                    fi = new FileInfo(lastImageFile);
-                    if (!fi.Exists || fileName == null)
-                        return "";
-                    fi.MoveTo(fileName);
-                    return DataAccess.Warning;
+                    originalSaved = false;
+                    return "Original not saved to lastImageFile: '" + fileName + "' not saved";
                 }
-                RenderTransform = Transform.Identity;
-                UpdateLayout();
-                return "";
             }
-            catch (Exception ex)
+            if (originalSaved && !DataAccess.WriteFile(fileName, data, encrypt))
             {
-                Debug.WriteLine(ex.Message);
-                Debug.WriteLine(ex.StackTrace);
-                return ex.Message;
+                fi = new FileInfo(lastImageFile);
+                if (!fi.Exists || fileName == null)
+                    return "";
+                fi.MoveTo(fileName);
+                return DataAccess.Warning;
             }
+            RenderTransform = Transform.Identity;
+            UpdateLayout();
+            return "";
         }
         IntSize ScaleToSize(CropRect rect, int maxSize)
         {

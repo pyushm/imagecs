@@ -601,6 +601,7 @@ namespace ImageProcessor
         #region Operations
         void deleteButton_Click(object s, EventArgs e)
         {
+            File.SetAttributes(imageInfo.FSPath, FileAttributes.Normal);
             if (imageModified)
             {
                 MessageBoxResult res = System.Windows.MessageBox.Show("Are you sure you want to delete current image?",
@@ -611,16 +612,23 @@ namespace ImageProcessor
             FileInfo fi = new FileInfo(imageInfo.FSPath);
             if (fi.Exists)
             {
-                deletedImageName = imageInfo.FSPath;
-                File.Delete(deletedImageFile);
-                if (parent == null)
-                    fi.MoveTo(deletedImageFile);
-                else
+                try
                 {
-                    fi.CopyTo(deletedImageFile);
-                    parent.DeleteActiveImage();
+                    deletedImageName = imageInfo.FSPath;
+                    File.Delete(deletedImageFile);
+                    if (parent == null)
+                        fi.MoveTo(deletedImageFile);
+                    else
+                    {
+                        fi.CopyTo(deletedImageFile);
+                        parent.DeleteActiveImage();
+                    }
+                    File.SetAttributes(deletedImageFile, FileAttributes.Normal);
                 }
-                File.SetAttributes(deletedImageFile, FileAttributes.Normal);
+                catch(Exception ex)
+                {
+                    System.Windows.Forms.MessageBox.Show(ex.Message, "Failed deleting " + deletedImageName);
+                }
             }
         }
         void restoreButton_Click(object sender, EventArgs e)
@@ -654,10 +662,17 @@ namespace ImageProcessor
         }
         void saveButton_Click(object s, EventArgs e)
         {
-            if (infoMode)
-                SaveImage(Path.Combine(Path.GetDirectoryName(imageInfo.FSPath), ImageFileName.InfoFileWithExtension(infoType)), -1, 100);
-            else
-                SaveImage(imageInfo.FSPath, resizeBox.Checked ? 2000 : 0, (qualityBox.Checked ? 87 : 75));
+            try
+            {
+                if (infoMode)
+                    SaveImage(Path.Combine(Path.GetDirectoryName(imageInfo.FSPath), ImageFileName.InfoFileWithExtension(infoType)), -1, 100);
+                else
+                    SaveImage(imageInfo.FSPath, resizeBox.Checked ? 2000 : 0, (qualityBox.Checked ? 87 : 75));
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show(ex.Message, "Failed saving " + imageInfo.FSPath);
+            }
         }
         void saveAsButton_Click(object s, EventArgs e)
         {
