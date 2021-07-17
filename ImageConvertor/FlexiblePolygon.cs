@@ -215,7 +215,7 @@ namespace ImageProcessor
         public int HitPointTest(Point tp)
         {
             for (int i = 0; i < Poly.Count; i++)
-                if ((tp - ToDrawing.Value.Transform(Poly[i])).Length < Smoother.MarkerSize)
+                if ((tp - ToDrawing.Value.Transform(Poly[i])).LengthSquared < Smoother.l2max)
                     return i;
             return -1;
         }
@@ -229,18 +229,22 @@ namespace ImageProcessor
                 Point p0 = pf.StartPoint;
                 for (int i = 0; i < pf.Segments.Count; i++)
                 {
-                    Point pend = new Point();
-                    if (pf.Segments[i] is BezierSegment)
+                    BezierSegment bsegm = pf.Segments[i] is BezierSegment ? pf.Segments[i] as BezierSegment : null;
+                    LineSegment lsegm = pf.Segments[i] is LineSegment ? pf.Segments[i] as LineSegment : null;
+                    Point pend = bsegm != null ? bsegm.Point3 : lsegm != null ? lsegm.Point : p0;
+                    double d = (pend - p0).Length;
+                    double dt = Smoother.MarkerSize / ((pend - p0).Length + 2);
+                    if (bsegm != null)
                     {
-                        BezierSegment segm = pf.Segments[i] as BezierSegment;
-                        pend = segm.Point3;
-                        double d = (pend - p0).Length;
-                        int n = (int)(d / Smoother.MarkerSize);
-                        if (n < 2)
-                            continue;
-                        double dt = 1.0 / n;
-                        for (double t = dt; t < 1; t += dt)
-                            if ((BezierPoint(p0, segm, t) - tp).LengthSquared < Smoother.l2max)
+                        for (double t = 0; t < 1; t += dt)
+                            if ((BezierPoint(p0, bsegm, t) - tp).LengthSquared < 2 * Smoother.l2max)
+                                return ind < Count ? ind : ind - Count;
+                    }
+                    if (lsegm != null)
+                    {
+                        Vector dv = pend - p0;
+                        for (double t = 0; t < 1; t += dt)
+                            if ((p0 + dv*t - tp).LengthSquared < 2 * Smoother.l2max)
                                 return ind < Count ? ind : ind - Count;
                     }
                     ind++;
@@ -250,7 +254,7 @@ namespace ImageProcessor
             return -1;
         }
         public Polygon Contour()
-        {
+        {   // contour of smoothed polygon (e.g. for selection)
             List<Point> pl = new List<Point>();
             PathGeometry = Smoother.SmoothPath(this, Poly.ToArray()); // in image coordinates
             foreach (PathFigure pf in PathGeometry.Figures)
@@ -281,7 +285,7 @@ namespace ImageProcessor
             pol.Poly = pl;
             return pol;
         }
-            public bool MoveSelectedPoints(Vector d)
+        public bool MoveSelectedPoints(Vector d)
         {
             List<int> selected = new List<int>();
             for (int i = 0; i < Poly.Count; i++)
@@ -410,7 +414,7 @@ namespace ImageProcessor
                     break;
                 }
             if (beginInd < 0)
-            {
+            {   // no sharp points
                 curve.pathOffsetInd = 0;
                 paths.Add(new PathFigure(points[0], CubicSpline(points, true), false));
                 return new PathGeometry(paths);

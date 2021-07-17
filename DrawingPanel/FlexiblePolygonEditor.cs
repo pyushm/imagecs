@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Diagnostics;
 
 namespace ImageProcessor
 {
@@ -14,9 +15,6 @@ namespace ImageProcessor
         int range = 5;                  // search range
         internal void SetEdgeDetector(BitmapAccess ba) { img = ba; }
         FlexiblePolygon activeStroke = null;
-        int activePointInd = -1;
-        int singlePointInd = -1;        // index of single moved point
-        MouseOperation editOperation;
         public BitmapAccess BackgroundImage { set { SetEdgeDetector(value); } }
         public FlexiblePolygonEditor(DrawingPanel panel_) { panel = panel_; }
         MenuItem CreateMenuItem(string title, ClickHandler handler)
@@ -27,109 +25,79 @@ namespace ImageProcessor
             mi.Click += new RoutedEventHandler(handler);
             return mi;
         }
-        bool ProcessStrokes(MouseButtonEventArgs e, FlexiblePolygon[] ss, Point canvasPoint)
+        internal bool MouseDown(MouseButtonEventArgs e, FlexiblePolygon[] ss, Point canvasPoint)
         {
-            FlexiblePolygon newActiveStroke = null;
-            int ind = -1;
             if (ss.Length == 0)
                 return false;
+            FlexiblePolygon newActiveStroke = null;
             if (ss.Length == 1)
-                activeStroke = newActiveStroke = ss[0];
-            if (activeStroke != null)
-            {
-                Point np = activeStroke.FromDrawing.Transform(canvasPoint);
-                ind = activeStroke.HitPointTest(canvasPoint); // i>=0 => point i hit
-                if (ind < 0 && e.ClickCount == 2)
-                {
-                    ind = activeStroke.HitContourTest(canvasPoint);
-                    if (ind >= 0)
-                        activeStroke.AddPoint(ind + 1, np);
-                    return true;
-                }
-                if (ind < 0)
-                    return false;
-                if (e.ClickCount == 2)
-                {
-                    activeStroke.InverseProperty(ind, PointProperties.Sharp);
-                    return true;
-                }
-            }
-            else
+                newActiveStroke = activeStroke = ss[0];
+            int sind = activeStroke != null ? activeStroke.HitContourTest(canvasPoint) : -1;  // segment index
+            if (sind < 0 && ss.Length > 1) // active stroke not hit and need to check other strokes
             {
                 foreach (var fp in ss)
                 {
-                    ind = fp.HitContourTest(canvasPoint);
-                    if (ind >= 0)
-                    {
+                    sind = fp.HitContourTest(canvasPoint);
+                    if (sind >= 0)
+                    {   // 'fp' hit @ sind
                         newActiveStroke = fp;
                         break;
                     }
                 }
             }
-            if (activeStroke != newActiveStroke && activeStroke != null) // unselect previous active stroke
-                activeStroke.RemoveProperty(PointProperties.Selected);
-            activeStroke = newActiveStroke;
-            if (activeStroke == null)
+            //Debug.WriteLine("segment " + sind + " hit");
+            if (sind < 0 || newActiveStroke == null)   // nothing hit
                 return false;
-            //activeStroke.AddProperty(PointProperties.Show);
-            activePointInd = ind;
-            if (e.ChangedButton == MouseButton.Left)
-            {   // single left click on point adds point to selected and starts moving selected points  
-                activeStroke.AddProperty(ind, PointProperties.Selected);
-                singlePointInd = ind;
-                editOperation = MouseOperation.Move;
-                Mouse.OverrideCursor = Cursors.Pen;
-                //Debug.WriteLine("move point "+ss.ToPropertiesString());
-            }
-            return true;
-        }
-        internal MouseOperation MouseDown(MouseButtonEventArgs e, FlexiblePolygon[] ss, Point canvasPoint)
-        {
-            editOperation = MouseOperation.None;
-            activePointInd = -1;
-            ProcessStrokes(e, ss, canvasPoint);
-            //Debug.WriteLine("SE down " + editOperation.ToString());
-            return editOperation == MouseOperation.None ? MouseOperation.None : MouseOperation.Stroke;
-        }
-        internal void MouseMove(MouseEventArgs e, Vector canvasShift)
-        {
-            if (editOperation == MouseOperation.Move)
+            if (activeStroke != newActiveStroke)
             {
-                if(panel.Selection != null)
-                {
-                    Vector shift = panel.Selection.FromDrawing.Value.Transform(canvasShift);
-                    if (panel.Selection.MoveSelectedPoints(shift))
-                        editOperation = MouseOperation.None;
-                }
-                //foreach (FlexiblePolygon ss in panel.Polygons)
-                //{
-                //    Vector shift = ss.FromDrawing.Value.Transform(canvasShift);
-                //    if (ss.MoveSelectedPoints(shift))
-                //        editOperation = MouseOperations.None;
-                //}
+                if (activeStroke != null) // unselect previous active stroke
+                    activeStroke.RemoveProperty(PointProperties.Selected);
+                activeStroke = newActiveStroke;
             }
-            //Debug.WriteLine("SE move " + editOperation.ToString());
+            int pind = activeStroke.HitPointTest(canvasPoint); // pind>=0 => point 'pind' hit
+            //Debug.WriteLine("point " + pind+" hit");
+            if (e.ClickCount == 2)
+            {
+                if (pind >= 0)
+                    activeStroke.InverseProperty(pind, PointProperties.Sharp);
+                else
+                    activeStroke.AddPoint(sind + 1, activeStroke.FromDrawing.Transform(canvasPoint));
+                return false;
+            }
+            if (e.ChangedButton != MouseButton.Left || pind < 0)
+                return false;
+            activeStroke.RemoveProperty(PointProperties.Selected);
+            activeStroke.AddProperty(pind, PointProperties.Selected);   // single left click on point marks point selected
+            //Debug.WriteLine("move point "+ss.ToPropertiesString());
+            return true;  // moving point starts   
+        }
+        internal bool MouseMove(MouseEventArgs e, Vector canvasShift)
+        {
+            if (panel.Selection != null)
+            {
+                Vector shift = panel.Selection.FromDrawing.Value.Transform(canvasShift);
+                if (panel.Selection.MoveSelectedPoints(shift))
+                    return false; // stop moving if point merged
+            }
+            //foreach (FlexiblePolygon ss in panel.Polygons)
+            //{ // edit contour drawing
+            //    Vector shift = ss.FromDrawing.Value.Transform(canvasShift);
+            //    if (ss.MoveSelectedPoints(shift))
+            //        editOperation = MouseOperations.None;
+            //}
+            return true;
         }
         internal void MouseUp(MouseButtonEventArgs e, Point mp)
         {
-            if (editOperation == MouseOperation.Move)
-            {   // ends operation
-                if (panel.Selection != null && singlePointInd >= 0)
-                {
-                    panel.Selection.RemoveProperty(singlePointInd, PointProperties.Selected);
-                    singlePointInd = -1;
-                }
-                //foreach (FlexiblePolygon ss in panel.Polygons)
-                //{
-                //    if (ss == activeStroke && singlePointInd >= 0)
-                //    {
-                //        ss.RemoveProperty(singlePointInd, PointProperties.Selected);
-                //        singlePointInd = -1;
-                //    }
-                //}
-                editOperation = MouseOperation.None;
-            }
-            Mouse.OverrideCursor = Cursors.Arrow;
+            ////foreach (FlexiblePolygon ss in panel.Polygons)
+            //{ // edit contour drawing
+            //    if (ss == activeStroke && singlePointInd >= 0)
+            //    {
+            //        ss.RemoveProperty(singlePointInd, PointProperties.Selected);
+            //        singlePointInd = -1;
+            //    }
+            //}
+            activeStroke.RemoveProperty(PointProperties.Selected);
             //Debug.WriteLine("SE up " + editOperation.ToString());
         }
         public int StickToEdge(FlexiblePolygon fp, double del)

@@ -218,6 +218,7 @@ namespace ImageProcessor
                     RealName = NameWithoutTempPrefix(RealName);
                 else if (IsInfoImage)
                     RealName = UnMangleText(fsi.Directory.Name) + '_' + RealName[1];
+                    //RealName = UnMangleText(fsi.Directory.Name) + '_' + RealName[1];
                 else if (header)
                     RealName = Path.GetFileName("dir_" + fsi.DirectoryName);
             }

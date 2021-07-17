@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Windows.Media;
 using System.Diagnostics;
 
 namespace ImageProcessor
@@ -64,6 +65,15 @@ namespace ImageProcessor
                     notifyFinal?.Invoke(messages);
             }
         }
+        public string ResizeImage(string fullPath, bool exact, double maxSize, bool encrypted)
+        {
+            var ba = BitmapAccess.LoadImage(fullPath, encrypted);
+            double scale = ba.ReducedImageScale(maxSize);
+            if (scale >= 1)
+                return ""; // image already smaller than maxSize
+            var bs = new BitmapAccess(ba.Source, new ScaleTransform(scale, scale));
+            return bs.SaveToFile(fullPath, exact, encrypted);
+        }
         public void AdjustFiles(DirectoryInfo directory, string relativePath)
         {
             if (stopFlag || adjustmentType == ImageAdjustmentType.None)
@@ -91,7 +101,7 @@ namespace ImageProcessor
                             resezeError = true;
                         else
                         {
-                            string ret = BitmapAccess.ResizeImage(file.FullName, ifi.IsExact, 2000);
+                            string ret = ResizeImage(file.FullName, ifi.IsExact, 2000, ifi.IsEncrypted);
                             if (ret.Length > 0)
                                 ReportResults(ret);
                         }

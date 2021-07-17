@@ -19,14 +19,6 @@ namespace ImageProcessor
         CrossDifference,
         SharrGradient,
     }
-    public enum BitmapOrigin
-    {
-        File,
-        Selection,
-        Memory,
-        Clipboard,
-        LoadingFailed
-    }
     public class BitmapAccess
     {   // base class for accessing Bitmap in WPF. BitmapAccess is used to avoid collision with System.Drawing.Bitmap
         [DllImport("gdi32.dll")]
@@ -45,7 +37,6 @@ namespace ImageProcessor
         protected WriteableBitmap source; // image source
         protected int bytespp;          // all supported formats have exact number of bytes per pixel in rawImage
         protected bool isIndexed;
-        public BitmapOrigin Origin      { get; private set; }
         public IntPtr DataPtr           { get { return source.BackBuffer; } }
         public int Width                { get; private set; }   // bitmap pixel width
         public int Height               { get; private set; }   // bitmap pixel height
@@ -55,10 +46,98 @@ namespace ImageProcessor
         public int Stride               { get { return source.BackBufferStride; } }
         public int DataLength           { get { return Stride * Height; } }
         public WriteableBitmap Source   { get { return source; } }
+        public static BitmapAccess CreateFromColorMatrixes(ByteMatrix[] colors)
+        {
+            if (colors.Length == 0)
+                return null;
+            int width = colors[0].Width;
+            int height = colors[0].Height;
+            WriteableBitmap bmn = new WriteableBitmap(width, height, 96, 96, PixelFormats.Pbgra32, null);
+            bmn.Lock();
+            Chank[] chanks = Chank.CreateChanks(height, 500, null, bmn);
+            unsafe
+            {
+                foreach (var chank in chanks)
+                //Parallel.ForEach(chanks, (chank) =>
+                {
+                    byte* ptrn = (byte*)chank.ToData;
+                    for (int i = chank.StartRow; i < chank.EndRow; i++)
+                    {
+                        if (colors.Length == 1)
+                        {
+                            ByteMatrix b = colors[0];
+                            for (ushort j = 0; j < width; j++)
+                            {
+                                *ptrn++ = b[i, j];
+                                *ptrn++ = b[i, j];
+                                *ptrn++ = b[i, j];
+                                *ptrn++ = byte.MaxValue;
+                            }
+                        }
+                        else if (colors.Length == 3)
+                        {
+                            ByteMatrix b = colors[0];
+                            ByteMatrix g = colors[1];
+                            ByteMatrix r = colors[2];
+                            for (ushort j = 0; j < width; j++)
+                            {
+                                *ptrn++ = b[i, j];
+                                *ptrn++ = g[i, j];
+                                *ptrn++ = r[i, j];
+                                *ptrn++ = byte.MaxValue;
+                            }
+                        }
+                        else
+                        {
+                            ByteMatrix b = colors[0];
+                            ByteMatrix g = colors[1];
+                            ByteMatrix r = colors[2];
+                            ByteMatrix a = colors[3];
+                            for (ushort j = 0; j < width; j++)
+                            {
+                                *ptrn++ = b[i, j];
+                                *ptrn++ = g[i, j];
+                                *ptrn++ = r[i, j];
+                                *ptrn++ = a[i, j];
+                            }
+                        }
+                    }
+                }
+                //});
+            }
+            bmn.Unlock();
+            return new BitmapAccess(bmn);
+        }
+        public static BitmapAccess Create8bppIndexedBitmap(ByteMatrix bwImage, InterpolationFunction func)
+        {
+            int nc = 256;
+            List<Color> colors = new List<Color>(nc);
+            for (int i = 0; i < nc; i++)
+            {
+                float acoef = func == null ? 1 : 1 - Math.Min(1, Math.Max(0, func.Apply(i / (float)byte.MaxValue)));
+                byte a = (byte)(byte.MaxValue * acoef);
+                byte b = (byte)i;
+                colors.Add(Color.FromArgb(a, b, b, b));
+            }
+            BitmapPalette palette = new BitmapPalette(colors);
+            WriteableBitmap bm = new WriteableBitmap(bwImage.Width, bwImage.Height, 96, 96, PixelFormats.Indexed8, palette);
+            unsafe
+            {
+                byte* ptr = (byte*)bm.BackBuffer;
+                for (int i = 0; i < bwImage.Height; i++)
+                {
+                    for (int j = 0; j < bwImage.Width; j++)
+                        *ptr++ = bwImage[i, j];
+                    for (int j = bwImage.Width; j < bm.BackBufferStride; j++)
+                        *ptr++ = 0;
+                }
+            }
+            return new BitmapAccess(bm);
+        }
         public static BitmapAccess LoadImage(string fullPath, bool encrypted)
         {
             byte[] imageBytes = DataAccess.ReadFile(fullPath, encrypted);
-            return new BitmapAccess(new MemoryStream(imageBytes), 0, fullPath);
+            return imageBytes.Length > 0 ? new BitmapAccess(new MemoryStream(imageBytes), 0, fullPath) : null;
         }
         public static BitmapAccess LoadThumbnail(string fullPath, bool encrypted)
         {
@@ -69,19 +148,13 @@ namespace ImageProcessor
         {   // loading image from memory array
             Path = path;
             BitmapImage bi = new BitmapImage();
-            if (dataStream.Length > 0)
-            {
-                bi.BeginInit();
-                bi.StreamSource = dataStream;
-                if (maxWidth > 0)
-                    bi.DecodePixelWidth = maxWidth;
-                bi.CreateOptions = BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreColorProfile;
-                bi.EndInit();
-                Initialize(new WriteableBitmap(bi), null);
-                Origin = BitmapOrigin.File;
-            }
-            else
-                Origin = BitmapOrigin.LoadingFailed;
+            bi.BeginInit();
+            bi.StreamSource = dataStream;
+            if (maxWidth > 0)
+                bi.DecodePixelWidth = maxWidth;
+            bi.CreateOptions = BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreColorProfile;
+            bi.EndInit();
+            Initialize(new WriteableBitmap(bi), null);
         }
         //public BitmapAccess(System.Drawing.Bitmap src)
         //{ // example of working with old Bitmap
@@ -91,53 +164,50 @@ namespace ImageProcessor
         //    finally { DeleteObject(hBitmap); }
         //    Initialize(new WriteableBitmap(bs), null);
         //}
-        //public BitmapAccess(string path)
-        //{   // loading image with Cache bypass to allow immediate image update
-        //    FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        //    BitmapImage bi = new BitmapImage();
-        //    bi.BeginInit();
-        //    bi.CacheOption = BitmapCacheOption.None;
-        //    bi.UriCachePolicy = new System.Net.Cache.RequestCachePolicy(System.Net.Cache.RequestCacheLevel.BypassCache);
-        //    bi.CacheOption = BitmapCacheOption.OnLoad;
-        //    bi.CreateOptions = BitmapCreateOptions.IgnoreImageCache | BitmapCreateOptions.IgnoreColorProfile;// | BitmapCreateOptions.PreservePixelFormat ;
-        //    bi.UriSource = new Uri(path, UriKind.Relative);
-        //    bi.EndInit();
-        //    Initialize(new WriteableBitmap(bi), null);
-        //    Origin = BitmapOrigin.File;
-        //}
-        public BitmapAccess(BitmapSource bs, BitmapOrigin origin)
+        public BitmapAccess(BitmapSource bs, Transform transform = null)
         {
             Path = "";
             if (bs == null)
                 throw new ArgumentNullException("bitmap = null");
-            Initialize(new WriteableBitmap(bs), null);
-            Origin = origin;
+            Initialize(new WriteableBitmap(bs), transform);
+        }
+        public BitmapAccess(int w, int h)
+        {
+            Path = "";
+            if (w <=0 || h <= 0)
+                throw new ArgumentNullException("bitmap dimetsion <=0");
+           Initialize(new WriteableBitmap(w, h, 96, 96, PixelFormats.Pbgra32, null), null);
+        }
+        public double ReducedImageScale(double maxSize)
+        {
+            double scalex = maxSize / Width;
+            double scaley = maxSize / Height;
+            if (scalex >= 1 && scaley >= 1)
+                return 1; // image already smaller than maxSize
+            return scalex > scaley ? scaley : scalex;
+        }
+        public string SaveToFile(string fullPath, bool exact, bool encrypt)
+        {
+            try
+            {
+                BitmapEncoder baseEncoder = exact ? (BitmapEncoder)new PngBitmapEncoder() : new JpegBitmapEncoder();
+                baseEncoder.Frames.Add(BitmapFrame.Create(Source));
+                MemoryStream ms = new MemoryStream();
+                baseEncoder.Save(ms);
+                DataAccess.WriteFile(fullPath, ms.ToArray(), encrypt);
+                return "";
+            }
+            catch (Exception ex) { return fullPath + Environment.NewLine + ex.Message; }
         }
         void Initialize(WriteableBitmap src, Transform transform)
         {
             source = src;
-            //if (!Supported(PixelFormat))
-            //    throw new Exception("Unsupported bitmap format " + PixelFormat.ToString());
             bytespp = (PixelFormat.BitsPerPixel + 7) / 8;// all supported formats have exact number of bytes per pixel
             isIndexed = PixelFormat == PixelFormats.Indexed8 && Palette != null;
             Width = source.PixelWidth;
             Height = source.PixelHeight;
-            SetTransform(transform);
-        }
-        public void SetTransform(Transform transform)
-        {
-            try
-            {
-                if (transform != null && transform != Transform.Identity)
-                    source = new WriteableBitmap(new TransformedBitmap(source, transform));
-            }
-            catch (Exception ex)
-            {
-#if DEBUG
-                Console.WriteLine(ex.Message);
-                Console.WriteLine(ex.StackTrace);
-#endif
-            }
+            if (transform != null && transform != Transform.Identity)
+                source = new WriteableBitmap(new TransformedBitmap(source, transform));
         }
         public Color BorderColor()
         {
@@ -197,16 +267,13 @@ namespace ImageProcessor
             }
             return data;
         }
-        public Color GetPixel(int i, int j)
-        {
-            return ColorFromBytes(GetBytes(i, j));
-        }
+        public Color GetPixel(int i, int j) { return ColorFromBytes(GetBytes(i, j)); }
         Color ColorFromBytes(byte[] ba)
         { 
             return isIndexed ? Palette.Colors[ba[0]] : bytespp == 1 ? Color.FromArgb(255, ba[0], ba[0], ba[0]) :
                 bytespp == 3 ? Color.FromArgb(255, ba[2], ba[1], ba[0]) : Color.FromArgb(ba[3], ba[2], ba[1], ba[0]);
         }
-        public BitmapAccess Clone() { return new BitmapAccess(source.Clone(), Origin); }
+        public BitmapAccess Clone() { return new BitmapAccess(source.Clone()); }
         public Color GetColorFromPixel(Point pt)
         {
             int i = (int)pt.X;
@@ -339,13 +406,13 @@ namespace ImageProcessor
                 }
             }
             source.Unlock();
-            return new BitmapAccess(source, BitmapOrigin.Memory);
+            return new BitmapAccess(source);
         }
         public BitmapAccess SetSelectionBitmap(Int32Rect cropRect, List<Point> edge, bool clearOutside)
         { 
             WriteableBitmap clip = new WriteableBitmap(cropRect.Width, cropRect.Height, 96, 96, PixelFormats.Pbgra32, null);
             if (edge == null || edge.Count < 4)
-                return new BitmapAccess(clip, BitmapOrigin.Selection);
+                return new BitmapAccess(clip);
             //Debug.WriteLine(cropRect.ToString());
             //Debug.WriteLine("clip: begin=" + clip.BackBuffer + " length=" + clip.BackBufferStride * clip.PixelHeight);
             //Debug.WriteLine("source: begin=" + clip.BackBuffer + " length=" + source.BackBufferStride * source.PixelHeight);
@@ -408,7 +475,7 @@ namespace ImageProcessor
                 }
             }
             finally { clip.Unlock(); }
-            return new BitmapAccess(clip, BitmapOrigin.Selection);
+            return new BitmapAccess(clip);
         }
         public ByteMatrix[] CreateColorMatrixes()
         {
@@ -618,94 +685,6 @@ namespace ImageProcessor
                 return new System.Drawing.Bitmap(bitmap);
             }
         }
-        public static BitmapAccess CreateFromColorMatrixes(ByteMatrix[] colors)
-        {
-            if (colors.Length == 0)
-                return null;
-            int width = colors[0].Width;
-            int height = colors[0].Height;
-            WriteableBitmap bmn = new WriteableBitmap(width, height, 96, 96, PixelFormats.Pbgra32, null);
-            bmn.Lock();
-            Chank[] chanks = Chank.CreateChanks(height, 500, null, bmn);
-            unsafe
-            {
-                foreach(var chank in chanks)
-                //Parallel.ForEach(chanks, (chank) =>
-                {
-                    byte* ptrn = (byte*)chank.ToData;
-                    for (int i = chank.StartRow; i < chank.EndRow; i++)
-                    {
-                        if (colors.Length == 1)
-                        {
-                            ByteMatrix b = colors[0];
-                            for (ushort j = 0; j < width; j++)
-                            {
-                                *ptrn++ = b[i, j];
-                                *ptrn++ = b[i, j];
-                                *ptrn++ = b[i, j];
-                                *ptrn++ = byte.MaxValue;
-                            }
-                        }
-                        else if (colors.Length == 3)
-                        {
-                            ByteMatrix b = colors[0];
-                            ByteMatrix g = colors[1];
-                            ByteMatrix r = colors[2];
-                            for (ushort j = 0; j < width; j++)
-                            {
-                                *ptrn++ = b[i, j];
-                                *ptrn++ = g[i, j];
-                                *ptrn++ = r[i, j];
-                                *ptrn++ = byte.MaxValue;
-                            }
-                        }
-                        else
-                        {
-                            ByteMatrix b = colors[0];
-                            ByteMatrix g = colors[1];
-                            ByteMatrix r = colors[2];
-                            ByteMatrix a = colors[3];
-                            for (ushort j = 0; j < width; j++)
-                            {
-                                *ptrn++ = b[i, j];
-                                *ptrn++ = g[i, j];
-                                *ptrn++ = r[i, j];
-                                *ptrn++ = a[i, j];
-                            }
-                        }
-                    }
-                }
-                //});
-            }
-            bmn.Unlock();
-            return new BitmapAccess(bmn, BitmapOrigin.Memory);
-        }
-        public static BitmapAccess Create8bppIndexedBitmap(ByteMatrix bwImage, InterpolationFunction func)
-        {
-            int nc = 256;
-            List<Color> colors = new List<Color>(nc);
-            for (int i = 0; i < nc; i++)
-            {
-                float acoef = func == null ? 1 : 1 - Math.Min(1, Math.Max(0, func.Apply(i / (float)byte.MaxValue)));
-                byte a = (byte)(byte.MaxValue * acoef);
-                byte b = (byte)i;
-                colors.Add(Color.FromArgb(a, b, b, b));
-            }
-            BitmapPalette palette = new BitmapPalette(colors);
-            WriteableBitmap bm = new WriteableBitmap(bwImage.Width, bwImage.Height, 96, 96, PixelFormats.Indexed8, palette);
-            unsafe
-            {
-                byte* ptr = (byte*)bm.BackBuffer;
-                for (int i = 0; i < bwImage.Height; i++)
-                {
-                    for (int j = 0; j < bwImage.Width; j++)
-                        *ptr++ = bwImage[i, j];
-                    for (int j = bwImage.Width; j < bm.BackBufferStride; j++)
-                        *ptr++ = 0;
-                }
-            }
-            return new BitmapAccess(bm, BitmapOrigin.Memory);
-        }
         public string ToColorsString()
         {   // complete bitmap to string with all 4 bytes
             ByteMatrix[] bma = CreateColorMatrixes();    // b, g, r, a
@@ -722,25 +701,6 @@ namespace ImageProcessor
             ByteMatrix[] bma = CreateColorMatrixes();    // b, g, r, a
             string[] ca = new string[] { "blue ", "green ", "red ", "alpha " };
             return ind>=0 && ind<4 ? ca[ind] + bma[ind].ToString() : "";
-        }
-        public static string ResizeImage(string fullPath, bool exact, double maxSize)
-        {
-            BitmapAccess ba = LoadImage(fullPath, false);
-            double scalex = maxSize / ba.Width;
-            double scaley = maxSize / ba.Height;
-            if (scalex >= 1 && scaley >= 1)
-                return ""; // image already smaller than maxSize
-            double scale = scalex > scaley ? scaley : scalex;
-            try
-            {
-                var bs = new TransformedBitmap(ba.Source, new ScaleTransform(scale, scale));
-                BitmapEncoder baseEncoder = exact ? (BitmapEncoder)new PngBitmapEncoder() : new JpegBitmapEncoder();
-                baseEncoder.Frames.Add(BitmapFrame.Create(bs));
-                FileInfo fi = new FileInfo(fullPath);
-                using (Stream stm = fi.Open(FileMode.Create, FileAccess.Write, FileShare.None)) { baseEncoder.Save(stm); }
-                return "";
-            }
-            catch(Exception ex) { return fullPath + Environment.NewLine + ex.Message; }
         }
         public override string ToString() { return PixelFormat.ToString() + ' ' + Width + 'x' + Height; }
         static public void DebugSave(string path, BitmapSource bs)
@@ -770,7 +730,7 @@ namespace ImageProcessor
         DataRange dataRange = new DataRange();
         int matrixOffset;       // size of not evaluated matrix edge 
 
-        public ValueMartixBitmap(BitmapAccess src) : base(src.Source, BitmapOrigin.Memory) { }
+        public ValueMartixBitmap(BitmapAccess src) : base(src.Source) { }
         public ValueMartix ScharrGradient(int resolution)
         {
             DataRange dataRange = new DataRange();

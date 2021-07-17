@@ -68,7 +68,7 @@ namespace ImageProcessor
                 pLeft = Pattern.Length - pInd;
                 sLeft = samplePattern.Length - sInd;
             }
-            return 600 * (penalty + pLeft + sLeft) / (Pattern.Length + samplePattern.Length + 1);
+            return 300 * (2 * penalty + pLeft + sLeft) / (Pattern.Length + samplePattern.Length + 1);
         }
     }
     public delegate void NewDirectoryNode(DirectoryInfo fi, string relativePath);

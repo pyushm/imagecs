@@ -36,7 +36,7 @@ namespace ImageProcessor
             Gap70 = 70,
         }
         string[] imageModes = new string[] { ToolMode.None.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.Morph.ToString() };//, ToolMode.FreeSelection.ToString(), ToolMode.Crop.ToString() };
-        string[] drawingeModes = new string[] { ToolMode.None.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.StrokeEdit.ToString() };
+        string[] drawingeModes = new string[] { ToolMode.None.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.ContourEdit.ToString() };
         private System.ComponentModel.Container components = null;
         private ValueControl saturationControl;
         private RangeControl brightnessControl;
@@ -56,7 +56,7 @@ namespace ImageProcessor
         ImageFileInfo imageInfo;            // image file info
         string savePath = null;
         // image processing members
-        public ToolMode ToolMode { get; private set; } // mouse mode
+        public ToolMode ToolMode { get; set; } // mouse mode
         int selectedIndex;                  // index of selected layer in layerListView
         bool suspendUpdate = false;         // suspends image update while reseting
         double replaceSpan = 3;             // time span to replace old image in seconds
@@ -166,7 +166,7 @@ namespace ImageProcessor
             this.layerListView.FullRowSelect = true;
             this.layerListView.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
             this.layerListView.HideSelection = false;
-            this.layerListView.LabelEdit = true;
+            this.layerListView.LabelEdit = false;
             this.layerListView.Location = new System.Drawing.Point(1, 49);
             this.layerListView.MultiSelect = false;
             this.layerListView.Name = "layerListView";
@@ -174,7 +174,6 @@ namespace ImageProcessor
             this.layerListView.TabIndex = 39;
             this.layerListView.UseCompatibleStateImageBehavior = false;
             this.layerListView.View = System.Windows.Forms.View.Details;
-            this.layerListView.AfterLabelEdit += new System.Windows.Forms.LabelEditEventHandler(this.layerListView_AfterLabelEdit);
             this.layerListView.ItemChecked += new System.Windows.Forms.ItemCheckedEventHandler(this.layerListView_ItemChecked);
             this.layerListView.ItemSelectionChanged += new System.Windows.Forms.ListViewItemSelectionChangedEventHandler(this.layerListView_ItemSelectionChanged);
             // 
@@ -384,6 +383,8 @@ namespace ImageProcessor
                 new MenuItem("Remove odd", delegate (object s, EventArgs e) { AddNoOddsLayer(); }),
                 new MenuItem("To background", delegate (object s, EventArgs e) { CopyToBackground(1); }),
                 new MenuItem("To back 1/2", delegate (object s, EventArgs e) { CopyToBackground(2); }),
+                new MenuItem("To back 1/3", delegate (object s, EventArgs e) { CopyToBackground(3); }),
+                new MenuItem("To back 1/4", delegate (object s, EventArgs e) { CopyToBackground(4); }),
                 new MenuItem("Delete", new EventHandler(DeleteLayer)) });
             layerListView.ContextMenu = selectMenu;
             layerListView.HideSelection = false;
@@ -511,7 +512,8 @@ namespace ImageProcessor
             VisualLayer oldActiveLayer = canvas.ActiveLayer;
             if (!canvas.SetActiveLayer(ind))
                 return false;
-            if (selectedIndex < 0 || oldActiveLayer.Type != canvas.ActiveLayer.Type)
+            if (selectedIndex < 0 || oldActiveLayer == null || oldActiveLayer.Type != canvas.ActiveLayer.Type)
+            if (selectedIndex < 0 || oldActiveLayer == null || oldActiveLayer.Type != canvas.ActiveLayer.Type)
                 CreateToolButtons(canvas.ActiveLayer);
             selectedIndex = ind;
             ResetColorControls();
@@ -570,9 +572,8 @@ namespace ImageProcessor
             int level = 5;
             name += "." + level;
             BitmapAccess clip = canvas.GetSelected(resolution);
-            bool selection = clip.Origin == BitmapOrigin.Selection;
-            int transparencyEdge = selection ? SelectedEdge(Math.Min((int)Math.Sqrt(clip.Width + clip.Height) / 3, 6)) : 0;
-            Vector shift = selection ? (Vector)canvas.SavedPosition : new Vector();
+            int transparencyEdge = bl.FromSelection ? SelectedEdge(Math.Min((int)Math.Sqrt(clip.Width + clip.Height) / 3, 6)) : 0;
+            Vector shift = bl.FromSelection ? (Vector)canvas.SavedPosition : new Vector();
             BitmapAccess ba = clip.ApplyConversion(ConversionType.MedianFilter, resolution, level);
             VisualLayer vl = new BitmapLayer(name, ba, transparencyEdge);
             UpdateLayerList(canvas.AddVisualLayer(vl, bl, shift));
@@ -598,7 +599,7 @@ namespace ImageProcessor
                 return;
             try
             {
-                BitmapAccess clip = new BitmapAccess(ClipboardBitmapAccess.GetImage(), BitmapOrigin.Clipboard);
+                BitmapAccess clip = new BitmapAccess(ClipboardBitmapAccess.GetImage());
                 panel.Focus();
                 int transparencyEdge = imageInfo.IsExact ? 0 : Math.Min((int)Math.Sqrt(clip.Width + clip.Height) / 3, 6);
                 transparencyEdge = SelectedEdge(transparencyEdge);
@@ -762,14 +763,6 @@ namespace ImageProcessor
                 ((RadioButton)ca[0]).Checked = true;
         }
         void ImageEditForm_FormClosing(object o, FormClosingEventArgs e) { }
-        private void layerListView_AfterLabelEdit(object sender, LabelEditEventArgs e)
-        {
-            if (e.Label != null)
-            {
-                canvas.RenameActiveLayer(e.Label);
-                UpdateLayerList(selectedIndex);
-            }
-        }
         void ImageEditForm_Resize(object s, EventArgs e)
         {
             panel.Size = new System.Drawing.Size(ClientSize.Width - viewingAreaOffset, ClientSize.Height);

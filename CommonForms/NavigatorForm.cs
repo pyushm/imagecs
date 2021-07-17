@@ -956,7 +956,6 @@ namespace ImageProcessor
                             fileCount++;
                         }
                 }
-                SetViewButtonState(SearchState.Display);
                 searchResultBox.Text = (dirOnly ? matchedDirs.Count + " names" : fileCount + " items") + " in " + searchRoot.FullName + 
                     Environment.NewLine + res;
             }
@@ -964,6 +963,7 @@ namespace ImageProcessor
             {
                 searchResultBox.Text = "No items in " + searchRoot.FullName + Environment.NewLine + res;
             }
+            SetViewButtonState(SearchState.Display);
             patternBox.Text = daysBox.Text = "";
             runningImage.Visible = false;
         }
@@ -977,12 +977,12 @@ namespace ImageProcessor
             }
             catch (Exception ex)
             {
-                if (ex.Message.Contains("encrypted"))
-                {
-                    PasswordDialog pd = new PasswordDialog();
-                    pd.Show();
-                }
-                else
+                //if (ex.Message.Contains("encrypted"))
+                //{
+                //    PasswordDialog pd = new PasswordDialog();
+                //    pd.Show();
+                //}
+                //else
                     Debug.WriteLine(ex.Message);
             }
         }

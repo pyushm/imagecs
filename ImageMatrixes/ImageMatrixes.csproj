@@ -61,6 +61,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ByteMatrix.cs" />
+    <Compile Include="LAlphaBetaPixel.cs" />
     <Compile Include="MultithreadChank.cs" />
     <Compile Include="ImageTransform.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

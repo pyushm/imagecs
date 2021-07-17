@@ -106,8 +106,6 @@ namespace ImageProcessor
             BitmapAccess bmp = null;
             try { bmp = BitmapAccess.LoadImage(loadInfo.FSPath, loadInfo.IsEncrypted); }
             catch (Exception ex) { throw new Exception("Failed load " + loadInfo.FSPath + ": " + DataAccess.Warning + ": " + ex.Message); }
-            if (bmp.Origin == BitmapOrigin.LoadingFailed)
-                throw new Exception("Failed load " + loadInfo.FSPath + ": " + DataAccess.Warning);
             var src = bmp.Source;
             var ra = new int[sizeM, sizeM];   // red temp matrix
             var ga = new int[sizeM, sizeM];   // green temp matrix

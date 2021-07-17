@@ -128,7 +128,7 @@ namespace ImageProcessor
         {
             soundPattern = mode == SearchMode.Sound ? new SoundLike(name) : null;
             string textPattern = mode == SearchMode.File || mode == SearchMode.Name ? name.ToLower() : null;
-            textPatterns = textPattern.Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            textPatterns = textPattern?.Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (mode == SearchMode.Image)
             {
                 if (activeImageName == null)
@@ -312,7 +312,8 @@ namespace ImageProcessor
                         int ind = field.IndexOf(textPattern);
                         if (ind < 0)
                             continue;
-                        dif = (ind > 0 ? 10 : 0) + Math.Min(dif, 100 * Math.Abs(field.Length - textPattern.Length)) / (field.Length + textPattern.Length);
+                        int letterDif = 100 / (field.Length + textPattern.Length);
+                        dif = Math.Min(dif, letterDif * (ind + Math.Abs(field.Length - textPattern.Length)));
                     }
                     if (dif == int.MaxValue)
                         return;
@@ -320,6 +321,8 @@ namespace ImageProcessor
                 }
                 else
                 {
+                    if (dirNode.Name.Contains('+'))
+                        return;
                     int dif = int.MaxValue;
                     foreach(string textPattern in textPatterns)
                     {
@@ -342,7 +345,7 @@ namespace ImageProcessor
                         return;
                 }
             }
-            if (soundPattern != null && soundPattern != null)     // by sound
+            if (soundPattern != null && soundPattern.Pattern != null)     // by sound
             {
                 int dif = int.MaxValue;
                 string item = ImageFileName.UnMangleText(dirNode.Name.ToLower());
@@ -424,13 +427,16 @@ namespace ImageProcessor
                         dif = int.MaxValue;
                     difference += dif;
                 }
-                if (matchingDirNotAdded)
+                if (difference != int.MaxValue)
                 {
-                    matchingDir = searchResult.AddDir(relativePath);
-                    matchingDirNotAdded = false;
+                    if (matchingDirNotAdded)
+                    {
+                        matchingDir = searchResult.AddDir(relativePath);
+                        matchingDirNotAdded = false;
+                    }
+                    //matchingDir?.AddFile((relativePath.Length == 0 ? fn : relativePath + '/' + fn), relevance);
+                    matchingDir?.AddFile(fn, difference);
                 }
-                //matchingDir?.AddFile((relativePath.Length == 0 ? fn : relativePath + '/' + fn), relevance);
-                matchingDir?.AddFile(fn, difference);
             }
         }
         #endregion

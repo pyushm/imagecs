@@ -16,7 +16,7 @@ namespace ImageProcessor
         Distortion3D,
         FreeSelection,
         RectSelection,
-        StrokeEdit,
+        ContourEdit, // editing contour drawing
         InfoImage,
         Crop,
         Morph,
@@ -31,7 +31,8 @@ namespace ImageProcessor
         public virtual void SetEffectParameters(double weight, double middle, double resolution) { }
         public virtual EffectType DerivativeType { get { return EffectType.None; } }
         bool deleting = false;      // marked for delayed deletion (do not display in layer list)
-        public string Name          { get; set; }
+        public bool FromSelection { get; set; } = false;
+        public string Name { get; set; }
         public bool IsImage         { get { return this as BitmapLayer != null; } }
         public IntSize LayoutSize   { get; protected set; } // image size used by layout system 
         public VisualLayerType Type { get { return type; } }
@@ -196,7 +197,7 @@ namespace ImageProcessor
         public BitmapLayer(string name) : base(name) { }    // for derivation
         public BitmapLayer(string name, BitmapAccess ba) : base(name) { SetImage(ba, -1); }
         public BitmapLayer(string name, BitmapAccess ba, int edge) : base(name) { SetImage(ba, edge); }
-        public void UpdateImage() { image = new BitmapAccess(Image.Source.Clone(), Image.Origin); }
+        public void UpdateImage() { image = new BitmapAccess(Image.Source.Clone()); }
         public void SetImage(BitmapAccess ba, int transparentEdge)
         {
             if (ba == null)
@@ -220,7 +221,7 @@ namespace ImageProcessor
                     bool borderSet = false;
                     colorTransform = new ColorTransform(borderColor);
                     transparencyMask = new ByteMatrix(0, 0);
-                    image = new BitmapAccess(image.AdjustedPArgbImage(colorTransform, transparencyMask, ref borderSet), image.Origin);
+                    image = new BitmapAccess(image.AdjustedPArgbImage(colorTransform, transparencyMask, ref borderSet));
                     if (borderSet)
                     {
                         ByteMatrix filter = ByteMatrix.CreateConeFilter(transparentEdge);
@@ -248,7 +249,7 @@ namespace ImageProcessor
             ParametricEffect cae = Effect as ParametricEffect;
             if (cae != null)
                 cae.SetParameters(colorTransform, strength, level, size);
-            Debug.WriteLine("SetEffectParameters: image=" + image.Path);
+            //Debug.WriteLine("SetEffectParameters: image=" + image.Path);
         }
         protected DrawingVisual CreateImageDrawing()
         {

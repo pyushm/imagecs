@@ -1,23 +1,24 @@
 ﻿using System;
-using System.Drawing;
+//using System.Drawing;
 using System.Windows;
+using System.Windows.Media;
 
 namespace ImageProcessor
 {
     class GradientColor
     {
-        PointF[] outline;
-        System.Windows.Media.Color[] outlineColor;
-        Rectangle rect;
-        public GradientColor(BitmapAccess src, PointF[] selection, Rectangle box, int smoothing)
+        Point[] outline;
+        Color[] outlineColor; // smoothed color at outline
+        Rect rect;
+        public GradientColor(BitmapAccess src, Point[] selection, Rect box, int smoothing)
         {
             outline = selection;
             rect = box;
             int sz = outline.Length;
             outlineColor = new System.Windows.Media.Color[sz];
-            System.Windows.Media.Color[] srcColor = new System.Windows.Media.Color[sz];
+            Color[] srcColor = new Color[sz]; // color at outline
             for (int i = 0; i < sz; i++)
-                srcColor[i] = src.GetPixel((int)(outline[i].X + box.Left), (int)(outline[i].X + box.Top));
+                srcColor[i] = src.GetPixel((int)(outline[i].X + box.Left), (int)(outline[i].Y + box.Top));
             for (int t = 0; t < sz; t++)
             {
                 int r = 0;
@@ -35,7 +36,7 @@ namespace ImageProcessor
                 r /= (smoothing + 1) / (smoothing + 1);
                 g /= (smoothing + 1) / (smoothing + 1);
                 b /= (smoothing + 1) / (smoothing + 1);
-           //     outlineColor[t] = Color.FromArgb(r, g, b);
+                outlineColor[t] = Color.FromRgb( (byte)r, (byte)g, (byte)b);
             }
         }
         public BitmapAccess CreateBitmap(double angle)

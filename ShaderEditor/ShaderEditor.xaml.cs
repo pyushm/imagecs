@@ -69,7 +69,7 @@ namespace ShaderEffects
                 BitmapImage bitmap = new BitmapImage(new Uri(fileName));
                 imagePixelSize = new IntSize(bitmap.PixelWidth, bitmap.PixelHeight);
                 img.Source = bitmap;
-                bitmapData = new BitmapAccess(bitmap, BitmapOrigin.File);
+                bitmapData = new BitmapAccess(bitmap);
                 ColumnDefinitionCollection cdc = grid.ColumnDefinitions;
                 double w = cdc[1].ActualWidth;
                 double h = grid.ActualHeight;
@@ -146,7 +146,7 @@ namespace ShaderEffects
                     if (selected != null && selected.Name == dp.Name)
                     {
                         selected.Background = new SolidColorBrush(c);
-                        se.SetValue(dp, PixelLSH.FromColor(c));
+                        se.SetValue(dp, c);
                         img.Effect = se;
                         selected = null;
                     }
@@ -315,7 +315,7 @@ namespace ShaderEffects
         {
             if (!System.Windows.Clipboard.ContainsData(System.Windows.DataFormats.Bitmap))
                 return;
-            BitmapAccess clipboard = new BitmapAccess(ClipboardBitmapAccess.GetImage(), BitmapOrigin.Clipboard);
+            BitmapAccess clipboard = new BitmapAccess(ClipboardBitmapAccess.GetImage());
             int transparencyEdge = Math.Min((int)Math.Sqrt(clipboard.Width + clipboard.Height) / 3, 6);
             int edge = -1;
             try { edge=int.Parse(edgeBox.Text); }

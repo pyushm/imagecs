@@ -24,7 +24,7 @@ namespace ImageProcessor
         Rotate = -4,           // rotate image (MouseButton.Right)
         Scale = -5,            // scale image (MouseButton.Middle)
         Add = -6,              // add point
-        Stroke = -7,           // stroke editing 
+        Stroke = -7,           // move stroke point  
         ViewPoint = -8,        // 3d view distortion 
         Morph = -9,            // local shift distortion 
     }
@@ -62,23 +62,22 @@ namespace ImageProcessor
         int nPoints;
         bool closed;
         double[] range;             // length range estimate from local curvature (1/2R)
-        int[] flag;                 // 1 - used point; -1 removed point; 0 - unknown
-        public double baseLength;   // accuracy (in drawing units) to build smooth stroke
-        public PolygonBuilder() { baseLength = 10; }
-        public Polygon CreateEquidistantContour(Polygon src)
+        int[] flag;                 // 1 - used point; -1 removed point; 0 - unknown 
+        public PolygonBuilder() { }
+        Polygon CreateEquidistantContour(Polygon src, double smoothingLength) // length (in drawing units) to build smooth stroke
         { // averaging with traingle distance-based weight, points added to reduce long segments
             double[] l = src.AccummulatedLength();
-            double len = l[src.Count - 1]; ;
-            if (baseLength < 2 || len < baseLength)
+            double len = l[src.Count - 1];
+            if (smoothingLength < 2 || len < smoothingLength)
                 return src;
             List<Point> pc = new List<Point>();
             int npc = src.IsClosed ? src.Count - 1 : src.Count;
-            double lpos = -baseLength;
+            double lpos = -smoothingLength;
             for (int t = 0; t < npc; t++)
             {
-                if (t < npc - 1 && l[t + 1] - lpos < baseLength + 1)
+                if (t < npc - 1 && l[t + 1] - lpos < smoothingLength + 1)
                     continue;
-                double tw = src.IsClosed ? baseLength : Math.Min(Math.Min(baseLength, len - l[t] + 1), l[t] + 1); // total weight
+                double tw = src.IsClosed ? smoothingLength : Math.Min(Math.Min(smoothingLength, len - l[t] + 1), l[t] + 1); // accumulated weight
                 double wm = tw;     // max weight
                 double sx = src[t].X * wm;
                 double sy = src[t].Y * wm;
@@ -117,7 +116,7 @@ namespace ImageProcessor
                 lpos = l[t];
             }
             if (src.IsClosed)
-                pc.Add(pc[0]);
+                pc[pc.Count - 1] = pc[0];
             Polygon res = new Polygon(src);
             res.Poly = pc;
             l = res.AccummulatedLength();
@@ -125,9 +124,9 @@ namespace ImageProcessor
             for (int i = res.Count - 2; i >= 0; i--)
             {
                 double d = lpos - l[i];
-                if (d > 1.5 * baseLength)
+                if (d > 1.5 * smoothingLength)
                 {
-                    int n = (int)(d / baseLength + 0.5);
+                    int n = (int)(d / smoothingLength + 0.5);
                     Vector v = (res[i + 1] - res[i]) / n;
                     Point pn = res[i + 1];
                     for (int j = 1; j < n; j++)
@@ -186,17 +185,17 @@ namespace ImageProcessor
                 flag[ind] = -1;
             } while (d > lpos - dd);
         }
-        public Polygon CreateShortPolygon(Polygon polygon)// divides curve into almost strait (d<maxDeviation) segmants
+        public Polygon CreateSmoothedPolygon(Polygon polygon, double length)// divides curve into almost strait (d<maxDeviation) segmants
         {
             if (polygon.IsEmpty)
                 return null;
-            Polygon src = CreateEquidistantContour(polygon);
+            Polygon src = CreateEquidistantContour(polygon, length);
             //Debug.WriteLine("original "+polygon.ToPointsString());
             //Debug.WriteLine("smoothed "+src.ToPointsString());
             dist = src.AccummulatedLength();
             nPoints = dist.Length;
             totDist = dist[nPoints - 1];
-            maxLength = totDist / 10;
+            maxLength = totDist / 4;
             closed = src.IsClosed;
             range = new double[nPoints]; // curvature (1/2R)
             Point pm = src[0];
@@ -236,10 +235,6 @@ namespace ImageProcessor
             }
             else
                 range[0] = range[nPoints - 1] = 0;
-            double avRange = 0;
-            foreach (double r in range)
-                avRange += r;
-            avRange /= nPoints;
 
             flag = new int[nPoints];
             if (!closed)
@@ -270,14 +265,13 @@ namespace ImageProcessor
     }
     public class Polygon : Primitive  
     {   // fixed point set, no closing needed   
-        static PolygonBuilder builder = new PolygonBuilder();
         public IntSize Target   { get; }// added points are limited to inside target rectangle {0,0,w,h}
         public List<Point> Poly { get; set; } = new List<Point>();
         public bool IsClosed    { get { return First == Last; } }
-        public Point First      { get { return Count>0 ? Poly[0] : new Point(); } }
-        public Point Last       { get; private set; }
+        public Point First      { get { return Count > 0 ? Poly[0] : new Point(); } }
+        public Point Last       { get { return Count > 0 ? Poly[Count - 1] : new Point(-10, -10); } }
         public bool IsEmpty     { get { return Count < 3; } }
-        public int Count        { get { return Poly.Count; } }
+        public int Count        { get { return Poly == null ? 0 : Poly.Count; } }
         public double TotalLength()
         {
             double l = 0;
@@ -286,17 +280,15 @@ namespace ImageProcessor
             return l;
         }
         public Point this[int i] { get { return Poly[i]; } set { Poly[i] = value; } }
-        public Polygon(IntSize range) { Target = range; Last = new Point(-10, -10); }
+        public Polygon(IntSize range) { Target = range; }
         public Polygon(Polygon points)
         {
             Poly = points.Poly;
-            Last = Count > 0 ? Poly[Count-1] : new Point(-10, -10);
             Target = points.Target;
         }
         public Polygon(List<Point> points, IntSize range)
         {
             Poly = points;
-            Last = Count > 0 ? Poly[Count - 1] : new Point(-10, -10);
             Target = range;
         }
         public void SetRectangle(Point p)
@@ -336,7 +328,6 @@ namespace ImageProcessor
                     p.X = x > 0 ? Target.Width : 0;
             }
             Poly.Add(p);
-            Last = p;
         }
         public void Close(Point p) { Add(p); Add(First); }
         public void Clear()     { Poly.Clear(); }
@@ -369,8 +360,6 @@ namespace ImageProcessor
             if (maxY > Target.Height) maxY = Target.Height;
             return new Int32Rect(minX, minY, maxX - minX, maxY - minY);
         }
-        public Polygon CreateEquidistantContour(double length) { builder.baseLength = length; return builder.CreateEquidistantContour(this); }
-        public Polygon CreateShortPolygon(double length) { builder.baseLength = length; return builder.CreateShortPolygon(this); }
         public double[] AccummulatedLength()
         {
             double[] l = new double[Count];

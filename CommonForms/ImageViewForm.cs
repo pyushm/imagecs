@@ -22,7 +22,6 @@ namespace ImageProcessor
         ImageListForm parent;				// parent image list form
         ImageFileInfo.Collection imageFiles;// full image file name shown as big image
         ImageFileInfo imageInfo;            // curently displayed image file info 
-        ToolMode toolMode = ToolMode.Crop;  // mouse mode
         bool infoMode;				        // indicates if info or original has to be extracted
         InfoType infoType;                  // tipe of info image when infoMode==true
         bool imageModified = false;
@@ -451,7 +450,7 @@ namespace ImageProcessor
         #endregion
 
         #region interface IPanelHolder
-        public ToolMode ToolMode { get { return toolMode; } }
+        public ToolMode ToolMode { get; private set; } = ToolMode.Crop;
         public void CropRectangleUpdated() { saveButton.Enabled = true; SetWindowTitle(); }
         public void GeometryTransformUpdated() { ShowGeometryTransformParameters(); }
         public void FocusControl() { }
@@ -526,11 +525,13 @@ namespace ImageProcessor
             if (e.KeyCode == Keys.C && Keyboard.IsKeyDown(Key.LeftCtrl))
                 canvas.SetClipboardFromSelection();
         }
-        void SetInitialState()
+        void SetInitialState(bool rotate90=false)
         {
+            canvas.XYmirroredFrame = rotate90;
             RescaleCanvas(true);
-            if (saveTypeBox.SelectedIndex != 0)
-                saveTypeBox.SelectedIndex = 0;
+            //if (saveTypeBox.SelectedIndex != 0)
+            //    saveTypeBox.SelectedIndex = 0;
+            saveTypeBox.SelectedItem = SaveTypeString();
             infoMode = false;
             saveButton.Enabled = resizeBox.Checked;
             imageModified = false;
@@ -552,7 +553,6 @@ namespace ImageProcessor
                 return;
             try
             {
-                toolMode = ToolMode.Crop;
                 saveButton.Enabled = resizeBox.Checked;
                 imageModified = false;
                 deleteButton.Enabled = true;
@@ -703,36 +703,46 @@ namespace ImageProcessor
             if (bitmapEncoder as JpegBitmapEncoder != null)
                 ((JpegBitmapEncoder)bitmapEncoder).QualityLevel = qualityLevel;
             string ret = info.IsImage ? canvas.SaveSingleImage(path, maxSize, bitmapEncoder, info.IsEncrypted) : canvas.SaveLayers(path, bitmapEncoder);
+            ToolMode = ToolMode.Crop;
             if (ret.Length != 0 )
                 System.Windows.Forms.MessageBox.Show(ret, "Saving "+path+" failed");
             else
                 ShowNewImage(path);
+        }
+        string SaveTypeString()
+        {
+            switch(ToolMode)
+            {
+                case ToolMode.FreeSelection:    return "Selection";
+                case ToolMode.RectSelection:    return "RectSelection";
+                default:                        return "Crop";
+            }
         }
         void SaveTypeChanged(object sender, EventArgs e)
         {
             string str = (string)saveTypeBox.SelectedItem;
             if (str.StartsWith("Selection"))
             {
-                toolMode = ToolMode.FreeSelection;
+                ToolMode = ToolMode.FreeSelection;
                 saveButton.Enabled = false;
                 canvas.InitializeToolDrawing();
             }
             else if (str.StartsWith("RectSelection"))
             {
-                toolMode = ToolMode.RectSelection;
+                ToolMode = ToolMode.RectSelection;
                 saveButton.Enabled = false;
                 canvas.InitializeToolDrawing();
             }
             else if (str.StartsWith("Crop"))
             {
-                toolMode = ToolMode.Crop;
+                ToolMode = ToolMode.Crop;
                 SetInitialState();
             }
             else
             {
                 object o = Enum.Parse(typeof(InfoType), str);
                 infoMode = o is InfoType;
-                toolMode = infoMode ? ToolMode.InfoImage : ToolMode.None;
+                ToolMode = infoMode ? ToolMode.InfoImage : ToolMode.None;
                 if (infoMode)
                 {
                     infoType = (InfoType)o;
@@ -812,9 +822,7 @@ namespace ImageProcessor
                     backgroundLayer.MatrixControl.RotateLeft();
                 if (s.Name.StartsWith("rotate"))
                 {
-                    canvas.SwitchSideSize();
-                    //RescaleCanvas(false); // MatrixControl already set
-                    SetCutRectangle();
+                    SetInitialState(true);
                     SetWindowTitle();
                 }
             }
