@@ -298,13 +298,13 @@ namespace ImageProcessor
         {   // matches directory by name, sound, date
             if (relativePath.Length == 0)
                 return;
-            int totalDif = 0;
+            double totalDif = 0;
             if (textPatterns != null && textPatterns.Length>0) // by name
             {
                 if (textPatterns.Length == 1)
                 {
                     string textPattern = textPatterns[0];
-                    int dif = int.MaxValue;
+                    double dif = int.MaxValue;
                     string item = ImageFileName.UnMangleText(dirNode.Name.ToLower());
                     string[] fields = item.Split(new char[] { ImageFileInfo.multiNameChar, ImageFileInfo.synonymChar });
                     foreach (string field in fields)
@@ -312,7 +312,7 @@ namespace ImageProcessor
                         int ind = field.IndexOf(textPattern);
                         if (ind < 0)
                             continue;
-                        int letterDif = 100 / (field.Length + textPattern.Length);
+                        double letterDif = 100 / (field.Length + textPattern.Length);
                         dif = Math.Min(dif, letterDif * (ind + Math.Abs(field.Length - textPattern.Length)));
                     }
                     if (dif == int.MaxValue)
@@ -328,18 +328,13 @@ namespace ImageProcessor
                     {
                         string item = ImageFileName.UnMangleText(dirNode.Name.ToLower());
                         string[] fields = item.Split(new char[] { ImageFileInfo.multiNameChar, ImageFileInfo.synonymChar });
-                        foreach (string field in fields)
+                        if (item.IndexOf(textPattern) != 0)
+                            continue;
+                        if (item.Length - textPattern.Length < 2)
                         {
-                            if(field.IndexOf(textPattern) != 0)
-                                continue;
-                            if (field.Length - textPattern.Length < 2)
-                            {
-                                dif = 0;
-                                break;
-                            }
-                        }
-                        if (dif == 0)
+                            dif = 0;
                             break;
+                        }
                     }
                     if (dif == int.MaxValue)
                         return;
@@ -368,8 +363,8 @@ namespace ImageProcessor
             }
             if (searchDaysOld != int.MaxValue) // by date
             {
-                int difDays = (DateTime.Today - dirNode.LastWriteTime).Days;
-                if(difDays > searchDaysOld)
+                var difDays = (DateTime.Today - dirNode.LastWriteTime).TotalDays;
+                if (difDays > searchDaysOld)
                     return;
                 totalDif += 100 * difDays / (searchDaysOld+1);
             }
@@ -404,18 +399,18 @@ namespace ImageProcessor
             bool matchingDirNotAdded = true;
             foreach (FileInfo file in files)
             {
-                int difference = 0;
+                double difference = 0;
                 if (searchDaysOld != int.MaxValue) // by date
                 {
-                    int difDays = (DateTime.Today - dirNode.LastWriteTime).Days;
-                    if (difDays > searchDaysOld)
+                    var difDays = (DateTime.Today - file.LastWriteTime).TotalDays;
+                    if (difDays > searchDaysOld)    // exact day limit
                         continue;
                     else
                         difference += difDays;
                 }
                 string fn = ImageFileName.FSUnMangle(file.Name).ToLower();
                 string fnne = Path.GetFileNameWithoutExtension(fn);
-                if (textPatterns != null) // by name
+                if (textPatterns != null && textPatterns.Length > 0) // multiple name patterns
                 {
                     int dif = int.MaxValue;
                     foreach (string textPattern in textPatterns)
@@ -423,20 +418,19 @@ namespace ImageProcessor
                         if (fnne.Contains(textPattern))
                             dif = Math.Min(dif, fnne.Length - textPattern.Length);
                     }
-                    if (textPatterns.Length > 1 && dif > 1)
-                        dif = int.MaxValue;
+                    if (textPatterns.Length > 1 && dif > 1) // in multiple search only 1 letter difference allowed
+                        continue;
+                    if (dif == int.MaxValue)
+                        continue;
                     difference += dif;
                 }
-                if (difference != int.MaxValue)
+                if (matchingDirNotAdded)
                 {
-                    if (matchingDirNotAdded)
-                    {
-                        matchingDir = searchResult.AddDir(relativePath);
-                        matchingDirNotAdded = false;
-                    }
-                    //matchingDir?.AddFile((relativePath.Length == 0 ? fn : relativePath + '/' + fn), relevance);
-                    matchingDir?.AddFile(fn, difference);
+                    matchingDir = searchResult.AddDir(relativePath);
+                    matchingDirNotAdded = false;
                 }
+                //matchingDir?.AddFile((relativePath.Length == 0 ? fn : relativePath + '/' + fn), relevance);
+                matchingDir?.AddFile(fn, difference);
             }
         }
         #endregion

@@ -826,6 +826,15 @@ namespace ImageProcessor
                     thumbnailUpdateIndex++;
                 }
             }
+            FileInfo GetInforFile(DirectoryInfo di, string p1, string p2)
+            {
+                FileInfo fsf = GetFirstImageName(di.GetFiles(p1));
+                if (fsf == null)
+                    fsf = GetFirstImageName(di.GetFiles(p2));
+                if (fsf == null)
+                    fsf = GetFirstImageName(di.GetFiles());
+                return fsf;
+            }
             void AppendFiles()              
             {
                 if (dirMode)
@@ -848,9 +857,9 @@ namespace ImageProcessor
                     }
                     else
                         directories = directory.GetDirectories();
-                    FileInfo fsf = GetFirstImageName(directory.GetFiles(InfoFileName(infoType) + '*'));
-                    if (fsf == null)
-                        fsf = GetFirstImageName(directory.GetFiles());
+                    string p1 = InfoFileName(infoType) + '*';
+                    string p2 = FSMangle(InfoFileName(infoType)) + '*';
+                    FileInfo fsf = GetInforFile(directory, p1, p2);
                     if (fsf != null)
                         AppendImageFile(DataType.LocalImages, fsf, isTemp, true);
                     foreach (DirectoryInfo di in directories)
@@ -859,10 +868,7 @@ namespace ImageProcessor
                             continue;
                         try
                         {
-                            string pattern = IsMangled(di.Name) ? FSMangle(InfoFileName(infoType)) : InfoFileName(infoType);
-                            fsf = GetFirstImageName(di.GetFiles(pattern + '*'));
-                            if (fsf == null)
-                                fsf = GetFirstImageName(di.GetFiles());
+                            fsf = GetInforFile(di, p1, p2);
                             if (fsf != null)
                                 AppendImageFile(FileType(fsf.Name), fsf, isTemp, true);
                             else if (Directory.GetDirectories(di.FullName).Length > 0)
