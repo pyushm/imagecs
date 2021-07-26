@@ -458,8 +458,8 @@ namespace ImageProcessor
         #endregion
         public ImageViewForm(ImageListForm parentListForm)    
         {
-            InitializeComponent();
             canvas = new DrawingPanel(this);
+            InitializeComponent();
             ElementHost host = new ElementHost();
             host.Dock = DockStyle.Fill;
             host.Name = "host";
