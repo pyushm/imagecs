@@ -348,12 +348,12 @@ namespace ImageProcessor
         public ImageEditForm()              
         {
             suspendUpdate = true;
-            InitializeComponent();
             canvas = new DrawingPanel(this);
             ElementHost host = new ElementHost();
             host.Dock = DockStyle.Fill;
             host.Name = "host";
             host.Child = canvas;
+            InitializeComponent();
             panel.Controls.Add(host);
             saturationControl.Colors = new Color[] { Color.Red, Color.Green, Color.Blue };
             saturationControl.ControlPoints = new float[] { 50, 50, 50 };
