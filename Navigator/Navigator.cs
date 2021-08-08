@@ -128,7 +128,12 @@ namespace ImageProcessor
         {
             soundPattern = mode == SearchMode.Sound ? new SoundLike(name) : null;
             string textPattern = mode == SearchMode.File || mode == SearchMode.Name ? name.ToLower() : null;
-            textPatterns = textPattern?.Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            var tps = textPattern?.Split(new char[] { ',', ' ', '.', '-' }, StringSplitOptions.RemoveEmptyEntries);
+            List<string> tpsl = new List<string>();
+            foreach (string tp in tps)
+                if (tp.Length > 1)
+                    tpsl.Add(tp);
+            textPatterns = tpsl.ToArray();
             if (mode == SearchMode.Image)
             {
                 if (activeImageName == null)
@@ -301,12 +306,12 @@ namespace ImageProcessor
             double totalDif = 0;
             if (textPatterns != null && textPatterns.Length>0) // by name
             {
+                string item = ImageFileName.UnMangleText(dirNode.Name.ToLower());
+                string[] fields = item.Split(new char[] { ImageFileInfo.multiNameChar, ImageFileInfo.synonymChar });
+                double dif = int.MaxValue;
                 if (textPatterns.Length == 1)
                 {
                     string textPattern = textPatterns[0];
-                    double dif = int.MaxValue;
-                    string item = ImageFileName.UnMangleText(dirNode.Name.ToLower());
-                    string[] fields = item.Split(new char[] { ImageFileInfo.multiNameChar, ImageFileInfo.synonymChar });
                     foreach (string field in fields)
                     {
                         int ind = field.IndexOf(textPattern);
@@ -323,18 +328,20 @@ namespace ImageProcessor
                 {
                     if (dirNode.Name.Contains('+'))
                         return;
-                    int dif = int.MaxValue;
                     foreach(string textPattern in textPatterns)
                     {
-                        string item = ImageFileName.UnMangleText(dirNode.Name.ToLower());
-                        string[] fields = item.Split(new char[] { ImageFileInfo.multiNameChar, ImageFileInfo.synonymChar });
-                        if (item.IndexOf(textPattern) != 0)
-                            continue;
-                        if (item.Length - textPattern.Length < 2)
+                        foreach (string field in fields)
                         {
-                            dif = 0;
-                            break;
+                            if (field.IndexOf(textPattern) != 0)
+                                continue;
+                            if (field.Length - textPattern.Length < 2)
+                            {
+                                dif = 0;
+                                break;
+                            }
                         }
+                        if (dif == 0)
+                            break;
                     }
                     if (dif == int.MaxValue)
                         return;

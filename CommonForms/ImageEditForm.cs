@@ -342,7 +342,8 @@ namespace ImageProcessor
         #region interface ILayerTool
         public void CropRectangleUpdated() { }
         public void GeometryTransformUpdated() { /*ShowGeometryTransformParameters();*/ }
-        public void FocusControl() { scaleBox.Focus(); }
+        public void FocusControl() { layerListView.Focus(); }
+        public void ActiveLayerUpdated(int i) { UpdateLayerList(i); }
         public void SetViewPosition(double x, double y) { canvas.ActiveLayer.SetEffectParameters(SelectedStrength, x, y); }
         #endregion
         public ImageEditForm()              
@@ -510,9 +511,8 @@ namespace ImageProcessor
             if (selectedIndex == ind)
                 return false;
             VisualLayer oldActiveLayer = canvas.ActiveLayer;
-            if (!canvas.SetActiveLayer(ind))
+            if (!canvas.UpdateActiveLayer(ind))
                 return false;
-            if (selectedIndex < 0 || oldActiveLayer == null || oldActiveLayer.Type != canvas.ActiveLayer.Type)
             if (selectedIndex < 0 || oldActiveLayer == null || oldActiveLayer.Type != canvas.ActiveLayer.Type)
                 CreateToolButtons(canvas.ActiveLayer);
             selectedIndex = ind;
@@ -616,19 +616,6 @@ namespace ImageProcessor
                 Debug.WriteLine(ex.Message);
             }
         }
-        //int GetThickness()                  // retrieves tool thickness
-        //{
-        //    try
-        //    {
-        //        NumericUpDown ic = (NumericUpDown)modeGroupBox.Controls["ThicknessInput"];
-        //        return (int)ic.Value;
-        //    }
-        //    catch { return 1; }
-        //}
-        //Color SetFromMediaColor(System.Windows.Media.Color nc)
-        //{
-        //    return Color.FromArgb(nc.A, nc.R, nc.G, nc.B);
-        //}
         System.Windows.Media.Color SetMediaColor(Color nc)
         {
             return System.Windows.Media.Color.FromArgb(nc.A, nc.R, nc.G, nc.B);

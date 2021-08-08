@@ -19,6 +19,7 @@ namespace ImageProcessor
         void GeometryTransformUpdated();
         void FocusControl();
         void SetViewPosition(double x, double y);
+        void ActiveLayerUpdated(int i);
     }
     public class DrawingPanel : Canvas
     {
@@ -63,7 +64,19 @@ namespace ImageProcessor
         public bool HasDrawing          { get { for (int i = 0; i < LayerCount; i++) if (GetLayer(i) is DrawingLayer) return true; return false; } }
         #region Layer list manipulation
         public VisualLayer GetLayer(int li) { if (li < 0 || li >= Children.Count) return null; return Children[li] as VisualLayer; }
-        public bool SetActiveLayer(int li) { ActiveLayer = GetLayer(li); bool ok = ActiveLayer != null; if (ok) { activeLayerIndex = li; UpdateToolDrawing(); } return ok; }
+        public bool UpdateActiveLayer(int li) 
+        {
+            if (activeLayerIndex == li)
+                return true;
+            ActiveLayer = GetLayer(li); 
+            bool ok = ActiveLayer != null; 
+            if (ok) 
+            { 
+                activeLayerIndex = li; 
+                UpdateToolDrawing(); 
+            } 
+            return ok; 
+        }
         public int RemoveActiveLayer()
         {
             if (ActiveLayer != null)
@@ -653,15 +666,33 @@ namespace ImageProcessor
                     if (mouseAction == MouseOperation.Rotate)
                         mouseAction = MouseOperation.Add;
                 }
-                else if (panelHolder.ToolMode == ToolMode.Crop && CropRectangle != null)
-                    mouseAction = CropRectangle.OperationFromLine(CropRectangle.FromDrawing.Transform(position));
-                else if (panelHolder.ToolMode == ToolMode.InfoImage)
-                    mouseAction = MouseAction.OperationFromMouse;
-                else if (IsActiveLayerVisible)
+                else if (LayerCount == 1)       // crop and info creation applies to single layer image only
+                {
+                    if (panelHolder.ToolMode == ToolMode.Crop && CropRectangle != null)
+                        mouseAction = CropRectangle.OperationFromLine(CropRectangle.FromDrawing.Transform(position));
+                    else if (panelHolder.ToolMode == ToolMode.InfoImage)
+                        mouseAction = MouseAction.OperationFromMouse;
+                }
+                else if (ActiveLayer != BackgroundLayer && IsActiveLayerVisible)    // operation on BackgroundLayer in multy-layer images cause confusion
+                {
                     mouseAction = panelHolder.ToolMode == ToolMode.Distortion3D ? ActiveLayer.MatrixControl.OperationFromPoint(position) :
                         panelHolder.ToolMode == ToolMode.Morph ? morphControl.OperationFromPoint(position) :
                         panelHolder.ToolMode == ToolMode.None ? MouseAction.OperationFromMouse :
                         MouseOperation.None;
+                    if(mouseAction== MouseOperation.Move && !ActiveLayer.HitTest(position)) // if move start not frominside active layer, set clicked layer as active
+                    {
+                        mouseAction = MouseOperation.None;
+                        int selected = -1;
+                        for (int i = 1; i < LayerCount; i++)
+                        {
+                            var vl = Children[i] as VisualLayer;
+                            if (vl != null && vl.HitTest(position))
+                                selected = i;
+                        }
+                        if (selected >= 0)
+                            panelHolder.ActiveLayerUpdated(selected);
+                    }
+                }
             }
             Mouse.OverrideCursor = ActionCursor;
             //Debug.WriteLine("DP down " + mouseAction.ToString());

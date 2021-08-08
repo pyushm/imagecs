@@ -454,6 +454,7 @@ namespace ImageProcessor
         public void CropRectangleUpdated() { saveButton.Enabled = true; SetWindowTitle(); }
         public void GeometryTransformUpdated() { ShowGeometryTransformParameters(); }
         public void FocusControl() { }
+        public void ActiveLayerUpdated(int i) { }
         public void SetViewPosition(double x, double y) { }
         #endregion
         public ImageViewForm(ImageListForm parentListForm)    
@@ -574,7 +575,7 @@ namespace ImageProcessor
                     previousColorTransform.CopyFrom(colorTransform);
                 colorTransform.Set();
                 SetInitialState();
-                canvas.SetActiveLayer(0);
+                canvas.UpdateActiveLayer(0);
                 SetWindowTitle();
                 ResetColorControls();
                 ShowGeometryTransformParameters();

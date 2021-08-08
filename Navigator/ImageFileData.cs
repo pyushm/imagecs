@@ -186,12 +186,12 @@ namespace ImageProcessor
         public bool IsDir { get { return Type == DataType.Dir; } }
         public bool IsLocalImages { get { return Type == DataType.LocalImages; } }
         public bool IsUnencryptedImage { get { return Type == DataType.GIF || Type == DataType.JPG || Type == DataType.PNG; } }  // unencrypted image of any format
-        public bool IsEncryptedImage { get { return Type == DataType.Exact || Type == DataType.Regular; } }  // any encrypted image
-        public bool IsRegularImage { get { return IsImage && !RealName.StartsWith(infoImagePrefix); } }
-        public bool IsImage { get { return IsUnencryptedImage || IsEncryptedImage; } }
-        public bool IsMultiLayer { get { return Type == DataType.MLI; } }    // always encrypted
-        public bool IsUnencryptedVideo { get { return Type == DataType.Movie; } }  // unencrypted video of any format
-        public bool IsEncryptedVideo { get { return Type == DataType.Video; } }  // encrypted video
+        public bool IsEncryptedImage { get { return Type == DataType.Exact || Type == DataType.Regular; } } // any encrypted image
+        public bool IsRegularImage { get { return IsImage && !RealName.StartsWith(infoImagePrefix); } }     // not an info
+        public bool IsImage { get { return IsUnencryptedImage || IsEncryptedImage; } }  // single layer
+        public bool IsMultiLayer { get { return Type == DataType.MLI; } }               // always encrypted
+        public bool IsUnencryptedVideo { get { return Type == DataType.Movie; } }       // unencrypted video of any format
+        public bool IsEncryptedVideo { get { return Type == DataType.Video; } }         // encrypted video
         public bool IsEncrypted { get { return IsMultiLayer || IsEncryptedImage || IsEncryptedVideo; } } // any encrypted file
         public bool IsExact { get { return Type == DataType.Exact || Type == DataType.PNG; } } // encrypted or unencrypted exact bitmap image
         public string StoreTypeString { get { object o = storeTypeString[Type]; return o == null ? " ??? " : (string)o; } }

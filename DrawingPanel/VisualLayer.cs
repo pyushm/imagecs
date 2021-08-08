@@ -45,6 +45,13 @@ namespace ImageProcessor
         }
         public int AddVisual(Visual v) { return children.Add(v); }
         public void RemoveVisual(Visual v) { children.Remove(v); }
+        public bool HitTest(Point pt) 
+        {
+            Matrix rm = RenderTransform.Value;
+            rm.Invert();
+            Point tp = rm.Transform(pt);
+            return tp.X>0 && tp.X< LayoutSize.Width && tp.Y>0 && tp.Y< LayoutSize.Height ? true : false;
+        }
         public void Clear() { children.Clear(); }
         public void SwitchSideSize() { LayoutSize = new IntSize(LayoutSize.Height, LayoutSize.Width); }
         protected override int VisualChildrenCount { get { return children.Count; } }
