@@ -658,39 +658,44 @@ namespace ImageProcessor
             if (!strokeEdit || mouseAction == MouseOperation.None)
             {
                 mouseAction = MouseOperation.None;
-                if ((panelHolder.ToolMode == ToolMode.RectSelection || panelHolder.ToolMode == ToolMode.FreeSelection) && collectedPolygon != null)
+                if (LayerCount == 1)   // crop and info creation and selection applies only to single layer image 
                 {
-                    collectedPolygon.Clear();
-                    collectedPolygon.Add(collectedPolygon.FromDrawing.Transform(position));
-                    mouseAction = MouseAction.OperationFromMouse;
-                    if (mouseAction == MouseOperation.Rotate)
-                        mouseAction = MouseOperation.Add;
-                }
-                else if (LayerCount == 1)       // crop and info creation applies to single layer image only
-                {
+                    if ((panelHolder.ToolMode == ToolMode.RectSelection || panelHolder.ToolMode == ToolMode.FreeSelection) && collectedPolygon != null)
+                    {
+                        collectedPolygon.Clear();
+                        collectedPolygon.Add(collectedPolygon.FromDrawing.Transform(position));
+                        mouseAction = MouseAction.OperationFromMouse;
+                        if (mouseAction == MouseOperation.Rotate)
+                            mouseAction = MouseOperation.Add;
+                    }
                     if (panelHolder.ToolMode == ToolMode.Crop && CropRectangle != null)
                         mouseAction = CropRectangle.OperationFromLine(CropRectangle.FromDrawing.Transform(position));
                     else if (panelHolder.ToolMode == ToolMode.InfoImage)
                         mouseAction = MouseAction.OperationFromMouse;
                 }
-                else if (ActiveLayer != BackgroundLayer && IsActiveLayerVisible)    // operation on BackgroundLayer in multy-layer images cause confusion
+                else
                 {
-                    mouseAction = panelHolder.ToolMode == ToolMode.Distortion3D ? ActiveLayer.MatrixControl.OperationFromPoint(position) :
-                        panelHolder.ToolMode == ToolMode.Morph ? morphControl.OperationFromPoint(position) :
-                        panelHolder.ToolMode == ToolMode.None ? MouseAction.OperationFromMouse :
-                        MouseOperation.None;
-                    if(mouseAction== MouseOperation.Move && !ActiveLayer.HitTest(position)) // if move start not frominside active layer, set clicked layer as active
+                    if (ActiveLayer != BackgroundLayer && IsActiveLayerVisible)    // operation on BackgroundLayer in multy-layer images cause confusion
                     {
-                        mouseAction = MouseOperation.None;
+                        mouseAction = panelHolder.ToolMode == ToolMode.Distortion3D ? ActiveLayer.MatrixControl.OperationFromPoint(position) :
+                            panelHolder.ToolMode == ToolMode.Morph ? morphControl.OperationFromPoint(position) :
+                            panelHolder.ToolMode == ToolMode.None ? MouseAction.OperationFromMouse :
+                            MouseOperation.None;
+                    }
+                    if (mouseAction == MouseOperation.Move || mouseAction == MouseOperation.None) // if higher than active layer clicked, set clicked layer as active
+                    {
                         int selected = -1;
-                        for (int i = 1; i < LayerCount; i++)
+                        for (int i = 1; i < LayerCount; i++)    // top-most layer selected
                         {
                             var vl = Children[i] as VisualLayer;
                             if (vl != null && vl.HitTest(position))
                                 selected = i;
                         }
-                        if (selected >= 0)
+                        if (selected != -1 && selected != activeLayerIndex)  // if hit other layer => new active layer
+                        {
                             panelHolder.ActiveLayerUpdated(selected);
+                            mouseAction = MouseOperation.None;
+                        }
                     }
                 }
             }
