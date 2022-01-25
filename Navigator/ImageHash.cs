@@ -84,7 +84,7 @@ namespace ImageProcessor
     {   // compact representation of image properties
         const int sizeM = 8;        // size of compact image matrix (sizeM x sizeM)
         const int sizeH = 16;       // histogram size
-        const int bitH = 4;         // histogram element bit size (histogram bit size = sizeH * bitH)
+        const int bitH = 4;         // histogram element bit size (histogram size = sizeH * bitH)
         const byte maxValueH = (1 << bitH) - 1; // max value of histogram element = 2^bitH-1
         const int hCoef = (byte.MaxValue + 1) / sizeH; // conversion of byte into sizeH
         public readonly DateTime CreateTime; // time when info was created
@@ -271,7 +271,7 @@ namespace ImageProcessor
             return "A=" + Aspect.ToString("D3") + " R=" + AverageR.ToString("D3") + " G=" + AverageG.ToString("D3") + " B=" + AverageB.ToString("D3") +
                 " Lum=" + Lum.ToString("X16") + " Sat=" + Sat.ToString("X16") + " Hue=" + Hue.ToString("X16") + " BWM=" + BWM.ToString("X16");
         }
-        public class Pattern : ImageHash
+        public class ImagePattern : ImageHash
         {
             const ulong up = 0xFF;
             const ulong down = 0xFF00000000000000;
@@ -281,7 +281,7 @@ namespace ImageProcessor
             public readonly ulong BWM2;   // BW matrix of compact image 
             public readonly ulong BWM3;   // BW matrix of compact image 
             public readonly ulong BWM4;   // BW matrix of compact image 
-            public Pattern(string imagePath) : base(new ImageFileInfo(new FileInfo(imagePath)))
+            public ImagePattern(string imagePath) : base(new ImageFileInfo(new FileInfo(imagePath)))
             {
                 BWM1 = BWM << sizeM;
                 BWM1 |= up;
@@ -390,52 +390,51 @@ namespace ImageProcessor
         public class Comparer : IComparer<ImageHash>
         {
             public readonly int MaxDifference; // all values normalized to byte.MaxValue. it is allowable measurement difference range
-            Pattern pattern;
             bool ExactComparison { get; set; }
-            public Pattern Pattern { get { return pattern; } }
+            public ImagePattern Pattern { get; private set; }
             public Comparer(int errorLevel)
             {
                 ExactComparison = true;
                 MaxDifference = errorLevel;
             }
-            public void SetPattern(string imagePath) { pattern = new Pattern(imagePath); }
+            public void SetPattern(string imagePath) { Pattern = new ImagePattern(imagePath); }
             public int HashDifference(ImageHash info)
             {
                 int partMax = MaxDifference / 4;
-                int dif = Math.Abs(info.Aspect - pattern.Aspect);
+                int dif = Math.Abs(info.Aspect - Pattern.Aspect);
                 if (dif > partMax/2)
                     return int.MaxValue;
-                dif += Math.Abs(info.AverageR - pattern.AverageR) + Math.Abs(info.AverageG - pattern.AverageG) + Math.Abs(info.AverageB - pattern.AverageB);
+                dif += Math.Abs(info.AverageR - Pattern.AverageR) + Math.Abs(info.AverageG - Pattern.AverageG) + Math.Abs(info.AverageB - Pattern.AverageB);
                 if (dif > partMax)
                     return int.MaxValue;
                 int el, es, eh, ep;
                 if (ExactComparison)
                 {
-                    el = pattern.ExactLumDif(info);
+                    el = Pattern.ExactLumDif(info);
                     if(el > partMax)
                         return int.MaxValue;
-                    es = pattern.ExactSatDif(info);
+                    es = Pattern.ExactSatDif(info);
                     if (es > partMax)
                         return int.MaxValue;
-                    eh = pattern.ExactHueDif(info);
+                    eh = Pattern.ExactHueDif(info);
                     if (eh > partMax)
                         return int.MaxValue;
-                    ep = pattern.ExactPixelDif(info);
+                    ep = Pattern.ExactPixelDif(info);
                     if (ep > partMax)
                         return int.MaxValue;
                 }
                 else
                 {
-                    el = pattern.ApprxLumDif(info);
+                    el = Pattern.ApprxLumDif(info);
                     if (el > partMax)
                         return int.MaxValue;
-                    es = pattern.ApprxSatDif(info);
+                    es = Pattern.ApprxSatDif(info);
                     if (es > partMax)
                         return int.MaxValue;
-                    eh = pattern.ApprxHueDif(info);
+                    eh = Pattern.ApprxHueDif(info);
                     if (eh > partMax)
                         return int.MaxValue;
-                    ep = pattern.ApprxPixelDif(info);
+                    ep = Pattern.ApprxPixelDif(info);
                     if (ep > partMax)
                         return int.MaxValue;
                 }

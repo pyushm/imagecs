@@ -78,6 +78,10 @@
       <Project>{a24ddb50-08af-4d2d-9f3a-dcaddc97770f}</Project>
       <Name>ImageMatrixes</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Navigator\Navigator.csproj">
+      <Project>{69610b8c-8790-41f8-ac96-146677f5bf5f}</Project>
+      <Name>Navigator</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\Edge.ps" />

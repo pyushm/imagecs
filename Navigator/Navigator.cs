@@ -128,12 +128,19 @@ namespace ImageProcessor
         {
             soundPattern = mode == SearchMode.Sound ? new SoundLike(name) : null;
             string textPattern = mode == SearchMode.File || mode == SearchMode.Name ? name.ToLower() : null;
-            var tps = textPattern?.Split(new char[] { ',', ' ', '.', '-' }, StringSplitOptions.RemoveEmptyEntries);
-            List<string> tpsl = new List<string>();
-            foreach (string tp in tps)
-                if (tp.Length > 1)
-                    tpsl.Add(tp);
-            textPatterns = tpsl.ToArray();
+            if (mode == SearchMode.Name)
+            {
+                var tps = textPattern?.Split(new char[] { ',', ' ', '.', '-' }, StringSplitOptions.RemoveEmptyEntries);
+                List<string> tpsl = new List<string>();
+                foreach (string tp in tps)
+                    if (tp.Length > 1)
+                        tpsl.Add(tp);
+                textPatterns = tpsl.ToArray();
+            }
+            else if (textPattern != null)
+                textPatterns = new string[] { textPattern };
+            else
+                textPatterns = null;
             if (mode == SearchMode.Image)
             {
                 if (activeImageName == null)

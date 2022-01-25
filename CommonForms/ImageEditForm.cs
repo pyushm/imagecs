@@ -574,7 +574,7 @@ namespace ImageProcessor
             BitmapAccess clip = canvas.GetSelected(resolution);
             int transparencyEdge = bl.FromSelection ? SelectedEdge(Math.Min((int)Math.Sqrt(clip.Width + clip.Height) / 3, 6)) : 0;
             Vector shift = bl.FromSelection ? (Vector)canvas.SavedPosition : new Vector();
-            BitmapAccess ba = clip.ApplyConversion(ConversionType.MedianFilter, resolution, level);
+            BitmapAccess ba = clip.ApplyConversion(FilterType.MedianFilter, resolution, level);
             VisualLayer vl = new BitmapLayer(name, ba, transparencyEdge);
             UpdateLayerList(canvas.AddVisualLayer(vl, bl, shift));
         }

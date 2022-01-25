@@ -60,8 +60,8 @@ namespace ShaderEffects
             ofd.Filter = "Images|*.jpg;*.png;*.bmp;*.gif|All Files|*.*";
             if (ofd.ShowDialog(this) == true)
             {
-                ImageSource oldSource = img.Source;
-                Matrix om = img.RenderTransform.Value;
+                //ImageSource oldSource = img.Source;
+                //Matrix om = img.RenderTransform.Value;
                 img.Stretch = Stretch.None;
                 img.HorizontalAlignment = HorizontalAlignment.Left;
                 img.VerticalAlignment = VerticalAlignment.Top;
@@ -70,6 +70,9 @@ namespace ShaderEffects
                 imagePixelSize = new IntSize(bitmap.PixelWidth, bitmap.PixelHeight);
                 img.Source = bitmap;
                 bitmapData = new BitmapAccess(bitmap);
+                //host.lo
+                //var imageInfo = new ImageFileInfo(new FileInfo(ofd.FileName));
+                //BitmapAccess ba = BitmapAccess.LoadImage(imageInfo.FSPath, imageInfo.IsEncrypted);
                 ColumnDefinitionCollection cdc = grid.ColumnDefinitions;
                 double w = cdc[1].ActualWidth;
                 double h = grid.ActualHeight;

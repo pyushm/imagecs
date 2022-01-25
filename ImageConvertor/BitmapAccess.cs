@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 
 namespace ImageProcessor
 {
-    public enum ConversionType
+    public enum FilterType
     {
         MedianFilter,
         WaveletFilter,
@@ -33,19 +33,17 @@ namespace ImageProcessor
                     return true;
             return false;
         }
-        public string Path { get; private set; }
-        protected WriteableBitmap source; // image source
-        protected int bytespp;          // all supported formats have exact number of bytes per pixel in rawImage
+        public string Path              { get; private set; }
         protected bool isIndexed;
-        public IntPtr DataPtr           { get { return source.BackBuffer; } }
+        public IntPtr DataPtr           { get { return Source.BackBuffer; } }
         public int Width                { get; private set; }   // bitmap pixel width
         public int Height               { get; private set; }   // bitmap pixel height
-        public PixelFormat PixelFormat  { get { return source.Format; } }
-        public BitmapPalette Palette    { get { return source.Palette; } }
-        public int Bytespp              { get { return bytespp; } }
-        public int Stride               { get { return source.BackBufferStride; } }
+        public PixelFormat PixelFormat  { get { return Source.Format; } }
+        public BitmapPalette Palette    { get { return Source.Palette; } }
+        public int Bytespp              { get; private set; }   // all supported formats have exact number of bytes per pixel in rawImage
+        public int Stride               { get { return Source.BackBufferStride; } }
         public int DataLength           { get { return Stride * Height; } }
-        public WriteableBitmap Source   { get { return source; } }
+        public WriteableBitmap Source   { get; private set; }   // image source
         public static BitmapAccess CreateFromColorMatrixes(ByteMatrix[] colors)
         {
             if (colors.Length == 0)
@@ -144,6 +142,17 @@ namespace ImageProcessor
             byte[] imageBytes = DataAccess.ReadFile(fullPath, encrypted);
             return new BitmapAccess(new MemoryStream(imageBytes), 200, fullPath);
         }
+        public static BitmapImage CreateHashImage(string fullPath, bool encrypted, IntSize size)
+        {
+            byte[] imageBytes = DataAccess.ReadFile(fullPath, encrypted);
+            BitmapImage bi = new BitmapImage();
+            bi.BeginInit();
+            bi.StreamSource = new MemoryStream(imageBytes);
+            bi.DecodePixelWidth = size.Width;
+            bi.DecodePixelHeight = size.Height;
+            bi.EndInit();
+            return bi;
+        }
         public BitmapAccess(MemoryStream dataStream, int maxWidth, string path)
         {   // loading image from memory array
             Path = path;
@@ -201,13 +210,13 @@ namespace ImageProcessor
         }
         void Initialize(WriteableBitmap src, Transform transform)
         {
-            source = src;
-            bytespp = (PixelFormat.BitsPerPixel + 7) / 8;// all supported formats have exact number of bytes per pixel
+            Source = src;
+            Bytespp = (PixelFormat.BitsPerPixel + 7) / 8;// all supported formats have exact number of bytes per pixel
             isIndexed = PixelFormat == PixelFormats.Indexed8 && Palette != null;
-            Width = source.PixelWidth;
-            Height = source.PixelHeight;
+            Width = Source.PixelWidth;
+            Height = Source.PixelHeight;
             if (transform != null && transform != Transform.Identity)
-                source = new WriteableBitmap(new TransformedBitmap(source, transform));
+                Source = new WriteableBitmap(new TransformedBitmap(Source, transform));
         }
         public Color BorderColor()
         {
@@ -231,7 +240,7 @@ namespace ImageProcessor
                 if (GetPixel(0, j).A != 0 || GetPixel(Width - 1, j).A != 0)
                     return null;
             ByteMatrix transparencyMask = new ByteMatrix(Height, Width);
-            Chank[] chanks = Chank.CreateChanks(Height, 500, source, null);
+            Chank[] chanks = Chank.CreateChanks(Height, 500, Source, null);
             int w = Width;
             unsafe
             {
@@ -254,14 +263,14 @@ namespace ImageProcessor
         }
         public byte[] GetBytes(int i, int j)
         {
-            byte[] data = new byte[bytespp];
-            int ind = j * Stride + i * bytespp;
+            byte[] data = new byte[Bytespp];
+            int ind = j * Stride + i * Bytespp;
             if (ind >= 0 && ind < DataLength)
             {
                 unsafe
                 {
                     byte* bp = (byte*)(DataPtr + ind);
-                    for (int c = 0; c < bytespp; c++)
+                    for (int c = 0; c < Bytespp; c++)
                         data[c] = *bp++;
                 }
             }
@@ -270,10 +279,10 @@ namespace ImageProcessor
         public Color GetPixel(int i, int j) { return ColorFromBytes(GetBytes(i, j)); }
         Color ColorFromBytes(byte[] ba)
         { 
-            return isIndexed ? Palette.Colors[ba[0]] : bytespp == 1 ? Color.FromArgb(255, ba[0], ba[0], ba[0]) :
-                bytespp == 3 ? Color.FromArgb(255, ba[2], ba[1], ba[0]) : Color.FromArgb(ba[3], ba[2], ba[1], ba[0]);
+            return isIndexed ? Palette.Colors[ba[0]] : Bytespp == 1 ? Color.FromArgb(255, ba[0], ba[0], ba[0]) :
+                Bytespp == 3 ? Color.FromArgb(255, ba[2], ba[1], ba[0]) : Color.FromArgb(ba[3], ba[2], ba[1], ba[0]);
         }
-        public BitmapAccess Clone() { return new BitmapAccess(source.Clone()); }
+        public BitmapAccess Clone() { return new BitmapAccess(Source.Clone()); }
         public Color GetColorFromPixel(Point pt)
         {
             int i = (int)pt.X;
@@ -282,15 +291,15 @@ namespace ImageProcessor
                 return Colors.Black;
             return GetPixel(i, j);
         }
-        public Color GetColor(Point pt) { return GetColorFromPixel(new Point(pt.X * source.DpiX / 96, pt.Y * source.DpiY / 96)); }
+        public Color GetColor(Point pt) { return GetColorFromPixel(new Point(pt.X * Source.DpiX / 96, pt.Y * Source.DpiY / 96)); }
         public void UpdateTransparency(ByteMatrix mask)
         {
             if (PixelFormat != PixelFormats.Pbgra32 || mask == null)
                 return;
             if (Width != mask.Width || Height != mask.Height)
                 return;
-            source.Lock();
-            Chank[] chanks = Chank.CreateChanks(Height, 700, source, null);
+            Source.Lock();
+            Chank[] chanks = Chank.CreateChanks(Height, 700, Source, null);
             float norm = (float)byte.MaxValue;
             unsafe
             {
@@ -316,17 +325,17 @@ namespace ImageProcessor
                     //}
                 });
             }
-            source.Unlock();
+            Source.Unlock();
         }
         public void Overwrite(BitmapAccess src, int x0, int y0, int scale)
         {   // overwrites bitmap with src starting at x0, y0; scale (e.g. 1, 2, 3) reduces size of from
             WriteableBitmap from = src.Source;
             WriteableBitmap to = Source;
-            if (from == null || to == null || bytespp < 4 || from.Format != PixelFormats.Pbgra32)
+            if (from == null || to == null || Bytespp < 4 || from.Format != PixelFormats.Pbgra32)
             {
                 bool borderSet = false;
                 if (PixelFormat != PixelFormats.Pbgra32)
-                    source = to = AdjustedPArgbImage(null, null, ref borderSet);
+                    Source = to = AdjustedPArgbImage(null, null, ref borderSet);
             }
             from.Lock();
             to.Lock();
@@ -357,14 +366,14 @@ namespace ImageProcessor
         }
         public BitmapAccess DeleteSelection(Int32Rect cropRect, List<Point> edge)
         {
-            source.Lock();
+            Source.Lock();
             unsafe
             {
-                uint* ptr = (uint*)source.BackBuffer + cropRect.Y * source.PixelWidth;
+                uint* ptr = (uint*)Source.BackBuffer + cropRect.Y * Source.PixelWidth;
                 int beginRow = Math.Max(0, cropRect.Y);
-                int endRow = Math.Min(source.PixelHeight, cropRect.Y + cropRect.Height);
+                int endRow = Math.Min(Source.PixelHeight, cropRect.Y + cropRect.Height);
                 int beginCol = Math.Max(0, cropRect.X);
-                int endCol = Math.Min(source.PixelWidth, cropRect.X + cropRect.Width);
+                int endCol = Math.Min(Source.PixelWidth, cropRect.X + cropRect.Width);
                 for (int r = beginRow; r < endRow; r++)
                 {
                     List<double> nodes = new List<double>(); //  Build a list of row crossing nodes.
@@ -402,11 +411,11 @@ namespace ImageProcessor
                             *ptr1 = 0xFFFFFFFF; // white pixels inside contour
                         ptr1++;
                     }
-                    ptr += source.PixelWidth;
+                    ptr += Source.PixelWidth;
                 }
             }
-            source.Unlock();
-            return new BitmapAccess(source);
+            Source.Unlock();
+            return new BitmapAccess(Source);
         }
         public BitmapAccess SetSelectionBitmap(Int32Rect cropRect, List<Point> edge, bool clearOutside)
         { 
@@ -416,7 +425,7 @@ namespace ImageProcessor
             //Debug.WriteLine(cropRect.ToString());
             //Debug.WriteLine("clip: begin=" + clip.BackBuffer + " length=" + clip.BackBufferStride * clip.PixelHeight);
             //Debug.WriteLine("source: begin=" + clip.BackBuffer + " length=" + source.BackBufferStride * source.PixelHeight);
-            Chank[] chanks = Chank.CreateChanks(cropRect.Height, 700, source, clip);
+            Chank[] chanks = Chank.CreateChanks(cropRect.Height, 700, Source, clip);
             clip.Lock();
             try
             {
@@ -456,7 +465,7 @@ namespace ImageProcessor
                                     ii++;
                             }
                             int nodeInd = 0;
-                            byte* bptr = (byte*)(chank.FromData + Stride * (i - chank.StartRow + cropRect.Y) + bytespp * cropRect.X);
+                            byte* bptr = (byte*)(chank.FromData + Stride * (i - chank.StartRow + cropRect.Y) + Bytespp * cropRect.X);
                            // Debug.WriteLine(" toPos=" + ((long)(IntPtr)uptr - (long)clip.BackBuffer) + " fromPos=" + ((long)(IntPtr)bptr - (long)source.BackBuffer));
                             for (ushort j = 0; j < clip.PixelWidth; j++)
                             {
@@ -467,7 +476,7 @@ namespace ImageProcessor
                                 else // remove transparency
                                     *uptr = *(uint*)bptr | 0xFF000000;
                                 uptr++;
-                                bptr += bytespp;
+                                bptr += Bytespp;
                             }
                         }
                     }
@@ -479,10 +488,10 @@ namespace ImageProcessor
         }
         public ByteMatrix[] CreateColorMatrixes()
         {
-            BitmapPalette palette = source.Palette;
-            source.Lock();
-            Chank[] chanks = Chank.CreateChanks(Height, 500, source, null);
-            int nm = isIndexed ? 3 : bytespp;
+            BitmapPalette palette = Source.Palette;
+            Source.Lock();
+            Chank[] chanks = Chank.CreateChanks(Height, 500, Source, null);
+            int nm = isIndexed ? 3 : Bytespp;
             ByteMatrix[] bmpa = new ByteMatrix[nm];
             for (int i = 0; i < nm; i++)
                 bmpa[i] = new ByteMatrix(Height, Width);
@@ -493,7 +502,7 @@ namespace ImageProcessor
                 Parallel.ForEach(chanks, (chank) =>
                 {   // setting original ByteMatrixes
                     byte* ptr = (byte*)chank.FromData;
-                    if (bytespp == 1)
+                    if (Bytespp == 1)
                     {
                         if(isIndexed)
                         {
@@ -522,7 +531,7 @@ namespace ImageProcessor
                         }
 
                     }
-                    else if (bytespp == 3)
+                    else if (Bytespp == 3)
                     {
                         ByteMatrix b = bmpa[0];
                         ByteMatrix g = bmpa[1];
@@ -557,10 +566,10 @@ namespace ImageProcessor
                     //}
                 });
             }
-            source.Unlock();
+            Source.Unlock();
             return bmpa;
         }
-        public BitmapAccess ApplyConversion(ConversionType access, int halfSize, int relativeLevel)
+        public BitmapAccess ApplyConversion(FilterType access, int halfSize, int relativeLevel)
         {
             if (halfSize <= 0)
                 return Clone();
@@ -574,16 +583,16 @@ namespace ImageProcessor
                 bmpa[i].original = original[i];
             }
             ByteMatrix transparency = original.Length == 4 ? original[3] : null;
-            if (access == ConversionType.MedianFilter)
+            if (access == FilterType.MedianFilter)
             {   // Parallel inside MedianSmoothing
                 for (int i = 0; i < pairLength; i++) { bmpa[i].transformed = bmpa[i].original.MedianSmoothing(halfSize, 500, (byte)byteLevel); }
             }
-            else if (access == ConversionType.WaveletFilter)
+            else if (access == FilterType.WaveletFilter)
             {   // Parallel inside WaveletContrasting
                 ByteMatrix filter = ByteMatrix.CreateWaveletFilter(halfSize);
                 for (int i = 0; i < pairLength; i++) { bmpa[i].transformed = bmpa[i].original.WaveletContrasting(filter, 700, byteLevel, false); }
             }
-            else if (access == ConversionType.ConeAverage)
+            else if (access == FilterType.ConeAverage)
             {
                 ByteMatrix filter = ByteMatrix.CreateConeFilter(halfSize);
                 for (int i = 0; i < pairLength; i++) { bmpa[i].transformed = bmpa[i].original.ConeSmoothing(filter, 700); }
@@ -598,14 +607,14 @@ namespace ImageProcessor
         public WriteableBitmap AdjustedPArgbImage(ColorTransform transform, ByteMatrix mask, ref bool transparencySet)
         {
             if ((transform == null || transform.IsIdentical) && (PixelFormat == PixelFormats.Pbgra32 || PixelFormat == PixelFormats.Bgra32))
-                return source.Clone();
+                return Source.Clone();
             bool alphaIgnored = (transform != null && transform.IsColorSet) || (PixelFormat != PixelFormats.Pbgra32 && PixelFormat != PixelFormats.Bgra32);
             WriteableBitmap bmn = new WriteableBitmap(Width, Height, 96, 96, PixelFormats.Pbgra32, null);
             bmn.Lock();
             if (mask != null)
                 mask.Set(Height, Width);
             bool flag = false;
-            Chank[] chanks = Chank.CreateChanks(Height, 500, source, bmn);
+            Chank[] chanks = Chank.CreateChanks(Height, 500, Source, bmn);
             int w = Width;
             unsafe
             {
@@ -621,11 +630,11 @@ namespace ImageProcessor
                         byte* ptrn = ptrn0;
                         for (ushort j = 0; j < w; j++)
                         {
-                            if (bytespp == 1)
+                            if (Bytespp == 1)
                             {
                                 r = b = g = *ptr++;
                             }
-                            else if (bytespp == 3)
+                            else if (Bytespp == 3)
                             {
                                 b = *ptr++;
                                 g = *ptr++;
@@ -653,7 +662,7 @@ namespace ImageProcessor
                             *ptrn++ = a;
                         }
                         ptrn0 += bmn.BackBufferStride;
-                        ptr0 += source.BackBufferStride;
+                        ptr0 += Source.BackBufferStride;
                     }
                 }
                 //});
@@ -670,7 +679,7 @@ namespace ImageProcessor
             {
                 //source.s(soutStream);
                 BitmapEncoder enc = new BmpBitmapEncoder();
-                enc.Frames.Add(BitmapFrame.Create(source)); // , BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.Default
+                enc.Frames.Add(BitmapFrame.Create(Source)); // , BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.Default
                 enc.Save(outStream);
                 //using (Stream file = File.Create("test.bmp"))
                 //{
@@ -717,7 +726,7 @@ namespace ImageProcessor
             catch(Exception ex) {
                 Debug.WriteLine("Saving "+ path+" failed: "+ex.Message); }
         }
-        public void DebugSave(string path) { DebugSave(path, source); }
+        public void DebugSave(string path) { DebugSave(path, Source); }
     }
     public class ValueMartixBitmap : BitmapAccess
     {
@@ -745,9 +754,9 @@ namespace ImageProcessor
             float[,] gradN = new float[h, w];
             try
             {
-                int hSize = resolution * bytespp;
+                int hSize = resolution * Bytespp;
                 int vSize = resolution * Stride;
-                int jump = (resolution - 1) * bytespp;
+                int jump = (resolution - 1) * Bytespp;
                 unsafe
                 {
                     byte* ptr = (byte*)DataPtr;
@@ -765,7 +774,7 @@ namespace ImageProcessor
                         for (int ii = 1; ii < w - 1; ii++)
                         {
                             float g;
-                            if (bytespp == 1)
+                            if (Bytespp == 1)
                             {
                                 lmm = *ptrmm++;
                                 l0m = *ptr0m++;
@@ -833,7 +842,7 @@ namespace ImageProcessor
                                 dataRange.max = g;
                             gradN[jj, ii] = g;
                             dataRange.average += g;
-                            if (bytespp == 4)
+                            if (Bytespp == 4)
                             {
                                 ptrmm++;
                                 ptr0m++;
@@ -870,7 +879,7 @@ namespace ImageProcessor
             dataRange.average = (float)dataRange.average / (w - 1) / (h - 1);
             return new ValueMartix(1, gradN, dataRange, resolution);
         }
-        unsafe ValueMartix CreateValueMartix(ConversionType type, int resolution_, bool compressed, int darkLevel)
+        unsafe ValueMartix CreateValueMartix(FilterType type, int resolution_, bool compressed, int darkLevel)
         {
             resolution = Math.Max(resolution_, 1);
             int compression = Math.Max(compressed ? resolution : 1, 1);
@@ -882,9 +891,9 @@ namespace ImageProcessor
             fixed (float* amat = &matrix[0, 0])
             {
                 dataRange.min = double.MaxValue;
-                jump = (compression - 1) * bytespp;
+                jump = (compression - 1) * Bytespp;
                 matrixOffset = resolution / compression;
-                hSize = resolution * bytespp;
+                hSize = resolution * Bytespp;
                 vSize = resolution * Stride;
                 int vStep = compressed ? vSize : Stride;
                 Chank[] chanks = Chank.CreateChanks(h, 500, matrixOffset, DataPtr, vStep, (IntPtr)amat, w * sizeof(float));
@@ -897,9 +906,9 @@ namespace ImageProcessor
                         float* mptr = (float*)chank.ToData;
                         for (int i = chank.StartRow; i < chank.EndRow; i++)
                         {
-                            if (type == ConversionType.CrossAverage)
+                            if (type == FilterType.CrossAverage)
                                 ProcessCrossAverage(ptr, mptr);
-                            if (type == ConversionType.CrossDifference)
+                            if (type == FilterType.CrossDifference)
                                 ProcessCrossDifference(ptr, mptr);
                             ptr += vStep;
                             mptr += w;
@@ -920,7 +929,7 @@ namespace ImageProcessor
         }
         unsafe void ProcessCrossAverage(byte* ptr, float* res)
         {
-            IList<Color> palette = isIndexed ? source.Palette.Colors : null;
+            IList<Color> palette = isIndexed ? Source.Palette.Colors : null;
             int r0m, g0m, b0m, r0p, g0p, b0p, rm0, gm0, bm0, rp0, gp0, bp0, b, g, r; // 1st - y, 2nd - x
             int val;
             Color c0p, c0m, cm0, cp0, c00;
@@ -931,7 +940,7 @@ namespace ImageProcessor
             byte* ptr0p = ptr + hSize;
             for (int i = matrixOffset; i < Width - matrixOffset; i++)
             {
-                if (bytespp == 1)
+                if (Bytespp == 1)
                 {
                     b = g = r = *ptr++;
                 }
@@ -959,7 +968,7 @@ namespace ImageProcessor
                         r = 2 * r + c0p.R + c0m.R + cp0.R + cm0.R;
                     }
                 }
-                else if (bytespp == 1)
+                else if (Bytespp == 1)
                 {
                     r = g = b = *ptr00++;
                     if (resolution > 0)
@@ -1002,7 +1011,7 @@ namespace ImageProcessor
                     dataRange.min = val;
                 *res++ = val;
                 dataRange.average += val;
-                if (bytespp == 4)
+                if (Bytespp == 4)
                 {   // ignoring transparency
                     ptr00++;
                     ptr0m++;
@@ -1022,7 +1031,7 @@ namespace ImageProcessor
         }
         unsafe void ProcessCrossDifference(byte* ptr, float* res)
         {
-            IList<Color> palette = isIndexed ? source.Palette.Colors : null;
+            IList<Color> palette = isIndexed ? Source.Palette.Colors : null;
             byte r00, g00, b00, r0m, g0m, b0m, r0p, g0p, b0p, rm0, gm0, bm0, rp0, gp0, bp0;
             int wb, hb, wg, hg, wr, hr; // 1st - y, 2nd - x
             double val;
@@ -1033,7 +1042,7 @@ namespace ImageProcessor
             byte* ptrm0 = ptr00 - vSize;
             byte* ptrp0 = ptr00 + vSize;
             byte* ptr0p = ptr00 + hSize;
-            for (int i = matrixOffset; i < source.PixelWidth - matrixOffset; i++)
+            for (int i = matrixOffset; i < Source.PixelWidth - matrixOffset; i++)
             {
                 if (isIndexed) 
                 {
@@ -1058,7 +1067,7 @@ namespace ImageProcessor
                     g0p = c0p.G;
                     r0p = c0p.R;
                 }
-                else if (bytespp == 1)
+                else if (Bytespp == 1)
                 {
                     r00 = g00 = b00 = *ptr00++;
                     r0m = g0m = b0m = *ptr0m++;
@@ -1105,7 +1114,7 @@ namespace ImageProcessor
                     dataRange.min = val;
                 *res++ = (float)val;
                 dataRange.average += val;
-                if (bytespp == 4)
+                if (Bytespp == 4)
                 {   // ignoring transparency
                     ptr00++;
                     ptr0m++;
