@@ -22,13 +22,14 @@ namespace ImageProcessor
         JPG,        //
         GIF,
         PNG,
-        MLI,        // encripted exact layers
+        Draw,       // multi-layer drawing
         Movie,
         Animation,
         Dir,
         LocalImages,
         Exact,      // encripted png image
         Regular,    // encripted jpg image
+        MLI,        // encripted exact layers
         Video,      // encripted video
         Unknown
     }
@@ -112,6 +113,7 @@ namespace ImageProcessor
             knownExtensions.Add(".gif", DataType.GIF);
             knownExtensions.Add(".bmp", DataType.PNG);
             knownExtensions.Add(".png", DataType.PNG);
+            knownExtensions.Add(".Draw", DataType.Draw);
             knownExtensions.Add(".exa", DataType.Exact);
             knownExtensions.Add(".jpe", DataType.Regular);
             knownExtensions.Add(".drw", DataType.MLI);
@@ -189,10 +191,10 @@ namespace ImageProcessor
         public bool IsEncryptedImage { get { return Type == DataType.Exact || Type == DataType.Regular; } } // any encrypted image
         public bool IsRegularImage { get { return IsImage && !RealName.StartsWith(infoImagePrefix); } }     // not an info
         public bool IsImage { get { return IsUnencryptedImage || IsEncryptedImage; } }  // single layer
-        public bool IsMultiLayer { get { return Type == DataType.MLI; } }               // always encrypted
+        public bool IsMultiLayer { get { return Type == DataType.MLI || Type == DataType.Draw; } }    
         public bool IsUnencryptedVideo { get { return Type == DataType.Movie; } }       // unencrypted video of any format
         public bool IsEncryptedVideo { get { return Type == DataType.Video; } }         // encrypted video
-        public bool IsEncrypted { get { return IsMultiLayer || IsEncryptedImage || IsEncryptedVideo; } } // any encrypted file
+        public bool IsEncrypted { get { return Type == DataType.MLI || IsEncryptedImage || IsEncryptedVideo; } } // any encrypted file
         public bool IsExact { get { return Type == DataType.Exact || Type == DataType.PNG; } } // encrypted or unencrypted exact bitmap image
         public string StoreTypeString { get { object o = storeTypeString[Type]; return o == null ? " ??? " : (string)o; } }
         public ImageFileName(string fileName) // name with extension
@@ -563,7 +565,7 @@ namespace ImageProcessor
                                 string dest = Path.Combine(toDirectory.FullName, FSMangle(Path.GetFileName(ifi.FSPath)));
                                 File.Move(ifi.FSPath, dest);
                             }
-                            else if (DataAccess.PrivateAccessAllowed && (ifi.IsUnencryptedImage || ifi.IsUnencryptedVideo))
+                            else if (DataAccess.PrivateAccess && (ifi.IsUnencryptedImage || ifi.IsUnencryptedVideo))
                             {   // when PrivateAccessAllowed move images with encription and name mangling
                                 string name = ifi.IsUnencryptedVideo ? ifi.FSName + ".vid" : ifi.IsExact ? ifi.FSName + ".exa" : ifi.FSName + ".jpe";
                                 byte[] src = File.ReadAllBytes(ifi.FSPath);

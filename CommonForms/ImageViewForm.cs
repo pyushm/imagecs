@@ -679,21 +679,13 @@ namespace ImageProcessor
         {
             SaveFileDialog saveAsDialog = new SaveFileDialog();
             saveAsDialog.FileName = imageInfo.RealName;
-            if (DataAccess.PrivateAccessAllowed)
-            {
-                saveAsDialog.Filter = "regular|*.jpe|Exact|*.exa|MultiLayer|*.drw"; // safe format relies on this order 
-                saveAsDialog.FilterIndex = imageInfo.IsMultiLayer ? 3 : imageInfo.IsExact ? 2 : 1;
-            }
-            else
-            {
-                saveAsDialog.Filter = "regular|*.jpg|Exact|*.png"; // safe format relies on this order 
-                saveAsDialog.FilterIndex = imageInfo.IsExact ? 2 : 1;
-            }
+            saveAsDialog.Filter = DataAccess.PrivateAccess ? "regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
+            saveAsDialog.FilterIndex = imageInfo.IsMultiLayer ? 3 : imageInfo.IsExact ? 2 : 1;
             saveAsDialog.RestoreDirectory = true;
             saveAsDialog.InitialDirectory = Path.GetDirectoryName(imageInfo.FSPath);
             if (saveAsDialog.ShowDialog() == DialogResult.OK)
             {
-                string saveName = DataAccess.PrivateAccessAllowed ? ImageFileName.FSMangle(saveAsDialog.FileName) : saveAsDialog.FileName;
+                string saveName = DataAccess.PrivateAccess ? ImageFileName.FSMangle(saveAsDialog.FileName) : saveAsDialog.FileName;
                 SaveImage(saveName, resizeBox.Checked ? 2000 : 0, (qualityBox.Checked ? 87 : 75));
             }
         }

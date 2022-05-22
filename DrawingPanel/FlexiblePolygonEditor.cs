@@ -47,7 +47,7 @@ namespace ImageProcessor
             }
             //Debug.WriteLine("segment " + sind + " hit");
             if (sind < 0 || newActiveStroke == null)   // nothing hit
-                return false;
+                return activeStroke.ProximityTest(canvasPoint) < 0;
             if (activeStroke != newActiveStroke)
             {
                 if (activeStroke != null) // unselect previous active stroke

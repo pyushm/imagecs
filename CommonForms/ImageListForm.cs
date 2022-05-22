@@ -573,12 +573,11 @@ namespace ImageProcessor
             {
                 ImageFileInfo f = imageCollection[e.ItemIndex];
                 e.Item = new ListViewItem(f.RealName);
-                if (f.IsMultiLayer)
-                    e.Item.Font = new Font("Arial", 10, FontStyle.Underline);
-                if (!f.IsEncrypted)
-                    e.Item.ForeColor = Color.DarkSlateGray;
-                if (f.IsExact)
-                    e.Item.Font = new Font("Arial", 10, FontStyle.Italic);
+                FontStyle fs = 0;
+                if (f.IsMultiLayer) fs |= FontStyle.Underline;
+                if (f.IsEncrypted) fs |= FontStyle.Bold;
+                if (f.IsExact) fs |= FontStyle.Italic;
+                e.Item.Font = new Font("Arial", 10, fs);
                 e.Item.Tag = f;
             }
             catch (Exception)
