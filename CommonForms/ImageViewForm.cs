@@ -510,7 +510,6 @@ namespace ImageProcessor
         }
         private void ImageViewForm_Load(object sender, EventArgs e)
         {
-
             Graphics g = this.CreateGraphics();
             if(g != null)
             {
@@ -679,13 +678,13 @@ namespace ImageProcessor
         {
             SaveFileDialog saveAsDialog = new SaveFileDialog();
             saveAsDialog.FileName = imageInfo.RealName;
-            saveAsDialog.Filter = DataAccess.PrivateAccess ? "regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
+            saveAsDialog.Filter = DataAccess.PrivateAccessAllowed ? "regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
             saveAsDialog.FilterIndex = imageInfo.IsMultiLayer ? 3 : imageInfo.IsExact ? 2 : 1;
             saveAsDialog.RestoreDirectory = true;
             saveAsDialog.InitialDirectory = Path.GetDirectoryName(imageInfo.FSPath);
             if (saveAsDialog.ShowDialog() == DialogResult.OK)
             {
-                string saveName = DataAccess.PrivateAccess ? ImageFileName.FSMangle(saveAsDialog.FileName) : saveAsDialog.FileName;
+                string saveName = DataAccess.PrivateAccessAllowed ? ImageFileName.FSMangle(saveAsDialog.FileName) : saveAsDialog.FileName;
                 SaveImage(saveName, resizeBox.Checked ? 2000 : 0, (qualityBox.Checked ? 87 : 75));
             }
         }

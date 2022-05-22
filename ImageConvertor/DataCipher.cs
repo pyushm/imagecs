@@ -136,8 +136,15 @@ namespace ImageProcessor
             byte[] res;
             using (MemoryStream ms = new MemoryStream())
             {
-                using (CryptoStream cs = new CryptoStream(ms, alg.CreateDecryptor(), CryptoStreamMode.Write))
-                    cs.Write(src, 0, src.Length);
+                try
+                {
+                    using (CryptoStream cs = new CryptoStream(ms, alg.CreateDecryptor(), CryptoStreamMode.Write))
+                        cs.Write(src, 0, src.Length);
+                }
+                catch (Exception ex)
+                {
+                    // Debug.WriteLine(ex.Message);
+                }
                 res = ms.ToArray();
             }
             return res;
@@ -148,8 +155,8 @@ namespace ImageProcessor
         static DataCipher cipher = null;
         public static string NullCipher = "Can't access private data: encryption not set";
         public static string Warning { get; private set; }
-        public static bool AllowPrivateAccess(string password) { cipher = DataCipher.Create(password); return PrivateAccess; }
-        public static bool PrivateAccess { get { return cipher != null; } set { if (!value) cipher = null; } }
+        public static bool AllowPrivateAccess(string password) { cipher = DataCipher.Create(password); return PrivateAccessAllowed; }
+        public static bool PrivateAccessAllowed { get { return cipher != null; } set { if (!value) cipher = null; } }
         public static byte[] ReadBytes(byte[] src, bool encrypted)
         {
             Warning = "";

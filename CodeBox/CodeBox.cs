@@ -497,13 +497,8 @@ namespace CodeEditor
         }
         private double MeasureString(string str)// Returns the width of the string in the font and fontsize of the textbox including the trailing white space.
         {
-            FormattedText formattedText = new FormattedText(
-                 str,
-                   CultureInfo.GetCultureInfo("en-us"),
-                   FlowDirection.LeftToRight,
-                   new Typeface(this.FontFamily.Source),
-                   this.FontSize,
-                  new SolidColorBrush(Colors.Black));
+            formattedText = new FormattedText(VisibleText, CultureInfo.GetCultureInfo("en-us"), FlowDirection.LeftToRight, new Typeface(this.FontFamily.Source),
+                    FontSize, BaseForeground, VisualTreeHelper.GetDpi(this).PixelsPerDip) { Trimming = TextTrimming.None };  //Text that matches the textbox's
             if (str == "")
             {
                 return formattedText.WidthIncludingTrailingWhitespace;

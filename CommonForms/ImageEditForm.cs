@@ -389,19 +389,17 @@ namespace ImageProcessor
                 new MenuItem("Delete", new EventHandler(DeleteLayer)) });
             layerListView.ContextMenu = selectMenu;
             layerListView.HideSelection = false;
-            suspendUpdate = false;
             Load += ImageEditForm_Load;
         }
         private void ImageEditForm_Load(object sender, EventArgs e)
         {
-
             Graphics g = this.CreateGraphics();
             if (g != null)
             {
                 dpiScaleX = g.DpiX / 96;
                 dpiScaleY = g.DpiY / 96;
                 g.Dispose();
-                RescaleCanvas(true);
+                RescaleCanvas(false);
             }
         }
         void CreateToolButtons(VisualLayer vl)
@@ -631,7 +629,7 @@ namespace ImageProcessor
             }
             SaveFileDialog saveAsDialog = new SaveFileDialog();
             saveAsDialog.FileName = imageInfo.RealName;
-            saveAsDialog.Filter = DataAccess.PrivateAccess ? "regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
+            saveAsDialog.Filter = DataAccess.PrivateAccessAllowed ? "regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
             saveAsDialog.FilterIndex = imageInfo.IsMultiLayer ? 3 : imageInfo.IsExact ? 2 : 1;
             saveAsDialog.RestoreDirectory = true;
             saveAsDialog.InitialDirectory = dir;

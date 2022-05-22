@@ -81,8 +81,8 @@ namespace DirTreeCompare
             backgroundWorker.RunWorkerCompleted += RunWorkerCompleted;
             backgroundWorker.WorkerReportsProgress = true;
             backgroundWorker.ProgressChanged += delegate (object sender, ProgressChangedEventArgs e) { opProgress.Value = e.ProgressPercentage; };
-            textBox1.Text = @"D:\OldC\stuff";
-            textBox2.Text = @"\\DESKTOP-KC4PK3K\data\OldC\stuff";
+            textBox1.Text = @"C:\data\OldC\stuff";
+            textBox2.Text = @"\\MSI\OldC\stuff";
         }
         void PerformBackgroundOperation(Operation op, System.Windows.Controls.TreeView listBox)
         {

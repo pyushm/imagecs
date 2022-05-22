@@ -1056,7 +1056,7 @@ namespace ImageProcessor
             }
             else
             {
-                DataAccess.PrivateAccess = false;
+                DataAccess.PrivateAccessAllowed = false;
             }
         }
     }

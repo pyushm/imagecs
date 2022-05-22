@@ -277,6 +277,7 @@ namespace ShaderEffects
             }
         }
         public ViewPointEffect() : base(EffectType.ViewPoint, inputProperties) { }
+        public ViewPointEffect(IntSize imSize) : base(EffectType.GradientContrast, inputProperties) { pixelSize = imSize; }
         public override DependencyProperty[] Parameters { get { return inputProperties; } }
         public override void SetParameters(ColorTransform trasform, double strength, double x, double y)
         {
@@ -424,7 +425,7 @@ namespace ShaderEffects
                     sw.Write(sourceCode); 
                     sw.Close();
                 }
-                ProcessStartInfo psi = new ProcessStartInfo(@"C:\Program Files (x86)\Windows Kits\10\bin\x86\fxc.exe");
+                ProcessStartInfo psi = new ProcessStartInfo(@"C:\Program Files (x86)\Windows Kits\10\bin\10.0.22000.0\x86\fxc.exe");
                 psi.CreateNoWindow = true;
                 psi.UseShellExecute = false;
                 psi.RedirectStandardError = true;

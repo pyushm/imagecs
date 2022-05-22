@@ -304,7 +304,7 @@ namespace ImageProcessor
                     return f;
             return null;
         }
-        bool modified = true;               // true indicatates for client to get new image 
+        public bool Modified { get; private set; } // true indicatates for client to get new image 
         bool cynchronized = false;          // false indicatates need to load image
         bool priority = false;              // true indicatates need for priority loading of visible image
         bool dirHeader;                     // indicate file representing directory
@@ -313,7 +313,6 @@ namespace ImageProcessor
         public FileInfo FileInfo            { get; private set; }
         public string FSPath { get { return FileInfo == null ? "" : FileInfo.FullName; } } // complete path of image object
         public string RealPath { get { return FileInfo == null ? "" : Path.Combine(FileInfo.Directory.Parent.FullName, UnMangleText(FileInfo.Directory.Name), RealName); } } // complete path of image object
-        public bool Modified                { get { return modified; } }
         public bool IsDirHeader             { get { return dirHeader; } }
         public ImageFileInfo(FileInfo fi) : base(fi.Name) { FileInfo = fi; }
         public ImageFileInfo(DataType dt, FileInfo fsi, bool temp, bool header) : base(dt, fsi, temp, header)
@@ -323,21 +322,20 @@ namespace ImageProcessor
             dirHeader = header;
             modifiedTime = new DateTime();
         }
-        public bool CheckFile()             
+        public bool CheckUpdate()
         {
             FileInfo fi = new FileInfo(FSPath);
             if (!fi.Exists || fi.Length == 0)
                 return false; // no data exists
-            if (fi.LastWriteTime <= modifiedTime)
-                return true;// existing image not updated
-            cynchronized = false;
+            if (fi.LastWriteTime > modifiedTime)
+                cynchronized = false;// image updated
             return true;
         }
         void SetCynchronized(DateTime dt)   
         {
             modifiedTime = dt;
             cynchronized = true;
-            modified = true;
+            Modified = true;
             priority = false;
         }
         Image CreateThumbnail(byte[] ba)    
@@ -398,7 +396,7 @@ namespace ImageProcessor
         {
             if(!cynchronized)
                 priority=true;
-            modified = false;
+            Modified = false;
             return thumbnail;
         }
         string Rename(string newName)       // returns new full name
@@ -417,7 +415,7 @@ namespace ImageProcessor
                 //info.MoveTo(newFullPath);
                 newFullPath = Path.Combine(FileInfo.Directory.FullName, newName);
                 FileInfo.MoveTo(newFullPath);
-                modified = true;
+                Modified = true;
                 FileInfo = new FileInfo(newFullPath);
                 return newFullPath;
             }
@@ -565,7 +563,7 @@ namespace ImageProcessor
                                 string dest = Path.Combine(toDirectory.FullName, FSMangle(Path.GetFileName(ifi.FSPath)));
                                 File.Move(ifi.FSPath, dest);
                             }
-                            else if (DataAccess.PrivateAccess && (ifi.IsUnencryptedImage || ifi.IsUnencryptedVideo))
+                            else if (DataAccess.PrivateAccessAllowed && (ifi.IsUnencryptedImage || ifi.IsUnencryptedVideo))
                             {   // when PrivateAccessAllowed move images with encription and name mangling
                                 string name = ifi.IsUnencryptedVideo ? ifi.FSName + ".vid" : ifi.IsExact ? ifi.FSName + ".exa" : ifi.FSName + ".jpe";
                                 byte[] src = File.ReadAllBytes(ifi.FSPath);
@@ -767,7 +765,7 @@ namespace ImageProcessor
                         AppendFiles();           // appending new files to the list
                         List<string> deletedFiles = new List<string>();
                         foreach (ImageFileInfo d in imageFileList)
-                            if (!d.CheckFile())
+                            if (!d.CheckUpdate())
                                 deletedFiles.Add(d.FSPath);            
                         if (deletedFiles.Count > 0)
                         {   // removing deleted files from the list

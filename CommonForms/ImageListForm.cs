@@ -11,11 +11,9 @@ namespace ImageProcessor
 	{
         public enum InfoSize
         {
-            Small = 6,
-            Normal = 10,
-            Large = 15,
+            Small = 50, // % of full size
+            Large = 100,
         }
-        float dpiScaleX = 1;
         float dpiScaleY = 1;
         ListView imageListView;
 		Button sortNameButton;
@@ -34,11 +32,9 @@ namespace ImageProcessor
         ImageViewForm viewForm;                 // form displaying active image of imageCollection
         Timer listUpdateTimer;
         int updateListFrequency = 300;          // update frequency of list change, ms
-        int updateImagesFrequency = 500;
         bool redrawRequest = true;
         private Button previousSetButton;
         private Button nextSetButton;       
-        int updateImagesTime = 0;               // update happens if updateImagesTime>updateImagesFrequency;
         private ComboBox sizeBox;
         protected override void Dispose(bool disposing)
 		{
@@ -207,7 +203,7 @@ namespace ImageProcessor
             imageListView.VirtualMode = true;
             Text = sourceDir.RealPath;
             infoModeBox.Items.AddRange(Enum.GetNames(typeof(InfoType)));
-            infoModeBox.SelectedIndex = 0;  // calls ModeChanged
+            infoModeBox.SelectedIndex = 1;  // calls ModeChanged
             sizeBox.Items.AddRange(Enum.GetNames(typeof(InfoSize)));
             sizeBox.SelectedIndex = 1;  // calls ModeChanged
             thumbnails = new ImageList();
@@ -235,13 +231,23 @@ namespace ImageProcessor
         }
         private void ImageViewForm_Load(object sender, EventArgs e)
         {
-
             Graphics g = CreateGraphics();
             if (g != null)
             {
-                dpiScaleX = g.DpiX / 96;
                 dpiScaleY = g.DpiY / 96;
+                Height -= (int)((ImageFileInfo.ThumbnailSize().Height + 13) * (dpiScaleY - 1));
                 g.Dispose();
+            }
+        }
+        void ImageListForm_FormClosing(object s, FormClosingEventArgs e)
+        {
+            imageCollection?.Clear();
+            if (viewForm != null && !viewForm.IsDisposed)
+                viewForm.Close();
+            if (listUpdateTimer != null)
+            {
+                listUpdateTimer.Stop();
+                listUpdateTimer.Dispose();
             }
         }
         void UpdateList(object s, EventArgs e) // updates list and images on timer
@@ -269,13 +275,10 @@ namespace ImageProcessor
                 imageListView.VirtualListSize = imageCollection.Count;
                 Text = sourceDir.RealPath + ": " + imageCollection.Count + (imageCollection.DirMode ? " directories " : " images");
             }
-            updateImagesTime += updateListFrequency;
-            if (s==null || updateImagesTime > updateImagesFrequency)
-                UpdateImages();
+            UpdateImages();
         }
         void UpdateImages()                     // updates visible images
         {
-            updateImagesTime = 0;
             if (imageListView.VirtualListSize == 0)
                 return;
             try
@@ -307,12 +310,11 @@ namespace ImageProcessor
                             break;
                     lastVisible--;
                 }
-                //Console.WriteLine("S="+DateTime.Now.Second+"MS="+DateTime.Now.Millisecond+" firstVisible=" + firstVisible + " lastVisible=" + lastVisible);
                 redrawRequest = true;
                 for (int i = firstVisible; i <= lastVisible; i++)
                 {
                     ImageFileInfo f = imageCollection[i];
-                    f.CheckFile();
+                    f.CheckUpdate();
                     if (f.Modified)
                         imageListView.Invalidate(imageListView.GetItemRect(i));
                 }
@@ -394,8 +396,10 @@ namespace ImageProcessor
             {
                 string mes = ex.Message;
             }
-		}
-		public void ViewImage(string filePath)	
+            if (imageListView.SelectedIndices.Count == 1)
+                imageListView.SelectedIndices.Clear();
+        }
+        public void ViewImage(string filePath)	
 		{
             if (filePath == null || filePath.Length == 0)
                 return;
@@ -547,8 +551,8 @@ namespace ImageProcessor
                 InfoType infoType = (InfoType)Enum.Parse(typeof(InfoType), (string)infoModeBox.SelectedItem);
                 double scale = (int)Enum.Parse(typeof(InfoSize), (string)sizeBox.SelectedItem) / 10.0;
                 IntSize si = ImageFileInfo.PixelSize(infoType);
-                if (si.Height * scale > 256)
-                    scale = 256.0 / si.Height;
+                if (si.Height * scale > 255)
+                    scale = 255.0 / si.Height;
                 thumbnails.ImageSize = new Size((int)(si.Width * scale), (int)(si.Height * scale));
                 imageCollection = extList != null ? new ImageFileInfo.Collection(sourceDir, extList) :
                     infoMode ? new ImageFileInfo.Collection(sourceDir, infoType, tempStore) : new ImageFileInfo.Collection(sourceDir, tempStore);
@@ -573,10 +577,7 @@ namespace ImageProcessor
             {
                 ImageFileInfo f = imageCollection[e.ItemIndex];
                 e.Item = new ListViewItem(f.RealName);
-                FontStyle fs = 0;
-                if (f.IsMultiLayer) fs |= FontStyle.Underline;
-                if (f.IsEncrypted) fs |= FontStyle.Bold;
-                if (f.IsExact) fs |= FontStyle.Italic;
+                FontStyle fs = f.IsMultiLayer ? FontStyle.Underline : f.IsExact ? FontStyle.Italic : FontStyle.Regular;
                 e.Item.Font = new Font("Arial", 10, fs);
                 e.Item.Tag = f;
             }
@@ -584,17 +585,6 @@ namespace ImageProcessor
             {
                 e.Item = new ListViewItem("......");
                 e.Item.Tag = null;
-            }
-        }
-        void ImageListForm_FormClosing(object s, FormClosingEventArgs e)
-        {
-            imageCollection?.Clear();
-            if (viewForm!=null && !viewForm.IsDisposed)
-				viewForm.Close();
-            if (listUpdateTimer != null)
-            {
-                listUpdateTimer.Stop();
-                listUpdateTimer.Dispose();
             }
         }
         void imageListView_DrawItem(object s, DrawListViewItemEventArgs e)
@@ -605,26 +595,28 @@ namespace ImageProcessor
                     return;
                 if (!IsItemVisible(e.ItemIndex))
                     return;
-                //if ((e.State & ListViewItemStates.Checked)!=0)
-                //    e.DrawFocusRectangle();
-                if ((e.State & ListViewItemStates.Focused) != 0)
-                    e.DrawFocusRectangle();
-                if ((e.State & ListViewItemStates.Grayed) != 0)
-                    e.DrawFocusRectangle();
-                if ((e.State & ListViewItemStates.Marked) != 0)
-                    e.DrawFocusRectangle();
-                if ((e.State & ListViewItemStates.Selected) != 0)
-                    e.Graphics.FillRectangle(Brushes.YellowGreen, e.Bounds);
                 Image im = imageCollection[e.ItemIndex].GetThumbnail();
                 float rw = e.Bounds.Width;
                 float rh = e.Bounds.Height - 13 * dpiScaleY;
                 float scale = Math.Min(rw / im.Width, rh / im.Height);
                 float iw = im.Width * scale;
                 float ih = im.Height * scale;
-                e.Graphics.DrawImage(im, e.Bounds.X + (rw - iw) / 2, e.Bounds.Y + (rh - ih) / 2, iw, ih);
+                if (imageListView.SelectedIndices.Contains(e.ItemIndex))
+                {
+                    var bm = new Bitmap((int)rw, (int)rh);
+                    var g = Graphics.FromImage(bm);
+                    g.FillRectangle(Brushes.Cyan, 0, 0, rw, e.Bounds.Height);
+                    g.DrawImage(im, (rw - iw) / 2, (rh - ih) / 2, iw, ih);
+                    e.Graphics.DrawImage(bm, e.Bounds.X, e.Bounds.Y, rw, rh);
+                }
+                else
+                    e.Graphics.DrawImage(im, e.Bounds.X + (rw - iw) / 2, e.Bounds.Y + (rh - ih) / 2, iw, ih);
                 e.DrawText(TextFormatFlags.HorizontalCenter | TextFormatFlags.Bottom);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message + " ind=" + e.ItemIndex + " e.Bounds=" + e.Bounds);
+            }
         }
         internal void nextSetButton_Click(object sender, EventArgs e)
         {

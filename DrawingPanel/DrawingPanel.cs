@@ -30,7 +30,7 @@ namespace ImageProcessor
         Point getBackgroundCenter() { return BackgroundLayer?.MatrixControl != null ? BackgroundLayer.MatrixControl.Center : new Point(); }
         double getBackgroundScale() { return BackgroundLayer?.MatrixControl != null ? BackgroundLayer.MatrixControl.RenderScale : 1; }
         double getBackgroundAngle() { return BackgroundLayer?.MatrixControl != null ? BackgroundLayer.MatrixControl.Angle : 0; }
-        Polygon collectedPolygon = null;      // mouse path in image pixels
+        Polygon collectedPolygon = null; // temporary selection: mouse path in image pixels
         bool strokeEdit = false;
         IPanelHolder panelHolder;
         string lastImageFile = "lastImageFile";
@@ -168,14 +168,14 @@ namespace ImageProcessor
             db.Opacity = 1;
             toolPen = new Pen(db, 0.5);
         }
-        public void Resize(bool firstTime, double scale, float hostW, float hostH)
+        public bool Resize(bool firstTime, double scale, float hostW, float hostH)
         {
             if (BackgroundLayer == null)
-                return;
+                return false;
             bool matrixControlSet = BackgroundLayer.MatrixControl != null;
             Debug.Assert(firstTime || matrixControlSet);
             if (!firstTime && !matrixControlSet) // !init assumes resize event: all MatrixControl has to be set and be changing according to resize
-                return;                     // init creates new MatrixControls if !matrixControlSet, otherwize (loaded from file) only shifts center
+                return false;                     // init creates new MatrixControls if !matrixControlSet, otherwize (loaded from file) only shifts center
             Vector centerShift = new Vector((hostW - previousHostSize.Width) / 2.0, (hostH - previousHostSize.Height) / 2.0);
             double scaleCoef = 1;
             previousHostSize = new Size(hostW, hostH);
@@ -184,7 +184,7 @@ namespace ImageProcessor
             {
                 scale = Math.Min(Math.Min((double)hostW / BackgroundLayer.LayoutSize.Width, (double)hostH / frameLayoutSize.Height), 2);
                 if (scale == 0)
-                    return;
+                    return false;
                 scaleCoef = scale / getBackgroundScale();
             }
             Width = Math.Max(hostW, frameLayoutSize.Width * scale);
@@ -254,6 +254,7 @@ namespace ImageProcessor
             if (Selection != null)
                 Selection.ToDrawing = new MatrixTransform(ToCanvas);
             UpdateToolDrawing();
+            return true;
         }
         public int AddVisualLayer(VisualLayer vl)
         {
@@ -329,6 +330,8 @@ namespace ImageProcessor
         {
             CropRectangle = null;
             strokeEdit = panelHolder.ToolMode == ToolMode.ContourEdit;
+            if (BackgroundLayer == null)
+                return;
             if (panelHolder.ToolMode == ToolMode.Crop)
             {
                 if (XYmirroredFrame)
@@ -345,7 +348,7 @@ namespace ImageProcessor
             }
             Selection = null;
             bool selectionMode = panelHolder.ToolMode == ToolMode.RectSelection || panelHolder.ToolMode == ToolMode.FreeSelection;
-            collectedPolygon = selectionMode ? new Polygon(size) : null;
+            collectedPolygon = new Polygon(size);
             strokeEditor.BackgroundImage = selectionMode ? (GetLayer(0) as BitmapLayer)?.Image : null;
             //Debug.WriteLine(layerTool.ToolMode.ToString()+ (pathPolygon==null ? " null Polygon" : " real Polygon") + (CropRectangle == null ? " null Rect" : " real Rect"));
             UpdateToolDrawing();
@@ -359,15 +362,12 @@ namespace ImageProcessor
                 tools.AddVisual(ActiveLayer.MatrixControl.ToVisual(toolBrush, toolPen));
             else if (panelHolder.ToolMode == ToolMode.Morph)
                 tools.AddVisual(morphControl.ToVisual(toolBrush, toolPen));
+            if (CropRectangle != null)
+                tools.AddVisual(CropRectangle.ToVisual(toolBrush, toolPen));
             if (collectedPolygon != null)
             {
                 collectedPolygon.ToDrawing = (MatrixTransform)ActiveLayer.RenderTransform;
-                tools.AddVisual(collectedPolygon.ToVisual(null, toolPen));
-            }
-            if (CropRectangle != null)
-            {
-                //CropRectangle.ToDrawing = layerTool.ToolMode == ToolMode.Crop ? new MatrixTransform(ToCanvas) : null;
-                tools.AddVisual(CropRectangle.ToVisual(toolBrush, toolPen));
+                tools.AddVisual(collectedPolygon.ToVisual(new SolidColorBrush(), toolPen));
             }
             if (Selection != null)
             {
@@ -565,8 +565,11 @@ namespace ImageProcessor
             {
                 try
                 {
-                    File.SetAttributes(lastImageFile, FileAttributes.Normal);
-                    File.Delete(lastImageFile);
+                    if (File.Exists(lastImageFile))
+                    {
+                        File.SetAttributes(lastImageFile, FileAttributes.Normal);
+                        File.Delete(lastImageFile);
+                    }
                     fi.MoveTo(lastImageFile);
                     File.SetAttributes(lastImageFile, FileAttributes.Normal);
                 }
@@ -653,9 +656,15 @@ namespace ImageProcessor
                 DrawingLayer sl = ActiveLayer as DrawingLayer;
                 FlexiblePolygon[] ss = sl != null ? sl.Polygons.ToArray() : new FlexiblePolygon[] { Selection };
                 mouseAction = strokeEditor.MouseDown(e, ss, position) ? MouseOperation.Stroke : MouseOperation.None;
-                //Debug.WriteLine("strokeEdit down " + mouseAction.ToString());
+                if (mouseAction == MouseOperation.None && MouseAction.OperationFromMouse == MouseOperation.Rotate && Selection != null)
+                {
+                    Selection.Clear();
+                    strokeEdit = false;
+                    UpdateToolDrawing();
+                }
+                //Debug.WriteLine("strokeEdit " + mouseAction.ToString());
             }
-            if (!strokeEdit || mouseAction == MouseOperation.None)
+            else
             {
                 mouseAction = MouseOperation.None;
                 if (LayerCount == 1)   // crop and info creation and selection applies only to single layer image 
@@ -665,7 +674,7 @@ namespace ImageProcessor
                         collectedPolygon.Clear();
                         collectedPolygon.Add(collectedPolygon.FromDrawing.Transform(position));
                         mouseAction = MouseAction.OperationFromMouse;
-                        if (mouseAction == MouseOperation.Rotate)
+                        if (mouseAction == MouseOperation.Move)
                             mouseAction = MouseOperation.Add;
                     }
                     if (panelHolder.ToolMode == ToolMode.Crop && CropRectangle != null)
