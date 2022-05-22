@@ -781,12 +781,11 @@ namespace ImageProcessor
         }
         void ShowGeometryTransformParameters()
         {
-            try
+            if(backgroundLayer != null && backgroundLayer.MatrixControl != null)
             {
-                //scaleCtrl.Value = (decimal)backgroundLayer.MatrixControl.RenderScale;
+                scaleCtrl.Value = (decimal)backgroundLayer.MatrixControl.RenderScale;
                 angleCtrl.Value = (decimal)backgroundLayer.MatrixControl.Angle;
             }
-            catch { }
         }
         void GeometryTransformChanged()
         {
