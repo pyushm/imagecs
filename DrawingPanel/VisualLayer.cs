@@ -24,9 +24,8 @@ namespace ImageProcessor
     public class VisualLayer : UIElement
     {   // collection of visual items comprizing one UIElement (similar to DrawingGroup, but working with DependencyProperties)
         protected VisualCollection children;
-        protected VisualLayerType type;       // bitmap derivative 
         protected ColorTransform colorTransform = new ColorTransform();
-        public MatrixControl MatrixControl { get; private set; }
+        public MatrixControl MatrixControl { get; private set; } 
         public List<MorthPoint> morthPoints = new List<MorthPoint>();
         public virtual void SetEffectParameters(double weight, double middle, double resolution) { }
         public virtual EffectType DerivativeType { get { return EffectType.None; } }
@@ -35,7 +34,7 @@ namespace ImageProcessor
         public string Name { get; set; }
         public bool IsImage         { get { return this as BitmapLayer != null; } }
         public IntSize LayoutSize   { get; protected set; } // image size used by layout system 
-        public VisualLayerType Type { get { return type; } }
+        public VisualLayerType Type { get; protected set; }
         public bool Deleted         { get { return deleting; } set { deleting = value; } }
         public ColorTransform ColorTransform { get { return colorTransform; } set { colorTransform.CopyFrom(value); } }
         public VisualLayer(string name_)
@@ -62,14 +61,14 @@ namespace ImageProcessor
             return children[index];
         }
         protected override Size MeasureCore(Size s) { return LayoutSize.Size; }
-        internal void SetStoredMatrixContro(VisualLayerData stored) { MatrixControl = stored.MatrixControl; }
+        internal void SetStoredMatrixContro(MatrixControl stored) { MatrixControl = stored; }
         public VisualLayerData CreateVisualLayerData(byte[] data) { return new VisualLayerData(Type, Name, LayoutSize, MatrixControl, data); }
         public byte[] SerializeImage(BitmapEncoder bitmapEncoder)
         {
             byte[] data;
             using (MemoryStream dataStream = new MemoryStream())
             {
-                if (Type == VisualLayerType.Bitmap)
+                if (Type == VisualLayerType.Bitmap || Type == VisualLayerType.Derivative)
                 {
                     BitmapLayer bl = this as BitmapLayer;
                     RenderTargetBitmap rtb = new RenderTargetBitmap(LayoutSize.Width, LayoutSize.Height, 96, 96, PixelFormats.Default);
@@ -106,7 +105,7 @@ namespace ImageProcessor
             MatrixControl = renderSrc.MatrixControl.Clone();
             RenderTransform = renderSrc.RenderTransform.Clone();
         }
-        public void InitializeTransforms(double w, double h, double scale, MatrixControl matrixControl)
+        public void InitializeTransforms(double w, double h, double scale, MatrixControl matrixControl = null)
         {
             if (scale < 0)      // auto scale limited by -scale
                 scale = Math.Min(Math.Min(w / LayoutSize.Width, h / LayoutSize.Height), -scale);
@@ -160,8 +159,8 @@ namespace ImageProcessor
         }
         public MorthPoint GetLastMorthPoint() { int nmp = morthPoints.Count; return nmp > 0 ? morthPoints[nmp - 1] : null; }
         public void AddMorthPoint(MorthPoint mp) { morthPoints.Add(mp); }
-        public override string ToString() { return string.Format("mode={0} name={1} size={2}x{3}", type, Name, LayoutSize.Width, LayoutSize.Height); }
-        public string ToTransformString() { return "MatrixControl: " + MatrixControl.ToString() + " RenderTransform: " + RenderTransform.Value.ToString(); }
+        public override string ToString() { return string.Format("mode={0} name={1} children={4} size={2}x{3} ", Type, Name, LayoutSize.Width, LayoutSize.Height, VisualChildrenCount); }
+        public string ToTransformString() { return "MatrixControl: " + MatrixControl?.ToString() + " RenderTransform: " + RenderTransform?.Value.ToString(); }
     }
     public class DrawingLayer : VisualLayer
     {
@@ -170,7 +169,7 @@ namespace ImageProcessor
         public List<FlexiblePolygon> Polygons { get { return polygons; } }
         public DrawingLayer(string name, IntSize s, List<FlexiblePolygon> polygons_) : base(name)
         {
-            type = VisualLayerType.Drawing;
+            Type = VisualLayerType.Drawing;
             LayoutSize = s;
             polygons = polygons_;
             //new List<FlexiblePolygon>(strokes.Length);
@@ -183,7 +182,7 @@ namespace ImageProcessor
         }
         public DrawingLayer(string name, IntSize s) : base(name)
         {
-            type = VisualLayerType.Drawing;
+            Type = VisualLayerType.Drawing;
             LayoutSize = s;
             polygons = new List<FlexiblePolygon>();
         }
@@ -209,7 +208,7 @@ namespace ImageProcessor
         {
             if (ba == null)
                 return;
-            type = VisualLayerType.Bitmap;
+            Type = VisualLayerType.Bitmap;
             image = ba;
             LayoutSize = new IntSize(image.Width, image.Height);
             if (transparentEdge >= 0)
@@ -281,7 +280,8 @@ namespace ImageProcessor
         {
             try
             {
-                type = VisualLayerType.Derivative;
+                //type = VisualLayerType.Bitmap;
+                Type = VisualLayerType.Derivative;
                 LayoutSize = new IntSize(ba.Width, ba.Height);
                 derivative = new BitmapLayer("", ba, edge);
                 derivative.Effect = derivativeEffect = effect;

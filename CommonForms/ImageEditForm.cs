@@ -57,7 +57,7 @@ namespace ImageProcessor
         string savePath = null;
         // image processing members
         public ToolMode ToolMode { get; set; } // mouse mode
-        int selectedIndex;                  // index of selected layer in layerListView
+        int layerIndex;                     // index of selected layer in layerListView
         bool suspendUpdate = false;         // suspends image update while reseting
         double replaceSpan = 3;             // time span to replace old image in seconds
         bool userInput = false;
@@ -366,7 +366,7 @@ namespace ImageProcessor
             ResetColorControls();
             viewingAreaOffset = panel.Location.X;
             panel.Size = new System.Drawing.Size(ClientSize.Width - viewingAreaOffset, ClientSize.Height);
-            selectedIndex = -1;       // nothing selected
+            layerIndex = -1;       // nothing selected
             KeyDown += CaptureKeyboard;
             scaleBox.Items.AddRange(Enum.GetNames(typeof(ImageScale)));
             edgeGapBox.Items.AddRange(Enum.GetNames(typeof(EdgeGap)));
@@ -374,18 +374,18 @@ namespace ImageProcessor
             edgeGapBox.SelectedIndex = 0;
             ContextMenu selectMenu = new ContextMenu();
             selectMenu.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
-                new MenuItem("Move on top", delegate (object s, EventArgs e) { if (canvas.MoveLayerOnTop(selectedIndex)) UpdateLayerList(selectedIndex); } ),
-                new MenuItem("Move back", delegate (object s, EventArgs e) { if (canvas.MoveLayerBack(selectedIndex)) UpdateLayerList(selectedIndex); } ),
+                new MenuItem("Move on top", delegate (object s, EventArgs e) { if (canvas.MoveLayerOnTop(layerIndex)) UpdateLayerList(layerIndex); } ),
+                new MenuItem("Move back", delegate (object s, EventArgs e) { if (canvas.MoveLayerBack(layerIndex)) UpdateLayerList(layerIndex); } ),
                 new MenuItem("Flip", delegate (object s, EventArgs e) { if (canvas.IsActiveLayerVisible) canvas.ActiveLayer.Flip(); }),
                 new MenuItem("Edges", delegate(object s, EventArgs e) { AddEffectLayer("Edge", new EdgeEffect()); }),
                 new MenuItem("Drawing", delegate(object s, EventArgs e) { UpdateLayerList(canvas.AddStrokeLayer("Drawing")); } ),
                 new MenuItem("Sharpness", delegate (object s, EventArgs e) { AddEffectLayer("Sharpness", new GradientContrastEffect()); }),
-                new MenuItem("ViewPoint", delegate (object s, EventArgs e) { AddEffectLayer("Morth", new MorphEffect()); }),
+                new MenuItem("ViewPoint", delegate (object s, EventArgs e) { AddEffectLayer("ViewPoint", new ViewPointEffect()); }),
                 new MenuItem("Remove odd", delegate (object s, EventArgs e) { AddNoOddsLayer(); }),
                 new MenuItem("To background", delegate (object s, EventArgs e) { CopyToBackground(1); }),
                 new MenuItem("To back 1/2", delegate (object s, EventArgs e) { CopyToBackground(2); }),
                 new MenuItem("To back 1/3", delegate (object s, EventArgs e) { CopyToBackground(3); }),
-                new MenuItem("To back 1/4", delegate (object s, EventArgs e) { CopyToBackground(4); }),
+                new MenuItem("To back 1/5", delegate (object s, EventArgs e) { CopyToBackground(5); }),
                 new MenuItem("Delete", new EventHandler(DeleteLayer)) });
             layerListView.ContextMenu = selectMenu;
             layerListView.HideSelection = false;
@@ -506,14 +506,14 @@ namespace ImageProcessor
         }
         bool SetActiveLayer(int ind)	    // resets image drawing controls to default values
         {
-            if (selectedIndex == ind)
+            if (layerIndex == ind)
                 return false;
             VisualLayer oldActiveLayer = canvas.ActiveLayer;
             if (!canvas.UpdateActiveLayer(ind))
                 return false;
-            if (selectedIndex < 0 || oldActiveLayer == null || oldActiveLayer.Type != canvas.ActiveLayer.Type)
+            if (layerIndex < 0 || oldActiveLayer == null || oldActiveLayer.Type != canvas.ActiveLayer.Type)
                 CreateToolButtons(canvas.ActiveLayer);
-            selectedIndex = ind;
+            layerIndex = ind;
             ResetColorControls();
             suspendUpdate = true;
             layerGroupBox.Text = canvas.ActiveLayer.Name;
@@ -555,7 +555,8 @@ namespace ImageProcessor
             BitmapAccess clip = canvas.GetSelected(0);
             int transparencyEdge = imageInfo.IsExact ? 0 : Math.Min((int)Math.Sqrt(clip.Width + clip.Height) / 3, 6);
             transparencyEdge = SelectedEdge(transparencyEdge);
-            BitmapDerivativeLayer vl = new BitmapDerivativeLayer(name, clip, effect, transparencyEdge);
+            //var vl = new BitmapLayer(name, clip, transparencyEdge);
+            var vl = new BitmapDerivativeLayer(name, clip, effect, transparencyEdge);
             vl?.SetEffectParameters(SelectedStrength, SelectedLevel, SelectedSize);
             UpdateLayerList(canvas.AddVisualLayer(vl, bl));
             //Debug.WriteLine(vl.Image.ToColorsString());
@@ -603,8 +604,8 @@ namespace ImageProcessor
                 transparencyEdge = SelectedEdge(transparencyEdge);
                 //Debug.WriteLine("AddClipboardLayer");
                 //Debug.WriteLine(clip.ToString());
-                //VisualLayer vl = new BitmapLayer("Clip" + transparencyEdge, clip, transparencyEdge);
-                VisualLayer vl = new BitmapDerivativeLayer("Clip" + transparencyEdge, clip, new ViewPointEffect(), transparencyEdge);
+                VisualLayer vl = new BitmapLayer("Clip" + transparencyEdge, clip, transparencyEdge);
+                //VisualLayer vl = new BitmapDerivativeLayer("Clip" + transparencyEdge, clip, new ViewPointEffect(), transparencyEdge);
                 vl?.SetEffectParameters(SelectedStrength, 0, 0);
                 UpdateLayerList(canvas.AddVisualLayer(vl, canvas.BackgroundLayer.MatrixControl.RenderScale));
                 SetMode(ToolMode.None);
@@ -688,8 +689,8 @@ namespace ImageProcessor
             ((VisualLayer)e.Item.Tag).Visibility = e.Item.Checked ? Visibility.Visible : Visibility.Hidden;
             if (e.Item.Checked)
                 SetActiveLayer(e.Item.Index);
-            else if (e.Item.Index == selectedIndex)
-                UpdateLayerList(canvas.ClosestVisibleIndex(selectedIndex));
+            //else if (e.Item.Index == layerIndex)
+                UpdateLayerList(canvas.ClosestVisibleIndex(layerIndex));
         }
         void layerListView_ItemSelectionChanged(object s, ListViewItemSelectionChangedEventArgs e)
         {
@@ -726,7 +727,7 @@ namespace ImageProcessor
             if (aLayer != null)
             {
                 aLayer.ColorTransform.CopyFrom(ColorTransform.BWTransform);
-                if (aLayer.Type == VisualLayerType.Bitmap)
+                if (aLayer.Type == VisualLayerType.Bitmap || aLayer.Type == VisualLayerType.Derivative)
                     aLayer.SetEffectParameters(SelectedStrength, SelectedLevel, SelectedSize);
                 ResetColorControls();
                 TransformChanged(null, null);

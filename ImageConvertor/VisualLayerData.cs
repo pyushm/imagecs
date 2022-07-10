@@ -75,7 +75,7 @@ namespace ImageProcessor
         byte[] data;
         string name;
         public bool IsThumbnail { get { return mode == VisualLayerType.Tool; } }
-        public bool IsBitmap { get { return mode == VisualLayerType.Bitmap; } }
+        public bool IsBitmap { get { return mode == VisualLayerType.Bitmap || mode == VisualLayerType.Derivative; } }
         public bool IsDrawing { get { return mode == VisualLayerType.Drawing; } }
         public string Name { get { return name!=null && name.Length>0 ? name : mode.ToString(); } }
         public byte[] Data { get { return data; } }
@@ -89,7 +89,7 @@ namespace ImageProcessor
             data = d;
         }
         public void SetData(byte[] d) { data = d; }
-        public BitmapAccess GetImageAccess() { return mode == VisualLayerType.Bitmap ? new BitmapAccess(new MemoryStream(data), 0, "") : null; }
+        public BitmapAccess GetImageAccess() { return IsBitmap ? new BitmapAccess(new MemoryStream(data), 0, "") : null; }
         public List<FlexiblePolygon> GetStrokes()
         {
             if (mode != VisualLayerType.Drawing)

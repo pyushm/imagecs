@@ -193,25 +193,25 @@ namespace ImageProcessor
             Transform prev = BackgroundLayer.RenderTransform;
 
             double prevAngle = getBackgroundAngle();
-            //Debug.WriteLine("---------->>> Resize INIT="+init + " W=" + hostW + " H=" + hostH + "matrixControlSet ="+ matrixControlSet);
+            //Debug.WriteLine("---------->>> " + (firstTime ? "NEW IMAGE " : "RESIZE EXISTING ") + BackgroundLayer.Name+ " Layers=" + LayerCount + " Children=" + Children.Count + " " + hostW + "x" + hostH);
             if (!firstTime)
             {
                 BackgroundLayer.Translate(centerShift);
                 BackgroundLayer.MatrixControl.RenderScale *= scaleCoef;
                 BackgroundLayer.UpdateRenderTransform();
                 dAngle = prevAngle - getBackgroundAngle();
-                //Debug.WriteLine("RESIZE BackgroundLayer " + BackgroundLayer.ToTransformString());
+                //Debug.WriteLine("RESIZE Background " + BackgroundLayer.ToTransformString());
             }
             else if (matrixControlSet)
             {
                 BackgroundLayer.InitializeTransforms(hostW, hostH, scale, BackgroundLayer.MatrixControl);
-                //Debug.WriteLine("INIT STORED BackgroundLayer " + BackgroundLayer.ToTransformString());
+                Debug.WriteLine("APPLY EXISTING MatrixControl to Background " + BackgroundLayer.ToTransformString());
             }
             else
             {
                 scaleCoef = scale / getBackgroundScale();
-                BackgroundLayer.InitializeTransforms(hostW, hostH, scale, null);
-                //Debug.WriteLine("INIT NEW BackgroundLayer " + BackgroundLayer.ToTransformString());
+                BackgroundLayer.InitializeTransforms(hostW, hostH, scale);
+                //Debug.WriteLine("APPLY NEW MatrixControl to Background " + BackgroundLayer.ToTransformString());
             }
             Matrix current = BackgroundLayer.RenderTransform.Value;
             for (int i = 1; i < LayerCount; i++)
@@ -221,25 +221,25 @@ namespace ImageProcessor
                     continue;
                 if (!firstTime)
                 {
-                    string mc = vl.MatrixControl.ToString();
+                    //string mc = vl.MatrixControl.ToString();
                     Point oldC = vl.MatrixControl.Center;
                     Matrix rm = prev.Value;
                     rm.Invert();
                     Point ip = rm.Transform(oldC);
                     Point tp = current.Transform(ip);
                     vl.SetResizedRenderTransform(tp - oldC, scaleCoef, dAngle);
-                    //Debug.WriteLine("RESIZE Layer " + i + " before MatrixControl " + mc + " after " + vl.ToTransformString());
+                    //Debug.WriteLine("RESIZE Layer " + i + " {" +vl.ToString() + "} " + vl.ToTransformString());
                 }
                 else if (matrixControlSet && vl.MatrixControl != null)
                 {
                     vl.InitializeTransforms(hostW, hostH, scale, vl.MatrixControl);
-                    //Debug.WriteLine("INIT STORED Layer " + i + " " + vl.ToTransformString());
+                    //Debug.WriteLine("APPLY EXISTING MatrixControl to Layer " + i + " {" + vl.ToString() + "} " + vl.ToTransformString());
                 }
                 else
                 {
                     Debug.Assert(vl.MatrixControl == null && !matrixControlSet);
-                    vl.InitializeTransforms(hostW, hostH, scale, null);
-                    //Debug.WriteLine("INIT NEW Layer " + i + " " + vl.ToTransformString());
+                    vl.InitializeTransforms(hostW, hostH, scale);
+                    //Debug.WriteLine("APPLY NEW MatrixControl to Layer " + i + " {" + vl.ToString() + "} " + vl.ToTransformString());
                 }
             }
             CropRectangle?.SetToDrawingTransform(BackgroundLayer.MatrixControl.RenderScale, Width, Height);
@@ -268,14 +268,14 @@ namespace ImageProcessor
         {
             if (vl == null)
                 return 0;
-            vl.InitializeTransforms(Width, Height, scale, null);
+            vl.InitializeTransforms(Width, Height, scale);
             vl.FromSelection = selection;
             return AddVisualLayer(vl);
         }
         public int AddVisualLayer(VisualLayer vl, VisualLayer renderSrc, Vector shift)
         {
             if (renderSrc == null)
-                vl?.InitializeTransforms(Width, Height, -1, null);
+                vl?.InitializeTransforms(Width, Height, -1);
             else
                 vl?.InitializeTransforms(renderSrc);
             if (shift.LengthSquared != 0)
@@ -290,7 +290,7 @@ namespace ImageProcessor
         {
             name = UniqueName(name);
             VisualLayer vl = new DrawingLayer(name, frameLayoutSize);
-            vl.InitializeTransforms(Width, Height, -1, null);
+            vl.InitializeTransforms(Width, Height, -1);
             Children.Insert(LayerCount, vl);
             return LayerCount++;
         }
@@ -359,7 +359,7 @@ namespace ImageProcessor
                 return;
             tools.Clear();
             if (panelHolder.ToolMode == ToolMode.Distortion3D)
-                tools.AddVisual(ActiveLayer.MatrixControl.ToVisual(toolBrush, toolPen));
+                tools.AddVisual(ActiveLayer.MatrixControl?.ToVisual(toolBrush, toolPen));
             else if (panelHolder.ToolMode == ToolMode.Morph)
                 tools.AddVisual(morphControl.ToVisual(toolBrush, toolPen));
             if (CropRectangle != null)
@@ -449,7 +449,7 @@ namespace ImageProcessor
                             Debug.WriteLine(ex.StackTrace);
                             vl = null;
                         }
-                        vl?.SetStoredMatrixContro(vlda[ind]);
+                        vl?.SetStoredMatrixContro(vlda[ind].MatrixControl);
                         AddVisualLayer(vl);
                     }
                 }
@@ -549,8 +549,25 @@ namespace ImageProcessor
             RenderTransform = new MatrixTransform(t);
             tools.Clear();
             UpdateLayout();
-            RenderTargetBitmap rtb = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Default);
+            RenderTargetBitmap rtb = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
             rtb.Render(this);
+
+            //Debug.WriteLine("LayerCount=" + LayerCount + " Children=" + Children.Count);
+            //for (int i = 0; i < Children.Count; i++)
+            //{
+            //    var vi = GetLayer(i);
+            //    if (vi != null)
+            //    {
+            //        Rect bounds = VisualTreeHelper.GetDescendantBounds(vi);
+            //        Debug.WriteLine("bounds="+ bounds.ToString()+' '+vi.ToString() + vi.ToTransformString());
+            //    }
+            //    RenderTargetBitmap rt =new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
+            //    vi.RenderToBitmap(rt);
+            //    BitmapAccess.DebugSave("testLayer" + i+".png", rt);
+            //}
+            //var ba = new BitmapAccess(rtb);
+            //Debug.WriteLine(ba.ToByteMatrixString(0));
+
             bitmapEncoder.Frames.Add(BitmapFrame.Create(rtb));
             MemoryStream ms = new MemoryStream();
             bitmapEncoder.Save(ms);

@@ -327,7 +327,7 @@ namespace ShaderEffects
                 transparencyEdge = edge;
             BitmapLayer clip = new BitmapLayer("Clip", clipboard, transparencyEdge);
             img.Source = clip.Image.Source;
-            clip.InitializeTransforms(Width, Height, -1, null);
+            clip.InitializeTransforms(Width, Height, -1);
             host.Children.Add(clip);
         }
         public void CaptureCtrlVC(object sender, System.Windows.Input.KeyEventArgs e)
