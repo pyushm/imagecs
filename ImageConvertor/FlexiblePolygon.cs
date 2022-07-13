@@ -219,10 +219,10 @@ namespace ImageProcessor
                     return i;
             return -1;
         }
-        public int HitContourTest(Point tp) { return ProximityTest(tp, 2); }
-        public int ProximityTest(Point tp) { return ProximityTest(tp, 6); }
+        public int HitContourTest(Point tp) { return ProximityTest(tp, 3); }
+        public bool AwayFromContourTest(Point tp) { return ProximityTest(tp, 60) < 0; } 
         public int ProximityTest(Point tp, double range)
-        {
+        {   // returns hit segment index or -1 if nothing hit
             int ind = pathOffsetInd;
             if (PathGeometry == null)
                 return -1;

@@ -269,6 +269,7 @@ namespace ImageProcessor
             catch { }
             return drawingVisual;
         }
+        public string ToEffectString() { return Effect.ToString(); }
     }
     public class BitmapDerivativeLayer : BitmapLayer
     {
@@ -303,5 +304,6 @@ namespace ImageProcessor
                 cae.SetParameters(colorTransform, strength, level, size);
             derivativeEffect.SetParameters(colorTransform, strength, level, size);
         }
+        public string ToDerivativeEffectString() { return derivativeEffect.ToString(); }
     }
 }

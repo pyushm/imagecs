@@ -26,11 +26,13 @@ namespace ShaderEffects
     [Serializable]
     public class EffectData
     {
-        EffectType type;
-        double[] values;
-        public EffectType Type { get { return type; } }
-        public double[] Values { get { return values; } set { values = value; } }
-        public EffectData(EffectType t) { type = t; }
+        //EffectType type;
+        //double[] values;
+        //public EffectType Type { get { return type; } }
+        //public double[] Values { get { return values; } set { values = value; } }
+        public EffectType Type { get; private set; }
+        public double[] Values { get; set; }
+        public EffectData(EffectType t) { Type = t; }
     }
     public abstract class EffectInput
     {
@@ -176,14 +178,15 @@ namespace ShaderEffects
         //    for (int i = 0; i < Math.Min(nParam, timeline.Length); i++)
         //        if (timeline[i] != null) BeginAnimation(inputProperties[i], timeline[i]);
         //}
-        public string ToParameterString(DependencyProperty[] inputProperties)
+        protected string ToParameterString(DependencyProperty[] inputProperties)
         {
             string pars = "";
             for (int i = 0; i < inputProperties.Length; i++)
-                pars += inputProperties[i].Name + " value=" + (inputProperties[i].PropertyType == typeof(double) ?
-                    ((double)GetValue(inputProperties[i])).ToString() : ((Color)GetValue(inputProperties[i])).ToString()) + Environment.NewLine;
+                pars += " | " + inputProperties[i].Name + '=' + (inputProperties[i].PropertyType == typeof(double) ?
+                    ((double)GetValue(inputProperties[i])).ToString() : ((Color)GetValue(inputProperties[i])).ToString());
             return pars;
         }
+        public override string ToString() { return ""; }
     }
     public class ColorAdjustmentEffect : ParametricEffect
     {   // bitmap color adjustment; used on bitmaps and bitmap derivatives
@@ -214,8 +217,9 @@ namespace ShaderEffects
             Debug.Assert(trasform.TransparencyValues.Length == 4);
             SetParameter(inputProperties[i++], trasform.Opacity);
             SetParameter(inputProperties[i++], trasform.OpacitySlope);
-            //Debug.Write("after" + Environment.NewLine + ToParameterString());
+            //Debug.Write(ToString());
         }
+        public override string ToString() { return Name + ToParameterString(inputProperties); }
     }
     public class ColorFilterEffect : ParametricEffect   // not used
     {
@@ -253,8 +257,9 @@ namespace ShaderEffects
             SetParameter(inputProperties[i++], 4*strength);
             SetParameter(inputProperties[i++], (size + 0.5) * (size / 4 + 0.5) / pixelSize.Width);
             SetParameter(inputProperties[i++], (double)pixelSize.Width / pixelSize.Height);
-            //Debug.Write("EdgeEffect parameters" + Environment.NewLine + ToParameterString(inputProperties));
+            //Debug.Write(ToString());
         }
+        public override string ToString() { return Name + ToParameterString(inputProperties); }
     }
     public class ViewPointEffect : ParametricEffect
     {
@@ -265,10 +270,10 @@ namespace ShaderEffects
             try
             {
                 inputs.AddGroup(new InputGroup() {
-                    new FloatInput("Distortion", 0),    // view point distortion strength (height / distance)
+                    new FloatInput("Distortion", 0),    // view point distortion - not used
                     new FloatInput("ViewX", 0),         // view point X relative to center as a fraction of image width (-0.5 - left; 0 - Center; 0.5 - right)
                     new FloatInput("ViewY", 0),         // view point Y relative to center as a fraction of image height (-0.5 - top; 0 - Center; 0.5 - bottom)
-                    new FloatInput("Aspect", 0) });     // .Width / .Height
+                    new FloatInput("Aspect", 1) });     // .Width / .Height
                 inputProperties = RegisterParameters(typeof(ViewPointEffect), inputs);
             }
             catch (Exception ex)
@@ -283,12 +288,13 @@ namespace ShaderEffects
         {
             Debug.Assert(trasform.BrightnessValues.Length == 6);
             int i = 0;
-            SetParameter(inputProperties[i++], strength);
-            SetParameter(inputProperties[i++], x);
-            SetParameter(inputProperties[i++], y);
+            SetParameter(inputProperties[i++], 1);
+            SetParameter(inputProperties[i++], x * 0.5 * strength);
+            SetParameter(inputProperties[i++], y * 0.5 * strength);
             SetParameter(inputProperties[i++], (double)pixelSize.Width / pixelSize.Height);
-            //Debug.Write("ViewPointEffect parameters" + Environment.NewLine + ToParameterString(inputProperties));
+            //Debug.Write(ToString());
         }
+        public override string ToString() { return Name + ToParameterString(inputProperties); }
     }
     public class MorphEffect : ParametricEffect
     {  
@@ -326,7 +332,9 @@ namespace ShaderEffects
             SetParameter(inputProperties[i++], (double)pixelSize.Width / pixelSize.Height);
             SetParameter(inputProperties[i++], x - px);
             SetParameter(inputProperties[i++], y - py);
+            //Debug.Write(ToString());
         }
+        public override string ToString() { return Name + ToParameterString(inputProperties); }
     }
     public class GradientContrastEffect : ParametricEffect  // sharpness layer
     {   // sharpens or smooths image based on R amd R/2 averaged values: image = C0*original + C1*average(radius/2) + (1-C0-C1)*average(radius)
@@ -358,8 +366,9 @@ namespace ShaderEffects
             SetParameter(inputProperties[i++], (double)pixelSize.Width / pixelSize.Height);
             SetParameter(inputProperties[i++], 4*strength); // C0
             SetParameter(inputProperties[i++], level+0.33); // C1
-            //Debug.Write("GradientContrastEffect"+Environment.NewLine+ ToParameterString(inputProperties));
+            //Debug.Write(ToString());
         }
+        public override string ToString() { return Name + ToParameterString(inputProperties); }
     }
     public class ThresholdSmoothingEffect : ParametricEffect    // does not work well - not used
     {   // removes odd values if difference from averaged exceeds Level: image = |original-average(radius)|<Level ? original : average(radius)
@@ -390,8 +399,9 @@ namespace ShaderEffects
             SetParameter(inputProperties[i++], size / pixelSize.Width);
             SetParameter(inputProperties[i++], (double)pixelSize.Width / pixelSize.Height);
             SetParameter(inputProperties[i++], strength);
-            //Debug.Write("ThresholdSmoothingEffect" + Environment.NewLine + ToParameterString(inputProperties));
+            //Debug.Write(ToString());
         }
+        public override string ToString() { return Name + ToParameterString(inputProperties); }
     }
     public class ShaderEffectCompiler
     {

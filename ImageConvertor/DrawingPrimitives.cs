@@ -447,7 +447,7 @@ namespace ImageProcessor
                     if (proj > pe * v || proj < pb * v)
                         continue;
                     double d = Math.Abs(Vector.CrossProduct(v, pp - pb));
-                    if (d < v.Length * CatchSize && minDist > d)
+                    if (d < v.Length * (CatchSize + 0.1 * v.Length) && minDist > d) 
                     {
                         minDist = d;
                         ind = i;

@@ -23,7 +23,7 @@ namespace CustomControls
         protected float ratio;                  // border width to height ratio
         protected float range = 1;              // value range
         protected float offset = 0;             // value offset (value at left boundary)
-        protected int iSize = 5;                // indicator capture size
+        protected int iSize = 6;                // indicator capture size
         protected int mSize = 3;                // indicator marker size
         protected int activePoint = -1;         // index of active control indicator
         Timer valueChangeTimer;                 // timer firing ValueChanged event only after value is the same after valueChangeDelay
@@ -31,8 +31,9 @@ namespace CustomControls
         bool timerToStop;                       // request timer to stop on leaving control
         protected Point[] iLocPrev;		        // indicator value at previous valueChangeTimer tick
         protected Point[] iLocLast;		        // indicator value at last ValueChanged firing
-        protected Point[] arrow = new Point[]   { new Point(-3, -4), new Point(-7, 0), new Point(-3, 4), new Point(-3, 1), 
-            new Point(3, 1), new Point(3, 4), new Point(7, 0), new Point(3, -4), new Point(3, -1), new Point(-3, -1)};
+        protected Point[] arrow = new Point[]   { new Point(-5, -5), new Point(-9, 0), new Point(-3, 5), new Point(-5, 2), 
+            new Point(5, 2), new Point(5, 5), new Point(9, 0), new Point(5, -5), new Point(5, -2), new Point(-5, -2)};
+        Point[] shiftedArrow;
         protected int NValues                   { get { return nPoints * PointDimension; } } // number of output values
         public int LastPointInd                 { get { return nPoints - 1; } }
         protected virtual int PointDimension    { get { return 0; } } // number of coordinates of control point
@@ -177,7 +178,7 @@ namespace CustomControls
                 g.FillRectangle(iBrush[i], iArea[i]);
             if (nPoints > 1)
             {
-                Point[] shiftedArrow = new Point[arrow.Length];
+                shiftedArrow = new Point[arrow.Length];
                 for (int i = 0; i < arrow.Length; i++)
                 {
                     shiftedArrow[i] = arrow[i];
@@ -225,8 +226,9 @@ namespace CustomControls
             for (int i = 0; i < nPoints; i++)
                 if (IsInProximity(p, iLoc[i]))
                     return i;
-            if (IsInProximity(p, sliderLoc))
-                return nPoints;
+            for (int i = 0; i < arrow.Length; i++) 
+                if (IsInProximity(p, shiftedArrow[i]))
+                    return nPoints;
             return -1;
         }
         void _MouseLeave(object s, EventArgs e) { /*ResetIndicators();*/ }

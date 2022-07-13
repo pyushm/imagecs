@@ -25,15 +25,15 @@ namespace ImageProcessor
             mi.Click += new RoutedEventHandler(handler);
             return mi;
         }
-        internal bool MouseDown(MouseButtonEventArgs e, FlexiblePolygon[] ss, Point canvasPoint)
+        internal MouseOperation MouseDown(MouseButtonEventArgs e, FlexiblePolygon[] ss, Point canvasPoint)
         {
             if (ss.Length == 0)
-                return false;
+                return MouseOperation.None;
             FlexiblePolygon newActiveStroke = null;
             if (ss.Length == 1)
                 newActiveStroke = activeStroke = ss[0];
-            int sind = activeStroke != null ? activeStroke.HitContourTest(canvasPoint) : -1;  // segment index
-            if (sind < 0 && ss.Length > 1) // active stroke not hit and need to check other strokes
+            int sind = activeStroke != null ? activeStroke.HitContourTest(canvasPoint) : -1;  // segment index from activeStroke
+            if (sind < 0 && ss.Length > 1) // if active stroke not hit and need to check other strokes
             {
                 foreach (var fp in ss)
                 {
@@ -46,8 +46,8 @@ namespace ImageProcessor
                 }
             }
             //Debug.WriteLine("segment " + sind + " hit");
-            if (sind < 0 || newActiveStroke == null)   // nothing hit
-                return activeStroke.ProximityTest(canvasPoint) < 0;
+            if (sind < 0)   // nothing hit
+                return MouseOperation.None; 
             if (activeStroke != newActiveStroke)
             {
                 if (activeStroke != null) // unselect previous active stroke
@@ -62,14 +62,14 @@ namespace ImageProcessor
                     activeStroke.InverseProperty(pind, PointProperties.Sharp);
                 else
                     activeStroke.AddPoint(sind + 1, activeStroke.FromDrawing.Transform(canvasPoint));
-                return false;
+                return MouseOperation.None;
             }
             if (e.ChangedButton != MouseButton.Left || pind < 0)
-                return false;
+                return MouseOperation.None;
             activeStroke.RemoveProperty(PointProperties.Selected);
             activeStroke.AddProperty(pind, PointProperties.Selected);   // single left click on point marks point selected
             //Debug.WriteLine("move point "+ss.ToPropertiesString());
-            return true;  // moving point starts   
+            return MouseOperation.Stroke;  // moving point starts   
         }
         internal bool MouseMove(MouseEventArgs e, Vector canvasShift)
         {

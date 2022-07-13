@@ -12,6 +12,23 @@ using System.Windows.Media.Imaging;
 
 namespace ImageProcessor
 {
+    public class NumEnum
+    {
+        public static object[] Values(Type t, double coef = 1)
+        {
+            object[] ret = new object[Enum.GetNames(t).Length];
+            for (int i = 0; i < ret.Length; i++)
+                ret[i] = coef * (int)Enum.GetValues(t).GetValue(i);
+            return ret;
+        }
+    }
+    enum MouseSensitivity
+    {
+        m2 = 2,
+        m5 = 5,
+        m10 = 10,
+        m20 = 20,
+    }
     public class ImageEditForm : Form, IPanelHolder
     {
         enum ImageScale                     // fixed image scales
@@ -24,7 +41,6 @@ namespace ImageProcessor
         }
         enum EdgeGap
         {
-            Auto = -1,
             Gap0 = 0,
             Gap3 = 3,
             Gap5 = 5,
@@ -33,7 +49,8 @@ namespace ImageProcessor
             Gap20 = 20,
             Gap30 = 30,
             Gap45 = 45,
-            Gap70 = 70,
+            Gap66 = 66,
+            Gap99 = 99,
         }
         string[] imageModes = new string[] { ToolMode.None.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.Morph.ToString() };//, ToolMode.FreeSelection.ToString(), ToolMode.Crop.ToString() };
         string[] drawingeModes = new string[] { ToolMode.None.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.ContourEdit.ToString() };
@@ -49,6 +66,7 @@ namespace ImageProcessor
         private GroupBox modeGroupBox;
         private Label label5;
         private GroupBox layerGroupBox;
+        ComboBox sensitivityBox;
         DrawingPanel canvas;
         float dpiScaleX = 1;
         float dpiScaleY = 1;
@@ -65,8 +83,9 @@ namespace ImageProcessor
         private ComboBox edgeGapBox;
         private ValueControl strengthControl;
         private ValueControl levelControl;
-        private Label label1;
+        private Label BWbtn;
         private Panel panel;
+        private Label mouseSensitivityLabel;
         private ValueControl resolutionControl;
 
         double SelectedStrength { get { return strengthControl.Values[0]; } }   // [0:1]
@@ -96,7 +115,8 @@ namespace ImageProcessor
             this.typeColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.nameColumn = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.layerGroupBox = new System.Windows.Forms.GroupBox();
-            this.label1 = new System.Windows.Forms.Label();
+            this.mouseSensitivityLabel = new System.Windows.Forms.Label();
+            this.BWbtn = new System.Windows.Forms.Label();
             this.levelControl = new CustomControls.ValueControl();
             this.resolutionControl = new CustomControls.ValueControl();
             this.strengthControl = new CustomControls.ValueControl();
@@ -107,6 +127,7 @@ namespace ImageProcessor
             this.edgeGapBox = new System.Windows.Forms.ComboBox();
             this.panel = new System.Windows.Forms.Panel();
             saveSameLocationButton = new System.Windows.Forms.Button();
+            sensitivityBox = new System.Windows.Forms.ComboBox();
             this.layerGroupBox.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -139,9 +160,9 @@ namespace ImageProcessor
             // 
             // modeGroupBox
             // 
-            this.modeGroupBox.Location = new System.Drawing.Point(1, 641);
+            this.modeGroupBox.Location = new System.Drawing.Point(2, 641);
             this.modeGroupBox.Name = "modeGroupBox";
-            this.modeGroupBox.Size = new System.Drawing.Size(136, 184);
+            this.modeGroupBox.Size = new System.Drawing.Size(138, 184);
             this.modeGroupBox.TabIndex = 31;
             this.modeGroupBox.TabStop = false;
             this.modeGroupBox.Text = "Mouse mode";
@@ -166,7 +187,6 @@ namespace ImageProcessor
             this.layerListView.FullRowSelect = true;
             this.layerListView.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
             this.layerListView.HideSelection = false;
-            this.layerListView.LabelEdit = false;
             this.layerListView.Location = new System.Drawing.Point(1, 49);
             this.layerListView.MultiSelect = false;
             this.layerListView.Name = "layerListView";
@@ -189,42 +209,62 @@ namespace ImageProcessor
             // 
             // layerGroupBox
             // 
-            this.layerGroupBox.Controls.Add(this.label1);
+            this.layerGroupBox.Controls.Add(sensitivityBox);
+            this.layerGroupBox.Controls.Add(this.mouseSensitivityLabel);
+            this.layerGroupBox.Controls.Add(this.BWbtn);
             this.layerGroupBox.Controls.Add(this.levelControl);
             this.layerGroupBox.Controls.Add(this.resolutionControl);
             this.layerGroupBox.Controls.Add(this.strengthControl);
             this.layerGroupBox.Controls.Add(this.transperancyControl);
             this.layerGroupBox.Controls.Add(this.saturationControl);
             this.layerGroupBox.Controls.Add(this.brightnessControl);
-            this.layerGroupBox.Location = new System.Drawing.Point(1, 240);
+            this.layerGroupBox.Location = new System.Drawing.Point(2, 240);
             this.layerGroupBox.Name = "layerGroupBox";
-            this.layerGroupBox.Size = new System.Drawing.Size(136, 395);
+            this.layerGroupBox.Size = new System.Drawing.Size(138, 395);
             this.layerGroupBox.TabIndex = 40;
             this.layerGroupBox.TabStop = false;
             this.layerGroupBox.Text = "Adjust layer";
             // 
-            // label1
+            // sensitivityBox
             // 
-            this.label1.BackColor = System.Drawing.SystemColors.ControlDarkDark;
-            this.label1.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
-            this.label1.ForeColor = System.Drawing.SystemColors.Window;
-            this.label1.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.label1.Location = new System.Drawing.Point(91, 108);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(32, 15);
-            this.label1.TabIndex = 45;
-            this.label1.Text = "B/W";
-            this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.label1.Click += new System.EventHandler(this.SetBWTransform);
+            sensitivityBox.IntegralHeight = false;
+            sensitivityBox.Location = new System.Drawing.Point(95, 16);
+            sensitivityBox.Name = "sensitivityBox";
+            sensitivityBox.Size = new System.Drawing.Size(41, 21);
+            sensitivityBox.TabIndex = 46;
+            // 
+            // mouseSensitivityLabel
+            // 
+            this.mouseSensitivityLabel.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.mouseSensitivityLabel.Location = new System.Drawing.Point(2, 16);
+            this.mouseSensitivityLabel.Name = "mouseSensitivityLabel";
+            this.mouseSensitivityLabel.Size = new System.Drawing.Size(92, 18);
+            this.mouseSensitivityLabel.TabIndex = 46;
+            this.mouseSensitivityLabel.Text = "Mouse sensitivity";
+            this.mouseSensitivityLabel.TextAlign = System.Drawing.ContentAlignment.TopRight;
+            // 
+            // BWbtn
+            // 
+            this.BWbtn.BackColor = System.Drawing.SystemColors.ControlDarkDark;
+            this.BWbtn.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
+            this.BWbtn.ForeColor = System.Drawing.SystemColors.Window;
+            this.BWbtn.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.BWbtn.Location = new System.Drawing.Point(103, 142);
+            this.BWbtn.Name = "BWbtn";
+            this.BWbtn.Size = new System.Drawing.Size(32, 15);
+            this.BWbtn.TabIndex = 45;
+            this.BWbtn.Text = "B/W";
+            this.BWbtn.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.BWbtn.Click += new System.EventHandler(this.SetBWTransform);
             // 
             // levelControl
             // 
             this.levelControl.Colors = null;
-            this.levelControl.Location = new System.Drawing.Point(3, 322);
+            this.levelControl.Location = new System.Drawing.Point(3, 352);
             this.levelControl.Name = "levelControl";
             this.levelControl.Offset = -1F;
             this.levelControl.Range = 2F;
-            this.levelControl.Size = new System.Drawing.Size(120, 32);
+            this.levelControl.Size = new System.Drawing.Size(134, 32);
             this.levelControl.TabIndex = 70;
             this.levelControl.Title = "Level";
             this.levelControl.ValueChanged += new System.EventHandler(this.TransformChanged);
@@ -232,34 +272,35 @@ namespace ImageProcessor
             // resolutionControl
             // 
             this.resolutionControl.Colors = null;
-            this.resolutionControl.Location = new System.Drawing.Point(3, 250);
+            this.resolutionControl.Location = new System.Drawing.Point(3, 284);
             this.resolutionControl.Name = "resolutionControl";
             this.resolutionControl.Offset = 0F;
             this.resolutionControl.Range = 4F;
-            this.resolutionControl.Size = new System.Drawing.Size(120, 32);
+            this.resolutionControl.Size = new System.Drawing.Size(134, 32);
             this.resolutionControl.TabIndex = 71;
             this.resolutionControl.Title = "Resolution";
             this.resolutionControl.ValueChanged += new System.EventHandler(this.TransformChanged);
+            this.resolutionControl.Click += new System.EventHandler(this.TransformChanged);
             // 
             // strengthControl
             // 
             this.strengthControl.Colors = null;
-            this.strengthControl.Location = new System.Drawing.Point(3, 286);
+            this.strengthControl.Location = new System.Drawing.Point(3, 318);
             this.strengthControl.Name = "strengthControl";
             this.strengthControl.Offset = 0F;
             this.strengthControl.Range = 1F;
-            this.strengthControl.Size = new System.Drawing.Size(120, 32);
+            this.strengthControl.Size = new System.Drawing.Size(134, 32);
             this.strengthControl.TabIndex = 68;
             this.strengthControl.Title = "Strength";
             this.strengthControl.ValueChanged += new System.EventHandler(this.TransformChanged);
             // 
             // transperancyControl
             // 
-            this.transperancyControl.Location = new System.Drawing.Point(3, 180);
+            this.transperancyControl.Location = new System.Drawing.Point(3, 214);
             this.transperancyControl.Name = "transperancyControl";
             this.transperancyControl.Offset = 0F;
             this.transperancyControl.Range = 1F;
-            this.transperancyControl.Size = new System.Drawing.Size(120, 68);
+            this.transperancyControl.Size = new System.Drawing.Size(134, 68);
             this.transperancyControl.TabIndex = 29;
             this.transperancyControl.Title = "Transperancy";
             this.transperancyControl.ValueChanged += new System.EventHandler(this.TransformChanged);
@@ -267,22 +308,22 @@ namespace ImageProcessor
             // saturationControl
             // 
             this.saturationControl.Colors = null;
-            this.saturationControl.Location = new System.Drawing.Point(3, 108);
+            this.saturationControl.Location = new System.Drawing.Point(3, 142);
             this.saturationControl.Name = "saturationControl";
             this.saturationControl.Offset = -1F;
             this.saturationControl.Range = 2F;
-            this.saturationControl.Size = new System.Drawing.Size(120, 68);
+            this.saturationControl.Size = new System.Drawing.Size(134, 68);
             this.saturationControl.TabIndex = 21;
             this.saturationControl.Title = "Saturation";
             this.saturationControl.ValueChanged += new System.EventHandler(this.TransformChanged);
             // 
             // brightnessControl
             // 
-            this.brightnessControl.Location = new System.Drawing.Point(3, 17);
+            this.brightnessControl.Location = new System.Drawing.Point(3, 41);
             this.brightnessControl.Name = "brightnessControl";
             this.brightnessControl.Offset = -1F;
             this.brightnessControl.Range = 2F;
-            this.brightnessControl.Size = new System.Drawing.Size(120, 85);
+            this.brightnessControl.Size = new System.Drawing.Size(134, 95);
             this.brightnessControl.TabIndex = 29;
             this.brightnessControl.Title = "Brightness";
             this.brightnessControl.ValueChanged += new System.EventHandler(this.TransformChanged);
@@ -290,18 +331,21 @@ namespace ImageProcessor
             // label7
             // 
             this.label7.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.label7.Location = new System.Drawing.Point(8, 219);
+            this.label7.Location = new System.Drawing.Point(4, 219);
             this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(66, 18);
+            this.label7.Size = new System.Drawing.Size(92, 18);
             this.label7.TabIndex = 44;
-            this.label7.Text = "Edge";
+            this.label7.Text = "Clip edge blur";
             this.label7.TextAlign = System.Drawing.ContentAlignment.TopRight;
             // 
             // edgeGapBox
             // 
-            this.edgeGapBox.Location = new System.Drawing.Point(80, 216);
+            this.edgeGapBox.DropDownHeight = 220;
+            this.edgeGapBox.IntegralHeight = false;
+            this.edgeGapBox.Location = new System.Drawing.Point(97, 216);
+            this.edgeGapBox.MaxDropDownItems = 10;
             this.edgeGapBox.Name = "edgeGapBox";
-            this.edgeGapBox.Size = new System.Drawing.Size(57, 21);
+            this.edgeGapBox.Size = new System.Drawing.Size(41, 21);
             this.edgeGapBox.TabIndex = 43;
             this.edgeGapBox.SelectedIndexChanged += new System.EventHandler(this.TransformChanged);
             // 
@@ -339,12 +383,11 @@ namespace ImageProcessor
         }
         #endregion
 
-        #region interface ILayerTool
+        #region interface IPanelHolder
         public void CropRectangleUpdated() { }
         public void GeometryTransformUpdated() { /*ShowGeometryTransformParameters();*/ }
         public void FocusControl() { layerListView.Focus(); }
         public void ActiveLayerUpdated(int i) { UpdateLayerList(i); }
-        public void SetViewPosition(double x, double y) { canvas.ActiveLayer.SetEffectParameters(SelectedStrength, x, y); }
         #endregion
         public ImageEditForm()              
         {
@@ -369,9 +412,11 @@ namespace ImageProcessor
             layerIndex = -1;       // nothing selected
             KeyDown += CaptureKeyboard;
             scaleBox.Items.AddRange(Enum.GetNames(typeof(ImageScale)));
-            edgeGapBox.Items.AddRange(Enum.GetNames(typeof(EdgeGap)));
+            edgeGapBox.Items.AddRange(NumEnum.Values(typeof(EdgeGap)));
+            sensitivityBox.Items.AddRange(NumEnum.Values(typeof(MouseSensitivity), 0.1));
             scaleBox.SelectedIndex = 0;
             edgeGapBox.SelectedIndex = 0;
+            sensitivityBox.SelectedIndex = 2;
             ContextMenu selectMenu = new ContextMenu();
             selectMenu.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
                 new MenuItem("Move on top", delegate (object s, EventArgs e) { if (canvas.MoveLayerOnTop(layerIndex)) UpdateLayerList(layerIndex); } ),
@@ -380,12 +425,11 @@ namespace ImageProcessor
                 new MenuItem("Edges", delegate(object s, EventArgs e) { AddEffectLayer("Edge", new EdgeEffect()); }),
                 new MenuItem("Drawing", delegate(object s, EventArgs e) { UpdateLayerList(canvas.AddStrokeLayer("Drawing")); } ),
                 new MenuItem("Sharpness", delegate (object s, EventArgs e) { AddEffectLayer("Sharpness", new GradientContrastEffect()); }),
-                new MenuItem("ViewPoint", delegate (object s, EventArgs e) { AddEffectLayer("ViewPoint", new ViewPointEffect()); }),
                 new MenuItem("Remove odd", delegate (object s, EventArgs e) { AddNoOddsLayer(); }),
                 new MenuItem("To background", delegate (object s, EventArgs e) { CopyToBackground(1); }),
                 new MenuItem("To back 1/2", delegate (object s, EventArgs e) { CopyToBackground(2); }),
-                new MenuItem("To back 1/3", delegate (object s, EventArgs e) { CopyToBackground(3); }),
-                new MenuItem("To back 1/5", delegate (object s, EventArgs e) { CopyToBackground(5); }),
+                new MenuItem("To back 1/4", delegate (object s, EventArgs e) { CopyToBackground(4); }),
+                new MenuItem("To back 1/8", delegate (object s, EventArgs e) { CopyToBackground(8); }),
                 new MenuItem("Delete", new EventHandler(DeleteLayer)) });
             layerListView.ContextMenu = selectMenu;
             layerListView.HideSelection = false;
@@ -475,11 +519,8 @@ namespace ImageProcessor
             else if (e.KeyCode == Keys.Delete)
                 canvas.DeleteSelection();
         }
-        int SelectedEdge(int defaultValue)
-        {
-            int gap = edgeGapBox.SelectedItem != null ? (int)Enum.Parse(typeof(EdgeGap), (string)edgeGapBox.SelectedItem) : defaultValue;
-            return gap < 0 ? defaultValue : gap;
-        }
+        int SelectedEdge() { return edgeGapBox.SelectedItem != null ? (int)(double)edgeGapBox.SelectedItem : 0; }
+        public double SelectedSensitivity() { return sensitivityBox.SelectedItem != null ? (double)sensitivityBox.SelectedItem : 1; }
         double DisplayScale
         {
             get { return scaleBox.SelectedItem == null ? 0 : (int)Enum.Parse(typeof(ImageScale), (string)scaleBox.SelectedItem)/10.0; }
@@ -553,8 +594,7 @@ namespace ImageProcessor
             if (bl == null)
                 return;
             BitmapAccess clip = canvas.GetSelected(0);
-            int transparencyEdge = imageInfo.IsExact ? 0 : Math.Min((int)Math.Sqrt(clip.Width + clip.Height) / 3, 6);
-            transparencyEdge = SelectedEdge(transparencyEdge);
+            int transparencyEdge = SelectedEdge();
             //var vl = new BitmapLayer(name, clip, transparencyEdge);
             var vl = new BitmapDerivativeLayer(name, clip, effect, transparencyEdge);
             vl?.SetEffectParameters(SelectedStrength, SelectedLevel, SelectedSize);
@@ -571,7 +611,7 @@ namespace ImageProcessor
             int level = 5;
             name += "." + level;
             BitmapAccess clip = canvas.GetSelected(resolution);
-            int transparencyEdge = bl.FromSelection ? SelectedEdge(Math.Min((int)Math.Sqrt(clip.Width + clip.Height) / 3, 6)) : 0;
+            int transparencyEdge = bl.FromSelection ? SelectedEdge() : 0;
             Vector shift = bl.FromSelection ? (Vector)canvas.SavedPosition : new Vector();
             BitmapAccess ba = clip.ApplyConversion(FilterType.MedianFilter, resolution, level);
             VisualLayer vl = new BitmapLayer(name, ba, transparencyEdge);
@@ -600,13 +640,12 @@ namespace ImageProcessor
             {
                 BitmapAccess clip = new BitmapAccess(ClipboardBitmapAccess.GetImage());
                 panel.Focus();
-                int transparencyEdge = imageInfo.IsExact ? 0 : Math.Min((int)Math.Sqrt(clip.Width + clip.Height) / 3, 6);
-                transparencyEdge = SelectedEdge(transparencyEdge);
+                int transparencyEdge = SelectedEdge();
                 //Debug.WriteLine("AddClipboardLayer");
                 //Debug.WriteLine(clip.ToString());
-                VisualLayer vl = new BitmapLayer("Clip" + transparencyEdge, clip, transparencyEdge);
-                //VisualLayer vl = new BitmapDerivativeLayer("Clip" + transparencyEdge, clip, new ViewPointEffect(), transparencyEdge);
-                vl?.SetEffectParameters(SelectedStrength, 0, 0);
+                //VisualLayer vl = new BitmapLayer("Clip" + transparencyEdge, clip, transparencyEdge);
+                VisualLayer vl = new BitmapDerivativeLayer("Clip" + transparencyEdge, clip, new ViewPointEffect(), transparencyEdge);
+                vl?.SetEffectParameters(SelectedSensitivity(), 0, 0);
                 UpdateLayerList(canvas.AddVisualLayer(vl, canvas.BackgroundLayer.MatrixControl.RenderScale));
                 SetMode(ToolMode.None);
             }
@@ -714,9 +753,9 @@ namespace ImageProcessor
                 aLayer.ColorTransform.Set(brightnessControl.Values, saturationControl.Values, transperancyControl.Values);
                 BitmapDerivativeLayer bdl = aLayer as BitmapDerivativeLayer;
                 if (bdl != null && bdl.DerivativeType == EffectType.ViewPoint)
-                    bdl.SetEffectParameters(SelectedStrength, bdl.MatrixControl.ViewDistortion.X, bdl.MatrixControl.ViewDistortion.Y);
+                    bdl.SetEffectParameters(SelectedSensitivity(), bdl.MatrixControl.ViewDistortion.X, bdl.MatrixControl.ViewDistortion.Y);
                 else if (bdl != null && bdl.DerivativeType == EffectType.Morph)
-                    bdl.SetEffectParameters(SelectedStrength, bdl.MatrixControl.ViewDistortion.X, bdl.MatrixControl.ViewDistortion.Y);
+                    bdl.SetEffectParameters(SelectedSensitivity(), bdl.MatrixControl.ViewDistortion.X, bdl.MatrixControl.ViewDistortion.Y);
                 else
                     aLayer.SetEffectParameters(SelectedStrength, SelectedLevel, SelectedSize);
             }
@@ -769,11 +808,6 @@ namespace ImageProcessor
             //    activeShape=((DrawingLayer)activeLayer).Drawing.AddShape(GetThickness(), shapeType);
             //    undoButton.Enabled = true;
             //}
-        }
-        void undoButton_Click(object s, EventArgs e)
-        {
-            //undoButton.Enabled=activeLayer.Undo();
-            //panel.Invalidate();
         }
         #endregion
     }

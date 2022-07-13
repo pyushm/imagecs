@@ -49,7 +49,7 @@ namespace ImageProcessor
         private Button rotateLeftButton;
         private Button rotateRightButton;
         private Button flipHorisontalButton;
-        private GroupBox groupBox2;
+        private GroupBox imageGroupBox;
         private RadioButton sameTransformButton;
         private ValueControl saturationControl;
         private RangeControl brightnessControl;
@@ -58,6 +58,8 @@ namespace ImageProcessor
         private Button previousImageButton;
         private Panel panel;
         private CheckBox resizeBox;
+        private ComboBox sensitivityBox;
+        private Label mouseSensitivityLabel;
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -91,7 +93,7 @@ namespace ImageProcessor
             this.rotateLeftButton = new System.Windows.Forms.Button();
             this.rotateRightButton = new System.Windows.Forms.Button();
             this.flipHorisontalButton = new System.Windows.Forms.Button();
-            this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.imageGroupBox = new System.Windows.Forms.GroupBox();
             this.sameTransformButton = new System.Windows.Forms.RadioButton();
             this.saturationControl = new CustomControls.ValueControl();
             this.brightnessControl = new CustomControls.RangeControl();
@@ -100,16 +102,18 @@ namespace ImageProcessor
             this.previousImageButton = new System.Windows.Forms.Button();
             this.resizeBox = new System.Windows.Forms.CheckBox();
             this.panel = new System.Windows.Forms.Panel();
+            this.sensitivityBox = new System.Windows.Forms.ComboBox();
+            this.mouseSensitivityLabel = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.angleCtrl)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.scaleCtrl)).BeginInit();
             this.groupBox5.SuspendLayout();
-            this.groupBox2.SuspendLayout();
+            this.imageGroupBox.SuspendLayout();
             this.SuspendLayout();
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(13, 450);
+            this.label2.Location = new System.Drawing.Point(13, 480);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(34, 13);
             this.label2.TabIndex = 83;
@@ -123,7 +127,7 @@ namespace ImageProcessor
             0,
             0,
             65536});
-            this.angleCtrl.Location = new System.Drawing.Point(63, 448);
+            this.angleCtrl.Location = new System.Drawing.Point(63, 478);
             this.angleCtrl.Maximum = new decimal(new int[] {
             999,
             0,
@@ -141,7 +145,7 @@ namespace ImageProcessor
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(13, 427);
+            this.label1.Location = new System.Drawing.Point(13, 457);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(34, 13);
             this.label1.TabIndex = 80;
@@ -155,7 +159,7 @@ namespace ImageProcessor
             0,
             0,
             196608});
-            this.scaleCtrl.Location = new System.Drawing.Point(63, 425);
+            this.scaleCtrl.Location = new System.Drawing.Point(63, 455);
             this.scaleCtrl.Minimum = new decimal(new int[] {
             1,
             0,
@@ -274,9 +278,9 @@ namespace ImageProcessor
             this.groupBox5.Controls.Add(this.rotateLeftButton);
             this.groupBox5.Controls.Add(this.rotateRightButton);
             this.groupBox5.Controls.Add(this.flipHorisontalButton);
-            this.groupBox5.Location = new System.Drawing.Point(5, 378);
+            this.groupBox5.Location = new System.Drawing.Point(1, 408);
             this.groupBox5.Name = "groupBox5";
-            this.groupBox5.Size = new System.Drawing.Size(128, 44);
+            this.groupBox5.Size = new System.Drawing.Size(136, 44);
             this.groupBox5.TabIndex = 66;
             this.groupBox5.TabStop = false;
             this.groupBox5.Text = "Flip/Rotate";
@@ -317,48 +321,68 @@ namespace ImageProcessor
             this.flipHorisontalButton.Size = new System.Drawing.Size(22, 22);
             this.flipHorisontalButton.TabIndex = 26;
             // 
-            // groupBox2
+            // imageGroupBox
             // 
-            this.groupBox2.Controls.Add(this.sameTransformButton);
-            this.groupBox2.Controls.Add(this.saturationControl);
-            this.groupBox2.Controls.Add(this.brightnessControl);
-            this.groupBox2.Location = new System.Drawing.Point(6, 170);
-            this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(127, 202);
-            this.groupBox2.TabIndex = 71;
-            this.groupBox2.TabStop = false;
-            this.groupBox2.Text = "Adjust image";
+            this.imageGroupBox.Controls.Add(this.sensitivityBox);
+            this.imageGroupBox.Controls.Add(this.mouseSensitivityLabel);
+            this.imageGroupBox.Controls.Add(this.sameTransformButton);
+            this.imageGroupBox.Controls.Add(this.saturationControl);
+            this.imageGroupBox.Controls.Add(this.brightnessControl);
+            this.imageGroupBox.Location = new System.Drawing.Point(1, 170);
+            this.imageGroupBox.Name = "imageGroupBox";
+            this.imageGroupBox.Size = new System.Drawing.Size(136, 232);
+            this.imageGroupBox.TabIndex = 71;
+            this.imageGroupBox.TabStop = false;
+            this.imageGroupBox.Text = "Adjust image";
             // 
             // sameTransformButton
             // 
             this.sameTransformButton.AutoSize = true;
-            this.sameTransformButton.Location = new System.Drawing.Point(10, 19);
+            this.sameTransformButton.Location = new System.Drawing.Point(10, 17);
             this.sameTransformButton.Name = "sameTransformButton";
-            this.sameTransformButton.Size = new System.Drawing.Size(88, 17);
+            this.sameTransformButton.Size = new System.Drawing.Size(90, 17);
             this.sameTransformButton.TabIndex = 31;
             this.sameTransformButton.TabStop = true;
             this.sameTransformButton.Text = "Repeat same";
             this.sameTransformButton.UseVisualStyleBackColor = true;
             this.sameTransformButton.CheckedChanged += new System.EventHandler(this.UsePresetTransformChanged);
             // 
+            // sensitivityBox
+            // 
+            sensitivityBox.IntegralHeight = false;
+            sensitivityBox.Location = new System.Drawing.Point(91, 40);
+            sensitivityBox.Name = "sensitivityBox";
+            sensitivityBox.Size = new System.Drawing.Size(41, 21);
+            sensitivityBox.TabIndex = 46;
+            // 
+            // mouseSensitivityLabel
+            // 
+            this.mouseSensitivityLabel.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.mouseSensitivityLabel.Location = new System.Drawing.Point(1, 40);
+            this.mouseSensitivityLabel.Name = "mouseSensitivityLabel";
+            this.mouseSensitivityLabel.Size = new System.Drawing.Size(89, 18);
+            this.mouseSensitivityLabel.TabIndex = 46;
+            this.mouseSensitivityLabel.Text = "Mouse sensitivity";
+            this.mouseSensitivityLabel.TextAlign = System.Drawing.ContentAlignment.TopRight;
+            // 
             // saturationControl
             // 
             this.saturationControl.Colors = null;
-            this.saturationControl.Location = new System.Drawing.Point(3, 128);
+            this.saturationControl.Location = new System.Drawing.Point(2, 157);
             this.saturationControl.Name = "saturationControl";
             this.saturationControl.Offset = -0.4F;
             this.saturationControl.Range = 0.8F;
-            this.saturationControl.Size = new System.Drawing.Size(120, 68);
+            this.saturationControl.Size = new System.Drawing.Size(132, 68);
             this.saturationControl.TabIndex = 21;
             this.saturationControl.Title = "Saturation";
             // 
             // brightnessControl
             // 
-            this.brightnessControl.Location = new System.Drawing.Point(3, 37);
+            this.brightnessControl.Location = new System.Drawing.Point(2, 62);
             this.brightnessControl.Name = "brightnessControl";
             this.brightnessControl.Offset = -0.4F;
             this.brightnessControl.Range = 0.8F;
-            this.brightnessControl.Size = new System.Drawing.Size(120, 85);
+            this.brightnessControl.Size = new System.Drawing.Size(132, 85);
             this.brightnessControl.TabIndex = 29;
             this.brightnessControl.Title = "Brightness";
             // 
@@ -428,7 +452,7 @@ namespace ImageProcessor
             this.Controls.Add(this.saveAsButton);
             this.Controls.Add(this.saveButton);
             this.Controls.Add(this.groupBox5);
-            this.Controls.Add(this.groupBox2);
+            this.Controls.Add(this.imageGroupBox);
             this.Controls.Add(this.deleteButton);
             this.Controls.Add(this.nextImageButton);
             this.Controls.Add(this.previousImageButton);
@@ -441,8 +465,8 @@ namespace ImageProcessor
             ((System.ComponentModel.ISupportInitialize)(this.angleCtrl)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.scaleCtrl)).EndInit();
             this.groupBox5.ResumeLayout(false);
-            this.groupBox2.ResumeLayout(false);
-            this.groupBox2.PerformLayout();
+            this.imageGroupBox.ResumeLayout(false);
+            this.imageGroupBox.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -455,7 +479,6 @@ namespace ImageProcessor
         public void GeometryTransformUpdated() { ShowGeometryTransformParameters(); }
         public void FocusControl() { }
         public void ActiveLayerUpdated(int i) { }
-        public void SetViewPosition(double x, double y) { }
         #endregion
         public ImageViewForm(ImageListForm parentListForm)    
         {
@@ -487,7 +510,8 @@ namespace ImageProcessor
             flipHorisontalButton.Click += flipRotateButton_Click;
             applyEffectsButton.Click += effectsButton_Click;
             gradientButton.Click += gradientButton_Click;
-            //KeyDown += CaptureCtrlC;
+            sensitivityBox.Items.AddRange(NumEnum.Values(typeof(MouseSensitivity), 0.1));
+            sensitivityBox.SelectedIndex = 2;
             KeyUp += CaptureCtrlC;
             saveTypeBox.Items.Add("Crop");
             saveTypeBox.Items.AddRange(Enum.GetNames(typeof(InfoType)));
@@ -519,6 +543,7 @@ namespace ImageProcessor
                 RescaleCanvas(false);
             }
         }
+        public double SelectedSensitivity() { return sensitivityBox.SelectedItem != null ? (double)sensitivityBox.SelectedItem : 1; }
         public void CaptureCtrlC(object sender, System.Windows.Forms.KeyEventArgs e)
         {
             //Debug.WriteLine("View Modifier=" + Keyboard.Modifiers.ToString() + " key=" + e.KeyCode.ToString() + " " + Keyboard.IsKeyDown(Key.LeftCtrl));

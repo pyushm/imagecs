@@ -18,7 +18,7 @@ namespace ImageProcessor
         void CropRectangleUpdated();
         void GeometryTransformUpdated();
         void FocusControl();
-        void SetViewPosition(double x, double y);
+        double SelectedSensitivity();
         void ActiveLayerUpdated(int i);
     }
     public class DrawingPanel : Canvas
@@ -548,27 +548,28 @@ namespace ImageProcessor
             }
             RenderTransform = new MatrixTransform(t);
             tools.Clear();
+            //Debug.WriteLine("LayerCount=" + LayerCount + " Children=" + Children.Count);
+            for (int i = 0; i < Children.Count; i++)
+            {
+                var vi = GetLayer(i);
+                var bdl = vi as BitmapDerivativeLayer;
+                if (bdl != null && bdl.DerivativeType == EffectType.ViewPoint)
+                {
+                    //Rect bounds = VisualTreeHelper.GetDescendantBounds(vi);
+                    //Debug.WriteLine("bounds=" + bounds.ToString() + ' ' + vi.ToString() + vi.ToTransformString()); 
+                    //Debug.WriteLine(bdl.MatrixControl.ToString());
+                    //Debug.WriteLine(bdl.ToEffectString());
+                    //Debug.WriteLine(bdl.ToDerivativeEffectString());
+                    if (bdl != null && bdl.DerivativeType == EffectType.ViewPoint)
+                        bdl.SetEffectParameters(panelHolder.SelectedSensitivity(), bdl.MatrixControl.ViewDistortion.X + 0.1, bdl.MatrixControl.ViewDistortion.Y + 0.1);
+                }
+                //RenderTargetBitmap rt = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
+                //vi.RenderToBitmap(rt);
+                //BitmapAccess.DebugSave("testLayer" + i + ".png", rt);
+            }
             UpdateLayout();
             RenderTargetBitmap rtb = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
-            rtb.Render(this);
-
-            //Debug.WriteLine("LayerCount=" + LayerCount + " Children=" + Children.Count);
-            //for (int i = 0; i < Children.Count; i++)
-            //{
-            //    var vi = GetLayer(i);
-            //    if (vi != null)
-            //    {
-            //        Rect bounds = VisualTreeHelper.GetDescendantBounds(vi);
-            //        Debug.WriteLine("bounds="+ bounds.ToString()+' '+vi.ToString() + vi.ToTransformString());
-            //    }
-            //    RenderTargetBitmap rt =new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
-            //    vi.RenderToBitmap(rt);
-            //    BitmapAccess.DebugSave("testLayer" + i+".png", rt);
-            //}
-            //var ba = new BitmapAccess(rtb);
-            //Debug.WriteLine(ba.ToByteMatrixString(0));
-
-            bitmapEncoder.Frames.Add(BitmapFrame.Create(rtb));
+            rtb.Render(this); bitmapEncoder.Frames.Add(BitmapFrame.Create(rtb));
             MemoryStream ms = new MemoryStream();
             bitmapEncoder.Save(ms);
             return ms.ToArray();
@@ -672,8 +673,8 @@ namespace ImageProcessor
             {
                 DrawingLayer sl = ActiveLayer as DrawingLayer;
                 FlexiblePolygon[] ss = sl != null ? sl.Polygons.ToArray() : new FlexiblePolygon[] { Selection };
-                mouseAction = strokeEditor.MouseDown(e, ss, position) ? MouseOperation.Stroke : MouseOperation.None;
-                if (mouseAction == MouseOperation.None && MouseAction.OperationFromMouse == MouseOperation.Rotate && Selection != null)
+                mouseAction = strokeEditor.MouseDown(e, ss, position);
+                if (mouseAction == MouseOperation.None && MouseAction.OperationFromMouse == MouseOperation.Move && Selection != null && Selection.AwayFromContourTest(position))
                 {
                     Selection.Clear();
                     strokeEdit = false;
@@ -711,11 +712,20 @@ namespace ImageProcessor
                     if (mouseAction == MouseOperation.Move || mouseAction == MouseOperation.None) // if higher than active layer clicked, set clicked layer as active
                     {
                         int selected = -1;
+                        bool found = false;
                         for (int i = 1; i < LayerCount; i++)    // top-most layer selected
                         {
                             var vl = Children[i] as VisualLayer;
                             if (vl != null && vl.HitTest(position))
-                                selected = i;
+                            {
+                                if (!found)
+                                {
+                                    selected = i;
+                                    found = true;
+                                }
+                                else
+                                    selected = -1;
+                            }
                         }
                         if (selected != -1 && selected != activeLayerIndex)  // if hit other layer => new active layer
                         {
@@ -737,6 +747,7 @@ namespace ImageProcessor
             Vector lastShift = position - SavedPosition;
             if (lastShift.Length < 2)
                 return;
+            lastShift *= panelHolder.SelectedSensitivity();
             if (strokeEdit && mouseAction == MouseOperation.Stroke)
             {
                 mouseAction = strokeEditor.MouseMove(e, lastShift) ? MouseOperation.Stroke : MouseOperation.None;
@@ -758,7 +769,7 @@ namespace ImageProcessor
                     if (dc != null)
                     {
                         Vector vd = dc.SetViewDistortion(position);
-                        panelHolder.SetViewPosition(vd.X, vd.Y);
+                        ActiveLayer.SetEffectParameters(panelHolder.SelectedSensitivity(), vd.X, vd.Y);
                     }
                 }
                 if (mouseAction == MouseOperation.Morph && ActiveLayer.DerivativeType == EffectType.Morph)
@@ -767,7 +778,7 @@ namespace ImageProcessor
                     if (dc != null)
                     {
                         Vector vd = dc.SetViewDistortion(position);
-                        panelHolder.SetViewPosition(vd.X, vd.Y);
+                        ActiveLayer.SetEffectParameters(panelHolder.SelectedSensitivity(), vd.X, vd.Y);
                     }
                 }
                 else if (mouseAction == MouseOperation.Move)
@@ -784,14 +795,14 @@ namespace ImageProcessor
                 else if (mouseAction == MouseOperation.Scale)
                 {
                     double sc = ActiveLayer.MatrixControl.ScaleFromPoints(position, SavedPosition);
-                    ActiveLayer.MatrixControl.RenderScale *= sc;
+                    ActiveLayer.MatrixControl.RenderScale *= 1 + (sc - 1) * panelHolder.SelectedSensitivity();
                     if (ActiveLayer == BackgroundLayer)
                         for (int i = 1; i < LayerCount; i++)
                             (Children[i] as VisualLayer)?.MatrixControl.ScaleAt(sc, BackgroundLayer.MatrixControl.Center);
                 }
                 else if (mouseAction == MouseOperation.Rotate)
                 {
-                    double rad = ActiveLayer.MatrixControl.RadiansFromPoints(position, SavedPosition);
+                    double rad = ActiveLayer.MatrixControl.RadiansFromPoints(position, SavedPosition) * panelHolder.SelectedSensitivity();
                     ActiveLayer.MatrixControl.RotateAngle(rad);
                     if (ActiveLayer == BackgroundLayer)
                         for (int i = 1; i < LayerCount; i++)
