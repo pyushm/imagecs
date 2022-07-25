@@ -108,6 +108,7 @@ namespace ImageProcessor
         static ImageFileName()
         {
             InfoModes = (InfoType[])Enum.GetValues(typeof(InfoType));
+            knownExtensions.Add(".heic", DataType.JPG);
             knownExtensions.Add(".jpg", DataType.JPG);
             knownExtensions.Add(".jpeg", DataType.JPG);
             knownExtensions.Add(".gif", DataType.GIF);
@@ -338,9 +339,8 @@ namespace ImageProcessor
             Modified = true;
             priority = false;
         }
-        Image CreateThumbnail(byte[] ba)    
+        Image CreateThumbnail(Image image)
         {
-            Image image = new Bitmap(new MemoryStream(ba));
             IntSize size = ThumbnailSize();
             float scale = Math.Min((float)size.Width / image.Width, (float)size.Height / image.Height);
             int w = (int)(image.Width * scale);
@@ -358,15 +358,19 @@ namespace ImageProcessor
                 case DataType.Regular:
                     try
                     {
-                        byte[] ba = DataAccess.ReadFile(FSPath, IsEncrypted);
-                        thumbnail = CreateThumbnail(ba);
+                        //byte[] ba = DataAccess.ReadFile(FSPath, IsEncrypted);
+                        //Bitmap bm = new Bitmap(new MemoryStream(ta)); // failes heic files
+                        BitmapAccess ba = BitmapAccess.LoadThumbnail(FSPath, IsEncrypted);
+                        Bitmap bm = ba.ConverToBitmap();
+                        thumbnail = CreateThumbnail(bm);
                         thumbnail.Tag = FSPath;
                         FileInfo fi = new FileInfo(FSPath);   // FileInfo recreated to get new LastWriteTime
                         SetCynchronized(fi.LastWriteTime);
                     }
-                    catch    // legal exception - update may fail if file is being modified
+                    catch (Exception ex)   // legal exception - update may fail if file is being modified
                     {
                         thumbnail = failedImage;
+                        Debug.WriteLine(FSPath+": "+ ex.Message);
                         //Debug.WriteLine("loading thumbnail '"+ FullPath + "' failed");
                     }
                     break;
@@ -376,8 +380,8 @@ namespace ImageProcessor
                     SetCynchronized(DateTime.Now);
                     break;
                 case DataType.MLI:
-                    byte[] ta = VisualLayerData.LoadThumbnail(FSPath, IsEncrypted);
-                    thumbnail = ta==null ? multiLayerImage : CreateThumbnail(ta);
+                    byte[] ta = VisualLayerData.LoadSerializedThumbnail(FSPath, IsEncrypted);
+                    thumbnail = ta == null ? multiLayerImage : CreateThumbnail(new Bitmap(new MemoryStream(ta)));
                     SetCynchronized(DateTime.Now);
                     break;
                 case DataType.Dir:

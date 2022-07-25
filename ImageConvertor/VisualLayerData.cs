@@ -44,7 +44,7 @@ namespace ImageProcessor
             }
             return vlda;
         }
-        public static byte[] LoadThumbnail(string fullPath, bool encrypted)
+        public static byte[] LoadSerializedThumbnail(string fullPath, bool encrypted)
         {
             FileStream fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             BinaryFormatter f = new BinaryFormatter();
