@@ -36,6 +36,8 @@ namespace ImageProcessor
         public IntSize LayoutSize   { get; protected set; } // image size used by layout system 
         public VisualLayerType Type { get; protected set; }
         public bool Deleted         { get { return deleting; } set { deleting = value; } }
+        public Rect RenderRect      { get { var diag = new Point[] { new Point(0, 0), new Point(LayoutSize.Width, LayoutSize.Height) }; RenderTransform.Value.Transform(diag); return new Rect(diag[0], diag[1]); } }
+        public bool IntersectsWith(VisualLayer vl) { return RenderRect.IntersectsWith(vl.RenderRect); }
         public ColorTransform ColorTransform { get { return colorTransform; } set { colorTransform.CopyFrom(value); } }
         public VisualLayer(string name_)
         {

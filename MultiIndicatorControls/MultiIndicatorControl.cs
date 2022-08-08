@@ -83,7 +83,7 @@ namespace CustomControls
                 Height = (int)(Height * factor.Height + 0.5);
                 topOffset = (int)(Font.Height * 1.25);
                 leftOffset = (int)(Font.Height * 1.6);
-                bottomOffset = (int)(Font.Height * 0.95);
+                bottomOffset = (int)(Font.Height * 1.0);
                 int iaw = Width - leftOffset - mSize - 1;
                 int iah = nPoints > 1 ? Height - topOffset - bottomOffset : Height - topOffset - 1;
                 border = new Rectangle(leftOffset, topOffset, iaw, iah);
@@ -109,7 +109,7 @@ namespace CustomControls
             sliderLoc.X = 0;
             for (int i = 0; i < nPoints; i++)
                 sliderLoc.X += iLoc[i].X;
-            sliderLoc = new Point(sliderLoc.X / nPoints, Height - bottomOffset / 2+2);
+            sliderLoc = new Point(sliderLoc.X / nPoints, Height - bottomOffset / 2 + 2);
         }
         public MultiIndicatorControl()          // base for all multi-value controls
         {
@@ -131,7 +131,7 @@ namespace CustomControls
             iLocLast = new Point[nPoints];
             topOffset = (int)(Font.Height*1.25);
             leftOffset = (int)(Font.Height * 1.6);
-            bottomOffset = (int)(Font.Height * 0.95);
+            bottomOffset = (int)(Font.Height * 1.2);
             int iaw = Width - leftOffset - mSize - 1;
             int iah = nPoints > 1 ? Height - topOffset - bottomOffset : Height - topOffset - 1;
             border = new Rectangle(leftOffset, topOffset, iaw, iah);
@@ -223,12 +223,12 @@ namespace CustomControls
         bool IsInProximity(Point p, PointF loc) { return Math.Abs(p.X - loc.X) < iSize && Math.Abs(p.Y - loc.Y) < iSize; }
         int ActiveIndicator(Point p)            // finds active indicator from point
         {
-            for (int i = 0; i < nPoints; i++)
-                if (IsInProximity(p, iLoc[i]))
-                    return i;
             for (int i = 0; i < arrow.Length; i++) 
                 if (IsInProximity(p, shiftedArrow[i]))
                     return nPoints;
+            for (int i = 0; i < nPoints; i++)
+                if (IsInProximity(p, iLoc[i]))
+                    return i;
             return -1;
         }
         void _MouseLeave(object s, EventArgs e) { /*ResetIndicators();*/ }

@@ -35,7 +35,8 @@ namespace ImageProcessor
         IPanelHolder panelHolder;
         string lastImageFile = "lastImageFile";
         Size previousHostSize;
-        string loadedFilePath = "";
+        //string loadedFilePath = "";
+        //bool newSelection = true;
         bool mouseDown;                 // true between mouseDown and MouseUp events
         MouseOperation mouseAction;     // support of mouse control manipulations
         VisualLayer tools = new VisualLayer("tools");
@@ -419,12 +420,12 @@ namespace ImageProcessor
                 {
                     BitmapAccess ba = BitmapAccess.LoadImage(loadInfo.FSPath, loadInfo.IsEncrypted);
                     if (DataAccess.Warning.Length > 0)
-                    {
-                        loadedFilePath = "";
+                    //{
+                    //    loadedFilePath = "";
                         return DataAccess.Warning;
-                    }
-                    else
-                        loadedFilePath = loadInfo.FSPath;
+                    //}
+                    //else
+                    //    loadedFilePath = loadInfo.FSPath;
                     vl = new BitmapLayer(loadInfo.RealName, ba);
                     //Debug.WriteLine("LoadFile: RT=" + vl.RenderTransform.Value.ToString());
                     AddVisualLayer(vl);
@@ -669,18 +670,19 @@ namespace ImageProcessor
             panelHolder.FocusControl();
             mouseDown = true;
             Point position = e.GetPosition(this);   // position in canvas coordinates
+            //Debug.WriteLine("OnMouseDown " + "strokeEdit="+strokeEdit.ToString());
             if (strokeEdit)
             {
                 DrawingLayer sl = ActiveLayer as DrawingLayer;
                 FlexiblePolygon[] ss = sl != null ? sl.Polygons.ToArray() : new FlexiblePolygon[] { Selection };
                 mouseAction = strokeEditor.MouseDown(e, ss, position);
-                if (mouseAction == MouseOperation.None && MouseAction.OperationFromMouse == MouseOperation.Move && Selection != null && Selection.AwayFromContourTest(position))
+                if (mouseAction == MouseOperation.OpCenter)
                 {
                     Selection.Clear();
                     strokeEdit = false;
                     UpdateToolDrawing();
                 }
-                //Debug.WriteLine("strokeEdit " + mouseAction.ToString());
+                //Debug.WriteLine("newSelection " + newSelection.ToString() + " mouseAction " + mouseAction.ToString());
             }
             else
             {
@@ -712,19 +714,23 @@ namespace ImageProcessor
                     if (mouseAction == MouseOperation.Move || mouseAction == MouseOperation.None) // if higher than active layer clicked, set clicked layer as active
                     {
                         int selected = -1;
-                        bool found = false;
-                        for (int i = 1; i < LayerCount; i++)    // top-most layer selected
+                        for (int i = 1; i < LayerCount; i++)    // only layer not intersecting with othes may be seledted by clicking (allowed)
                         {
-                            var vl = Children[i] as VisualLayer;
-                            if (vl != null && vl.HitTest(position))
+                            var vli = Children[i] as VisualLayer;
+                            if (vli != null && vli.HitTest(position))
                             {
-                                if (!found)
+                                bool allowed = true;
+                                for (int j = 1; j < LayerCount; j++)
                                 {
-                                    selected = i;
-                                    found = true;
+                                    var vlj = Children[j] as VisualLayer;
+                                    if (j != i && vli != null && vli.IntersectsWith(vlj))
+                                    {
+                                        allowed = false;
+                                        break;
+                                    }
                                 }
-                                else
-                                    selected = -1;
+                                selected = allowed ? i : -1;
+                                break;
                             }
                         }
                         if (selected != -1 && selected != activeLayerIndex)  // if hit other layer => new active layer
@@ -750,7 +756,7 @@ namespace ImageProcessor
             lastShift *= panelHolder.SelectedSensitivity();
             if (strokeEdit && mouseAction == MouseOperation.Stroke)
             {
-                mouseAction = strokeEditor.MouseMove(e, lastShift) ? MouseOperation.Stroke : MouseOperation.None;
+               mouseAction = strokeEditor.MouseMove(e, lastShift) ? MouseOperation.Stroke : MouseOperation.None;
                 //Debug.WriteLine("strokeEdit move " + mouseAction.ToString());
             }
             else if (mouseAction == MouseOperation.Add && collectedPolygon != null && panelHolder.ToolMode == ToolMode.FreeSelection)

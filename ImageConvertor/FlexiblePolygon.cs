@@ -7,12 +7,6 @@ using System.Text;
 
 namespace ImageProcessor
 {
-    public enum PointProperty
-    {
-        Selected = 1,
-        Sharp = 2,
-        Transparent = 4,
-    }
     public enum Link
     {
         None,                       // not linked 
@@ -20,40 +14,6 @@ namespace ImageProcessor
         Smooth,                     // smoothly linked to previous
         Self,                       // linked to own end
         Closed                      // smoothly linked to own end
-    }
-    [Serializable]
-    public struct StrokePoint           // holds untransformed data & handles PressureFactor as property
-    {   // PressureFactor =: 0 - normal; 1*res - selected; 2*res - sharp; 4*res - starts transparent segment
-        static float res = 0.1f;
-        static int Key(float val) { return (int)(val / res + 0.5f); }
-        internal static bool HasProperty(StylusPoint p, PointProperty a) { return (Key(p.PressureFactor) & (int)a) == (int)a; }
-        internal static string ToString(StylusPoint p)
-        {
-            string selected = HasProperty(p, PointProperty.Selected) ? "Selected" : "Not Selected";
-            string sharp = HasProperty(p, PointProperty.Sharp) ? "Sharp" : "Smooth";
-            string transparent = HasProperty(p, PointProperty.Transparent) ? "Transparent" : "Visible";
-            return p.X.ToString("f0") + ',' + p.Y.ToString("f0") + ' ' + Key(p.PressureFactor) + " {" + selected + ", " + sharp + ", " + transparent + "} ";
-        }
-        float x;                        // absolute (not related to canvas)
-        float y;                        // absolute (not related to canvas)
-        int properties;                 // sum of PointProperty
-        public float X { get { return x; } }
-        public float Y { get { return y; } }
-        public int Properties { get { return properties; } }
-        internal StrokePoint(StylusPoint sp, Matrix matrix)
-        {
-            Point p = matrix.Transform(new Point(sp.X, sp.Y));
-            x = (float)p.X;
-            y = (float)p.Y;
-            properties = Key(sp.PressureFactor);
-        }
-        internal StylusPoint ToStylusPoint(Matrix matrix)
-        {
-            Point p = matrix.Transform(new Point(x, y));
-            return new StylusPoint(p.X, p.Y, properties * res);
-        }
-        internal StylusPoint SwitchProperty(PointProperty a, StylusPoint p) { properties ^= (int)a; p.PressureFactor = properties * res; return p; }
-        internal bool HasProperty(PointProperty a) { return (properties & (int)a) == (int)a; }
     }
     [Serializable]
     public struct StorePoint                // holds untransformed data & handles PressureFactor as property
@@ -155,6 +115,7 @@ namespace ImageProcessor
         public double Thickness { get { return Pen != null ? Pen.Thickness : 1; } }
         internal bool Closed { get; private set; }
         internal PathGeometry PathGeometry { get; set; }
+        public Point Center;
         public void SetPen(Color color, double thickness) { Color = color; Pen = thickness > 0 ? new Pen(new SolidColorBrush(color), thickness) : null; }
         static Point BezierPoint(Point p0, BezierSegment segm, double t)
         {
@@ -202,6 +163,7 @@ namespace ImageProcessor
             if (Closed)
                 Poly.RemoveAt(Poly.Count - 1);
             proprties = new List<PointProperties>(Poly.Count);
+            SetCenter();
         }
         public void AddPoint(int i, Point p) { Poly.Insert(i, p); proprties.Insert(i, PointProperties.Normal); }
         public void RemovePoint(int ind) { Poly.RemoveAt(ind); proprties.RemoveAt(ind); }
@@ -219,6 +181,7 @@ namespace ImageProcessor
                     return i;
             return -1;
         }
+        public bool HitControlTest(Point tp) { return (tp - ToDrawing.Value.Transform(Center)).LengthSquared < Smoother.l2max; }
         public int HitContourTest(Point tp) { return ProximityTest(tp, 3); }
         public bool AwayFromContourTest(Point tp) { return ProximityTest(tp, 60) < 0; } 
         public int ProximityTest(Point tp, double range)
@@ -287,8 +250,21 @@ namespace ImageProcessor
             pol.Poly = pl;
             return pol;
         }
+        void SetCenter()
+        {
+            if (Poly.Count > 1)
+            {
+                Vector c = (Vector)Poly[0];
+                for (int i = 1; i < Poly.Count; i++)
+                    c += (Vector)Poly[i];
+                Center = (Point)(c / Poly.Count);
+            }
+            else
+                Center = new Point();
+        }
         public bool MoveSelectedPoints(Vector d)
         {
+            bool pointDeleted = false;
             List<int> selected = new List<int>();
             for (int i = 0; i < Poly.Count; i++)
                 if (proprties[i].Has(PointProperties.Selected))
@@ -302,15 +278,19 @@ namespace ImageProcessor
                     if (i != si && (siCanvas - ToDrawing.Value.Transform(Poly[i])).LengthSquared < Smoother.l2max)
                     {
                         RemovePoint(si);
-                        return true;
+                        pointDeleted = true;
+                        break;
                     }
-                return false;
             }
-            for (int s = 0; s < selected.Count; s++)
-                Poly[selected[s]] += d;
-            return false;
+            else
+            {
+                for (int s = 0; s < selected.Count; s++)
+                    Poly[selected[s]] += d;
+            }
+            SetCenter();
+            return pointDeleted;
         }
-        bool ValidIndex(int ind) { return ind >= 0 && ind < Poly.Count; }
+        //bool ValidIndex(int ind) { return ind >= 0 && ind < Poly.Count; }
         public override void Draw(DrawingContext g, Brush brush, Pen pen)
         {
             if (Pen == null)
@@ -394,6 +374,8 @@ namespace ImageProcessor
             if(showMarkers)
                 for (int i = 0; i < curve.Poly.Count; i++)
                     DrawMarker(g, points[i], curve.Property(i), curve.Pen);
+            Point center = curve.ToDrawing.Value.Transform(curve.Center);
+            g.DrawRectangle(smoothMarkerBrush, curve.Pen, new Rect(center.X - MarkerSize/2, center.Y - MarkerSize/2, MarkerSize, MarkerSize));
         }
         internal PathGeometry SmoothPath(FlexiblePolygon curve, Point[] points)
         {

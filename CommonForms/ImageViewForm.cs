@@ -28,7 +28,7 @@ namespace ImageProcessor
         ColorTransform colorTransform = new ColorTransform();
         ColorTransform previousColorTransform = new ColorTransform(); // previous non-identical transform
         VisualLayer backgroundLayer;
-        bool userInput = true;
+        bool userInput = false;
         string deletedImageName = null;
         string deletedImageFile = "deletedImage";
         private Label label2;
@@ -578,6 +578,7 @@ namespace ImageProcessor
                 return;
             try
             {
+                userInput = false;
                 saveButton.Enabled = resizeBox.Checked;
                 imageModified = false;
                 deleteButton.Enabled = true;
@@ -605,6 +606,7 @@ namespace ImageProcessor
                 ShowGeometryTransformParameters();
                 Show();
                 BringToFront();
+                userInput = true;
             }
             catch (Exception ex)
             {
@@ -655,6 +657,8 @@ namespace ImageProcessor
                     System.Windows.Forms.MessageBox.Show(ex.Message, "Failed deleting " + deletedImageName);
                 }
             }
+            if(imageFiles == null)
+                Close();
         }
         void restoreButton_Click(object sender, EventArgs e)
         {
@@ -786,7 +790,8 @@ namespace ImageProcessor
                 iml.ColorTransform.CopyFrom(colorTransform);
                 iml.SetEffectParameters(0, 0, 1);
                 saveButton.Enabled = true;
-                imageModified = true;
+                if (userInput)
+                    imageModified = true;
             }
         }
         void UsePresetTransformChanged(object sender, EventArgs e)
@@ -799,10 +804,8 @@ namespace ImageProcessor
         }
         void ResetColorControls()
         {
-            userInput = false;
             saturationControl.SetValues(colorTransform.ColorValues);
             brightnessControl.SetValues(colorTransform.BrightnessValues);
-            userInput = true;
         }
         void ShowGeometryTransformParameters()
         {
@@ -844,13 +847,15 @@ namespace ImageProcessor
             }
             backgroundLayer.UpdateRenderTransform();
             saveButton.Enabled = true;
-            imageModified = true;
+            if (userInput)
+                imageModified = true;
         }
         void MatrixControlChanged()
         {
             backgroundLayer.UpdateRenderTransform();
             saveButton.Enabled = true;
-            imageModified = true;
+            if (userInput)
+                imageModified = true;
         }
         #endregion
     }

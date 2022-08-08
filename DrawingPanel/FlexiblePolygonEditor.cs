@@ -32,6 +32,8 @@ namespace ImageProcessor
             FlexiblePolygon newActiveStroke = null;
             if (ss.Length == 1)
                 newActiveStroke = activeStroke = ss[0];
+            if (activeStroke.HitControlTest(canvasPoint))
+                return MouseOperation.OpCenter;
             int sind = activeStroke != null ? activeStroke.HitContourTest(canvasPoint) : -1;  // segment index from activeStroke
             if (sind < 0 && ss.Length > 1) // if active stroke not hit and need to check other strokes
             {
