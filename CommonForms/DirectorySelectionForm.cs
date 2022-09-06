@@ -34,7 +34,7 @@ namespace ImageProcessor
             DirectoryInfo[] dia = navigator.GetDirectories(((DirectoryInfo)node.Tag));
             string[] fna = new string[dia.Length];
             for (int i = 0; i < dia.Length; i++)
-                fna[i] = ImageFileName.UnMangleText(dia[i].Name);
+                fna[i] = FileName.UnMangle(dia[i].Name);
             Array.Sort(fna, dia, new ImageFileInfo.NameComparer());
             for (int i = 0; i < dia.Length; i++)
             {
@@ -52,7 +52,7 @@ namespace ImageProcessor
             if (selectedNode.Exists)
             {
                 itemInfoImages.ShowInfoImages(selectedNode);
-                inputOutputBox.Text = Path.Combine(selectedNode.Parent.FullName, ImageFileName.UnMangleText(selectedNode.Name));
+                inputOutputBox.Text = Path.Combine(selectedNode.Parent.FullName, FileName.UnMangle(selectedNode.Name));
                 if (selectedNode.Parent.Name == navigator.AllDevicy.Name)
                     inputOutputBox.Text += '/';
             }
@@ -66,7 +66,7 @@ namespace ImageProcessor
             }
             dirSelection = new DirectoryInfo(inputOutputBox.Text);
             if (!dirSelection.Exists)
-                dirSelection = new DirectoryInfo(Path.Combine(dirSelection.Parent.FullName, ImageFileName.MangleText(dirSelection.Name)));
+                dirSelection = new DirectoryInfo(Path.Combine(dirSelection.Parent.FullName, FileName.Mangle(dirSelection.Name)));
             if (!dirSelection.Exists)
             {
                 int c = 10;

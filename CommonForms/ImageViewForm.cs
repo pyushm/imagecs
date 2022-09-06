@@ -713,7 +713,7 @@ namespace ImageProcessor
             saveAsDialog.InitialDirectory = Path.GetDirectoryName(imageInfo.FSPath);
             if (saveAsDialog.ShowDialog() == DialogResult.OK)
             {
-                string saveName = DataAccess.PrivateAccessAllowed ? ImageFileName.FSMangle(saveAsDialog.FileName) : saveAsDialog.FileName;
+                string saveName = DataAccess.PrivateAccessAllowed ? FileName.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName;
                 SaveImage(saveName, resizeBox.Checked ? 2000 : 0, (qualityBox.Checked ? 87 : 75));
             }
         }

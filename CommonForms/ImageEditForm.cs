@@ -678,7 +678,7 @@ namespace ImageProcessor
                 try
                 {
                     savePath = Path.GetDirectoryName(saveAsDialog.FileName);
-                    ImageFileInfo info = new ImageFileInfo(new FileInfo(ImageFileName.FSMangle(saveAsDialog.FileName)));
+                    ImageFileInfo info = new ImageFileInfo(new FileInfo(FileName.MangleFile(saveAsDialog.FileName)));
                     BitmapEncoder bitmapEncoder = info.IsExact ? (BitmapEncoder)new PngBitmapEncoder() : new JpegBitmapEncoder();
                     if (bitmapEncoder as JpegBitmapEncoder != null)
                         ((JpegBitmapEncoder)bitmapEncoder).QualityLevel = 87;

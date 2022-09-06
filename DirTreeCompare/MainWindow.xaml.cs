@@ -38,7 +38,7 @@ namespace DirTreeCompare
             DockPanel dp = new DockPanel();
             cb = new System.Windows.Controls.CheckBox();
             TextBlock tb = new TextBlock();
-            tb.Text = ImageFileName.FSUnMangle(info.Name);
+            tb.Text = FileName.UnMangleFile(info.Name);
             if(info.IsDirectory)
                 tb.TextDecorations = TextDecorations.Underline;
             tb.Background = new SolidColorBrush(color);

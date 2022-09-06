@@ -80,9 +80,9 @@ namespace ImageProcessor
                 return;
             if (sync)
                 ReportStatus(adjustmentType.ToString() + " in " + directory.FullName);
-            if (adjustmentType == ImageAdjustmentType.Mangle && relativePath.Length > 0 && !ImageFileName.IsMangled(directory.Name))
+            if (adjustmentType == ImageAdjustmentType.Mangle && relativePath.Length > 0 && !FileName.IsMangled(directory.Name))
             {   // mangle dir name
-                string newDirName = ImageFileName.MangleText(directory.Name);
+                string newDirName = FileName.Mangle(directory.Name);
                 if(newDirName != directory.Name)
                     directory.MoveTo(Path.Combine(directory.Parent.FullName, newDirName));
             }
@@ -109,7 +109,7 @@ namespace ImageProcessor
                     }
                     string name = file.Name;   // name with extension
                     if (adjustmentType == ImageAdjustmentType.Mangle && ImageFileName.InfoMode(name) == null)
-                        name = ImageFileName.FSMangle(name);
+                        name = FileName.MangleFile(name);
                     else if (adjustmentType == ImageAdjustmentType.Encrypt)
                     {
                         ImageFileName ifi = new ImageFileName(file.Name);
@@ -163,7 +163,7 @@ namespace ImageProcessor
                 string dn = NewDirName.Trim();
                 if (dn.Length > 0)
                 {
-                    string ndn = Path.Combine(directory.Parent.FullName, ImageFileName.MangleText(dn));
+                    string ndn = Path.Combine(directory.Parent.FullName, FileName.Mangle(dn));
                     directory.MoveTo(ndn);
                 }
                 return;
@@ -178,7 +178,7 @@ namespace ImageProcessor
                 //name = ImageFileName.NameWithoutTempPrefix(name);
                 if (ImageFileName.InfoMode(name) != null)
                     continue;
-                name = ImageFileName.FSUnMangle(name);
+                name = FileName.UnMangleFile(name);
                 try
                 {
                     if(renameType == RenameType.AddPrefix)
@@ -192,7 +192,7 @@ namespace ImageProcessor
                             continue;
                         name = name.Substring(0, ind) + TextReplacement + name.Substring(ind+l);
                     }
-                    string newFileName = Path.Combine(file.DirectoryName, ImageFileName.FSMangle(name));
+                    string newFileName = Path.Combine(file.DirectoryName, FileName.MangleFile(name));
                     if (newFileName != file.FullName)
                     {
                         try { file.MoveTo(newFileName); }

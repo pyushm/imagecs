@@ -195,12 +195,12 @@ namespace ImageProcessor
         {
             if (StopSearch)
                 return;
-            relativePath = ImageFileName.FSUnMangle(relativePath);
+            relativePath = FileName.UnMangleFile(relativePath);
             searchMatch?.Invoke(dirNode, relativePath);
             DirectoryInfo[] subdirs = dirNode.GetDirectories();
             foreach (DirectoryInfo subdir in subdirs)
             {
-                string mn = ImageFileName.UnMangleText(subdir.Name);
+                string mn = FileName.UnMangle(subdir.Name);
                 string newRelativePath = Path.Combine(relativePath, mn);
                 SearchRecursively(subdir, newRelativePath);
             }
@@ -313,7 +313,7 @@ namespace ImageProcessor
             double totalDif = 0;
             if (textPatterns != null && textPatterns.Length>0) // by name
             {
-                string item = ImageFileName.UnMangleText(dirNode.Name.ToLower());
+                string item = FileName.UnMangle(dirNode.Name.ToLower());
                 string[] fields = item.Split(new char[] { ImageFileInfo.multiNameChar, ImageFileInfo.synonymChar });
                 double dif = int.MaxValue;
                 if (textPatterns.Length == 1)
@@ -357,7 +357,7 @@ namespace ImageProcessor
             if (soundPattern != null && soundPattern.Pattern != null)     // by sound
             {
                 int dif = int.MaxValue;
-                string item = ImageFileName.UnMangleText(dirNode.Name.ToLower());
+                string item = FileName.UnMangle(dirNode.Name.ToLower());
                 string[] fields = item.Split(new char[] { ImageFileInfo.multiNameChar, ImageFileInfo.synonymChar });
                 foreach (string field in fields)
                 {
@@ -422,7 +422,7 @@ namespace ImageProcessor
                     else
                         difference += difDays;
                 }
-                string fn = ImageFileName.FSUnMangle(file.Name).ToLower();
+                string fn = FileName.UnMangleFile(file.Name).ToLower();
                 string fnne = Path.GetFileNameWithoutExtension(fn);
                 if (textPatterns != null && textPatterns.Length > 0) // multiple name patterns
                 {

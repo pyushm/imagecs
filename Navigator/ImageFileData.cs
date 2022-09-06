@@ -33,33 +33,26 @@ namespace ImageProcessor
         Video,      // encripted video
         Unknown
     }
-    public class ImageFileName
-    {   // ImageFileNam has file type and name conversion data
-        static Comparison<FileInfo> FileInfoComparison = delegate (FileInfo p1, FileInfo p2)
-        {
-            string n1 = IsMangled(p1.Name) ? FSUnMangle(p1.Name) : p1.Name;
-            string n2 = IsMangled(p2.Name) ? FSUnMangle(p2.Name) : p2.Name;
-            return string.Compare(n1, n2);
-        };
-        static Hashtable knownExtensions = new Hashtable();
-        static Hashtable storeTypeString = new Hashtable();
-        public const char mangleChar = '\u13B7';
+    public static class FileName
+    {
+        const char mangleChar = '\u13B7';
+        public static bool DoMangle { get; set; } = false;
         public static bool IsMangled(string text) { return text != null && text.Length > 0 && text[0] == mangleChar; }
-        public static string FSUnMangle(string filePath) // returns path with last component of path (dir or file) replaced by human readable name
+        public static string UnMangleFile(string filePath) // returns path with last component of path (dir or file) replaced by human readable name
         {
             if (filePath == null || filePath.Length == 0)
                 return filePath;
             string fileName = Path.GetFileNameWithoutExtension(filePath);
-            return Path.Combine(Path.GetDirectoryName(filePath), UnMangleText(fileName) + Path.GetExtension(filePath));
+            return Path.Combine(Path.GetDirectoryName(filePath), UnMangle(fileName) + Path.GetExtension(filePath));
         }
-        public static string FSMangle(string filePath) // returns path with last component of path (dir or file) replaced by scrambled name
+        public static string MangleFile(string filePath) // returns path with last component of path (dir or file) replaced by scrambled name
         {
-            if (filePath == null || filePath.Length == 0)
+            if (!DoMangle || filePath == null || filePath.Length == 0)
                 return filePath;
             string fileName = Path.GetFileNameWithoutExtension(filePath);
-            return Path.Combine(Path.GetDirectoryName(filePath), MangleText(fileName) + Path.GetExtension(filePath));
+            return Path.Combine(Path.GetDirectoryName(filePath), Mangle(fileName) + Path.GetExtension(filePath));
         }
-        public static string UnMangleText(string src)   // returns unscrambled src if src scrambled; otherwise returns src
+        public static string UnMangle(string src)   // returns unscrambled src if src scrambled; otherwise returns src
         {
             if (!IsMangled(src))
                 return src;
@@ -74,9 +67,9 @@ namespace ImageProcessor
             }
             return new string(res);
         }
-        public static string MangleText(string src)  // return scrambled src if src not scrambled; otherwise returns src
+        public static string Mangle(string src)  // return scrambled src if src not scrambled; otherwise returns src
         {
-            if (src == null || src.Length == 0 || src[0] == mangleChar)
+            if (!DoMangle || src == null || src.Length == 0 || src[0] == mangleChar)
                 return src;
             char[] res = new char[src.Length + 1];
             res[0] = mangleChar;
@@ -90,6 +83,17 @@ namespace ImageProcessor
             }
             return new string(res);
         }
+    }
+    public class ImageFileName
+    {   // ImageFileNam has file type and name conversion data
+        static Comparison<FileInfo> FileInfoComparison = delegate (FileInfo p1, FileInfo p2)
+        {
+            string n1 = FileName.UnMangle(p1.Name);
+            string n2 = FileName.UnMangle(p2.Name);
+            return string.Compare(n1, n2);
+        };
+        static Hashtable knownExtensions = new Hashtable();
+        static Hashtable storeTypeString = new Hashtable();
         public static string NameWithoutTempPrefix(string name)
         {   // consitent with temp prefix set in GroupManager
             int ind = name.IndexOf('.');
@@ -202,7 +206,7 @@ namespace ImageProcessor
         {
             Type = FileType(fileName);
             FSName = Path.GetFileNameWithoutExtension(fileName);
-            RealName = UnMangleText(FSName);
+            RealName = FileName.UnMangle(FSName);
             IsInfoImage = InfoMode(RealName) != null;
         }
         public ImageFileName(DataType dt, FileInfo fsi, bool temp, bool header)
@@ -213,14 +217,14 @@ namespace ImageProcessor
             else
             {
                 FSName = Path.GetFileNameWithoutExtension(fsi.Name);
-                RealName = UnMangleText(FSName);
+                RealName = FileName.UnMangle(FSName);
                 IsInfoImage = InfoMode(RealName) != null;
                 if (dt == DataType.LocalImages)
                     RealName = "LocalImages";
                 else if (temp)
                     RealName = NameWithoutTempPrefix(RealName);
                 else if (IsInfoImage)
-                    RealName = UnMangleText(fsi.Directory.Name) + '_' + RealName[1];
+                    RealName = FileName.UnMangle(fsi.Directory.Name) + '_' + RealName[1];
                     //RealName = UnMangleText(fsi.Directory.Name) + '_' + RealName[1];
                 else if (header)
                     RealName = Path.GetFileName("dir_" + fsi.DirectoryName);
@@ -313,7 +317,7 @@ namespace ImageProcessor
         DateTime modifiedTime;              // update time of the image 
         public FileInfo FileInfo            { get; private set; }
         public string FSPath { get { return FileInfo == null ? "" : FileInfo.FullName; } } // complete path of image object
-        public string RealPath { get { return FileInfo == null ? "" : Path.Combine(FileInfo.Directory.Parent.FullName, UnMangleText(FileInfo.Directory.Name), RealName); } } // complete path of image object
+        public string RealPath { get { return FileInfo == null ? "" : Path.Combine(FileInfo.Directory.Parent.FullName, FileName.UnMangle(FileInfo.Directory.Name), RealName); } } // complete path of image object
         public bool IsDirHeader             { get { return dirHeader; } }
         public ImageFileInfo(FileInfo fi) : base(fi.Name) { FileInfo = fi; }
         public ImageFileInfo(DataType dt, FileInfo fsi, bool temp, bool header) : base(dt, fsi, temp, header)
@@ -412,7 +416,7 @@ namespace ImageProcessor
                 FileInfo.Refresh();
                 string ext = Path.GetExtension(FSPath);
                 RealName = newName;
-                FSName = MangleText(RealName);
+                FSName = FileName.UnMangle(RealName);
                 newName = FSName + ext;
                 string newFullPath;
                 //newFullPath = Path.Combine(info.Directory.FullName, newName);
@@ -466,7 +470,7 @@ namespace ImageProcessor
             public ImageFileInfo added = null;
             int thumbnailUpdateIndex = 0;
             bool abortSynchronization = false;
-            public string RealName          { get { return directory == null ? "" : UnMangleText(directory.Name); } }
+            public string RealName          { get { return directory == null ? "" : FileName.UnMangle(directory.Name); } }
             public int Count                { get { return imageFileList.Count; } }
             bool IsUpdating                 { get { return synchronization != null && synchronization.IsBusy; } }
             public bool DirMode             { get { return dirMode; } }
@@ -564,14 +568,14 @@ namespace ImageProcessor
                                 warnings += Delete(ifi.FSPath);
                             else if (ifi.IsEncrypted)
                             {
-                                string dest = Path.Combine(toDirectory.FullName, FSMangle(Path.GetFileName(ifi.FSPath)));
+                                string dest = Path.Combine(toDirectory.FullName, FileName.MangleFile(Path.GetFileName(ifi.FSPath)));
                                 File.Move(ifi.FSPath, dest);
                             }
                             else if (DataAccess.PrivateAccessAllowed && (ifi.IsUnencryptedImage || ifi.IsUnencryptedVideo))
                             {   // when PrivateAccessAllowed move images with encription and name mangling
                                 string name = ifi.IsUnencryptedVideo ? ifi.FSName + ".vid" : ifi.IsExact ? ifi.FSName + ".exa" : ifi.FSName + ".jpe";
                                 byte[] src = File.ReadAllBytes(ifi.FSPath);
-                                if (!DataAccess.WriteFile(Path.Combine(toDirectory.FullName, FSMangle(name)), src, true))
+                                if (!DataAccess.WriteFile(Path.Combine(toDirectory.FullName, FileName.MangleFile(name)), src, true))
                                     warnings += ifi.FSName + ": " + DataAccess.Warning;
                                 else
                                 {
@@ -854,7 +858,7 @@ namespace ImageProcessor
                                 directories[i] = new DirectoryInfo(dirFullName);
                             else
                             {
-                                dirFullName = Path.Combine(directory.FullName, FSMangle(extList[i]));
+                                dirFullName = Path.Combine(directory.FullName, FileName.MangleFile(extList[i]));
                                 directories[i] = Directory.Exists(dirFullName) ? new DirectoryInfo(dirFullName) : null;
                             }
                         }
@@ -862,7 +866,7 @@ namespace ImageProcessor
                     else
                         directories = directory.GetDirectories();
                     string p1 = InfoFileName(infoType) + '*';
-                    string p2 = FSMangle(InfoFileName(infoType)) + '*';
+                    string p2 = FileName.MangleFile(InfoFileName(infoType)) + '*';
                     FileInfo fsf = GetInforFile(directory, p1, p2);
                     if (fsf != null)
                         AppendImageFile(DataType.LocalImages, fsf, isTemp, true);

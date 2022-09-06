@@ -69,13 +69,12 @@ namespace ImageProcessor
         private Button findSimilarImagesBtn;
         private Button imageInfoBtn;
         private TextBox newTextBox;
-        private Label label5;
-        private Label label1;
         private Label label3;
         private TextBox imageSizeBox;
         private Button reduceButton;
         private TextBox renameResultBox;
         private CheckBox pravateAccessBox;
+        private Label label5;
         Dictionary<string, string[]> matchingImages = new Dictionary<string, string[]>();
         protected override void Dispose( bool disposing )
 		{
@@ -119,9 +118,8 @@ namespace ImageProcessor
             this.findFileBtn = new System.Windows.Forms.Button();
             this.findImagePanel = new System.Windows.Forms.Panel();
             this.tabPage2 = new System.Windows.Forms.TabPage();
-            this.renameResultBox = new System.Windows.Forms.TextBox();
             this.label5 = new System.Windows.Forms.Label();
-            this.label1 = new System.Windows.Forms.Label();
+            this.renameResultBox = new System.Windows.Forms.TextBox();
             this.newTextBox = new System.Windows.Forms.TextBox();
             this.directoryNameBox = new System.Windows.Forms.TextBox();
             this.renameDirBtn = new System.Windows.Forms.Button();
@@ -147,17 +145,20 @@ namespace ImageProcessor
             // infoImagePanel
             // 
             this.infoImagePanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.infoImagePanel.Location = new System.Drawing.Point(242, 241);
+            this.infoImagePanel.Location = new System.Drawing.Point(363, 371);
+            this.infoImagePanel.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.infoImagePanel.Name = "infoImagePanel";
-            this.infoImagePanel.Size = new System.Drawing.Size(142, 485);
+            this.infoImagePanel.Size = new System.Drawing.Size(212, 745);
             this.infoImagePanel.TabIndex = 7;
             this.infoImagePanel.DoubleClick += new System.EventHandler(this.infoImagePanel_DoubleClick);
             // 
             // outputList
             // 
-            this.outputList.Location = new System.Drawing.Point(394, 241);
+            this.outputList.ItemHeight = 20;
+            this.outputList.Location = new System.Drawing.Point(591, 371);
+            this.outputList.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.outputList.Name = "outputList";
-            this.outputList.Size = new System.Drawing.Size(240, 485);
+            this.outputList.Size = new System.Drawing.Size(358, 744);
             this.outputList.TabIndex = 8;
             this.outputList.SelectedIndexChanged += new System.EventHandler(this.DisplayFoundItem);
             this.outputList.DoubleClick += new System.EventHandler(this.ActivateFoundItem);
@@ -165,10 +166,11 @@ namespace ImageProcessor
             // 
             // locationTreeView
             // 
-            this.locationTreeView.Location = new System.Drawing.Point(8, 32);
+            this.locationTreeView.Location = new System.Drawing.Point(12, 49);
+            this.locationTreeView.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.locationTreeView.Name = "locationTreeView";
             this.locationTreeView.ShowNodeToolTips = true;
-            this.locationTreeView.Size = new System.Drawing.Size(224, 694);
+            this.locationTreeView.Size = new System.Drawing.Size(334, 1066);
             this.locationTreeView.TabIndex = 10;
             this.locationTreeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.RetrievNodes);
             this.locationTreeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.DisplaySelectedNode);
@@ -176,33 +178,37 @@ namespace ImageProcessor
             // 
             // addPrefixButton
             // 
-            this.addPrefixButton.Location = new System.Drawing.Point(6, 46);
+            this.addPrefixButton.Location = new System.Drawing.Point(362, 71);
+            this.addPrefixButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.addPrefixButton.Name = "addPrefixButton";
-            this.addPrefixButton.Size = new System.Drawing.Size(125, 21);
+            this.addPrefixButton.Size = new System.Drawing.Size(171, 32);
             this.addPrefixButton.TabIndex = 15;
             this.addPrefixButton.Text = "Add prefix";
             // 
             // oldTextBox
             // 
-            this.oldTextBox.Location = new System.Drawing.Point(137, 47);
+            this.oldTextBox.Location = new System.Drawing.Point(5, 122);
+            this.oldTextBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.oldTextBox.Name = "oldTextBox";
-            this.oldTextBox.Size = new System.Drawing.Size(215, 20);
+            this.oldTextBox.Size = new System.Drawing.Size(267, 26);
             this.oldTextBox.TabIndex = 5;
             // 
             // changeNameButton
             // 
-            this.changeNameButton.Location = new System.Drawing.Point(6, 79);
+            this.changeNameButton.Location = new System.Drawing.Point(71, 71);
+            this.changeNameButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.changeNameButton.Name = "changeNameButton";
-            this.changeNameButton.Size = new System.Drawing.Size(125, 21);
+            this.changeNameButton.Size = new System.Drawing.Size(183, 32);
             this.changeNameButton.TabIndex = 22;
             this.changeNameButton.Text = "Change part of name";
             this.changeNameButton.TextAlign = System.Drawing.ContentAlignment.TopCenter;
             // 
             // outputBox
             // 
-            this.outputBox.Location = new System.Drawing.Point(139, 8);
+            this.outputBox.Location = new System.Drawing.Point(208, 12);
+            this.outputBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.outputBox.Name = "outputBox";
-            this.outputBox.Size = new System.Drawing.Size(495, 20);
+            this.outputBox.Size = new System.Drawing.Size(740, 26);
             this.outputBox.TabIndex = 19;
             this.outputBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.outputBox_KeyDown);
             this.outputBox.MouseDown += new System.Windows.Forms.MouseEventHandler(this.outputBox_MouseDown);
@@ -214,63 +220,70 @@ namespace ImageProcessor
             // 
             // findNameButton
             // 
-            this.findNameButton.Location = new System.Drawing.Point(34, 6);
+            this.findNameButton.Location = new System.Drawing.Point(51, 9);
+            this.findNameButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.findNameButton.Name = "findNameButton";
-            this.findNameButton.Size = new System.Drawing.Size(85, 21);
+            this.findNameButton.Size = new System.Drawing.Size(128, 32);
             this.findNameButton.TabIndex = 0;
             this.findNameButton.Text = "Name";
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(6, 63);
+            this.label2.Location = new System.Drawing.Point(9, 97);
+            this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(35, 13);
+            this.label2.Size = new System.Drawing.Size(51, 20);
             this.label2.TabIndex = 28;
             this.label2.Text = "Name";
             // 
             // patternBox
             // 
-            this.patternBox.Location = new System.Drawing.Point(44, 60);
+            this.patternBox.Location = new System.Drawing.Point(66, 92);
+            this.patternBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.patternBox.Name = "patternBox";
-            this.patternBox.Size = new System.Drawing.Size(166, 20);
+            this.patternBox.Size = new System.Drawing.Size(247, 26);
             this.patternBox.TabIndex = 20;
             this.patternBox.TextChanged += new System.EventHandler(this.patternBox_TextChanged);
             // 
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(6, 90);
+            this.label4.Location = new System.Drawing.Point(9, 138);
+            this.label4.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(48, 13);
+            this.label4.Size = new System.Drawing.Size(70, 20);
             this.label4.TabIndex = 29;
             this.label4.Text = "Days old";
             // 
             // daysBox
             // 
-            this.daysBox.Location = new System.Drawing.Point(60, 86);
+            this.daysBox.Location = new System.Drawing.Point(90, 132);
+            this.daysBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.daysBox.Name = "daysBox";
-            this.daysBox.Size = new System.Drawing.Size(36, 20);
+            this.daysBox.Size = new System.Drawing.Size(52, 26);
             this.daysBox.TabIndex = 27;
             this.daysBox.TextChanged += new System.EventHandler(this.patternBox_TextChanged);
             // 
             // runningImage
             // 
             this.runningImage.Image = global::ImageProcessor.Properties.Resources.wspinner_1_;
-            this.runningImage.Location = new System.Drawing.Point(9, 11);
+            this.runningImage.Location = new System.Drawing.Point(14, 17);
+            this.runningImage.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.runningImage.Name = "runningImage";
-            this.runningImage.Size = new System.Drawing.Size(16, 16);
+            this.runningImage.Size = new System.Drawing.Size(24, 25);
             this.runningImage.TabIndex = 31;
             this.runningImage.TabStop = false;
             this.runningImage.Visible = false;
             // 
             // searchResultBox
             // 
-            this.searchResultBox.Location = new System.Drawing.Point(6, 117);
+            this.searchResultBox.Location = new System.Drawing.Point(9, 180);
+            this.searchResultBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.searchResultBox.Multiline = true;
             this.searchResultBox.Name = "searchResultBox";
             this.searchResultBox.ReadOnly = true;
-            this.searchResultBox.Size = new System.Drawing.Size(204, 56);
+            this.searchResultBox.Size = new System.Drawing.Size(304, 84);
             this.searchResultBox.TabIndex = 34;
             // 
             // tabControl1
@@ -278,10 +291,11 @@ namespace ImageProcessor
             this.tabControl1.Controls.Add(this.tabPage1);
             this.tabControl1.Controls.Add(this.tabPage2);
             this.tabControl1.Controls.Add(this.tabPage3);
-            this.tabControl1.Location = new System.Drawing.Point(238, 34);
+            this.tabControl1.Location = new System.Drawing.Point(357, 52);
+            this.tabControl1.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(396, 205);
+            this.tabControl1.Size = new System.Drawing.Size(594, 315);
             this.tabControl1.TabIndex = 25;
             // 
             // tabPage1
@@ -298,122 +312,120 @@ namespace ImageProcessor
             this.tabPage1.Controls.Add(this.label4);
             this.tabPage1.Controls.Add(this.label2);
             this.tabPage1.Controls.Add(this.patternBox);
-            this.tabPage1.Location = new System.Drawing.Point(4, 22);
+            this.tabPage1.Location = new System.Drawing.Point(4, 29);
+            this.tabPage1.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.tabPage1.Name = "tabPage1";
-            this.tabPage1.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage1.Size = new System.Drawing.Size(388, 179);
+            this.tabPage1.Padding = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.tabPage1.Size = new System.Drawing.Size(586, 282);
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "Search";
             this.tabPage1.UseVisualStyleBackColor = true;
             // 
             // displayResultsBtn
             // 
-            this.displayResultsBtn.Location = new System.Drawing.Point(106, 85);
+            this.displayResultsBtn.Location = new System.Drawing.Point(159, 131);
+            this.displayResultsBtn.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.displayResultsBtn.Name = "displayResultsBtn";
-            this.displayResultsBtn.Size = new System.Drawing.Size(104, 21);
+            this.displayResultsBtn.Size = new System.Drawing.Size(156, 32);
             this.displayResultsBtn.TabIndex = 39;
             this.displayResultsBtn.Text = "Display Names";
             // 
             // findLookBtn
             // 
-            this.findLookBtn.Location = new System.Drawing.Point(125, 33);
+            this.findLookBtn.Location = new System.Drawing.Point(188, 51);
+            this.findLookBtn.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.findLookBtn.Name = "findLookBtn";
-            this.findLookBtn.Size = new System.Drawing.Size(85, 21);
+            this.findLookBtn.Size = new System.Drawing.Size(128, 32);
             this.findLookBtn.TabIndex = 38;
             this.findLookBtn.Text = "Looks like";
             // 
             // findSoundBtn
             // 
-            this.findSoundBtn.Location = new System.Drawing.Point(34, 33);
+            this.findSoundBtn.Location = new System.Drawing.Point(51, 51);
+            this.findSoundBtn.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.findSoundBtn.Name = "findSoundBtn";
-            this.findSoundBtn.Size = new System.Drawing.Size(85, 21);
+            this.findSoundBtn.Size = new System.Drawing.Size(128, 32);
             this.findSoundBtn.TabIndex = 37;
             this.findSoundBtn.Text = "Sound like";
             // 
             // findFileBtn
             // 
-            this.findFileBtn.Location = new System.Drawing.Point(125, 6);
+            this.findFileBtn.Location = new System.Drawing.Point(188, 9);
+            this.findFileBtn.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.findFileBtn.Name = "findFileBtn";
-            this.findFileBtn.Size = new System.Drawing.Size(85, 21);
+            this.findFileBtn.Size = new System.Drawing.Size(128, 32);
             this.findFileBtn.TabIndex = 36;
             this.findFileBtn.Text = "File";
             // 
             // findImagePanel
             // 
             this.findImagePanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.findImagePanel.Location = new System.Drawing.Point(216, 3);
+            this.findImagePanel.Location = new System.Drawing.Point(324, 5);
+            this.findImagePanel.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.findImagePanel.Name = "findImagePanel";
-            this.findImagePanel.Size = new System.Drawing.Size(173, 173);
+            this.findImagePanel.Size = new System.Drawing.Size(258, 265);
             this.findImagePanel.TabIndex = 35;
             // 
             // tabPage2
             // 
-            this.tabPage2.Controls.Add(this.renameResultBox);
             this.tabPage2.Controls.Add(this.label5);
-            this.tabPage2.Controls.Add(this.label1);
+            this.tabPage2.Controls.Add(this.renameResultBox);
             this.tabPage2.Controls.Add(this.newTextBox);
             this.tabPage2.Controls.Add(this.directoryNameBox);
             this.tabPage2.Controls.Add(this.renameDirBtn);
             this.tabPage2.Controls.Add(this.oldTextBox);
             this.tabPage2.Controls.Add(this.addPrefixButton);
             this.tabPage2.Controls.Add(this.changeNameButton);
-            this.tabPage2.Location = new System.Drawing.Point(4, 22);
+            this.tabPage2.Location = new System.Drawing.Point(4, 29);
+            this.tabPage2.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.tabPage2.Name = "tabPage2";
-            this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(388, 179);
+            this.tabPage2.Padding = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.tabPage2.Size = new System.Drawing.Size(586, 282);
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "Rename";
             this.tabPage2.UseVisualStyleBackColor = true;
             // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(276, 127);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(36, 20);
+            this.label5.TabIndex = 42;
+            this.label5.Text = "==>";
+            // 
             // renameResultBox
             // 
-            this.renameResultBox.Location = new System.Drawing.Point(6, 106);
+            this.renameResultBox.Location = new System.Drawing.Point(4, 158);
+            this.renameResultBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.renameResultBox.Multiline = true;
             this.renameResultBox.Name = "renameResultBox";
             this.renameResultBox.ReadOnly = true;
-            this.renameResultBox.Size = new System.Drawing.Size(376, 67);
+            this.renameResultBox.Size = new System.Drawing.Size(579, 101);
             this.renameResultBox.TabIndex = 40;
-            // 
-            // label5
-            // 
-            this.label5.Anchor = System.Windows.Forms.AnchorStyles.None;
-            this.label5.Location = new System.Drawing.Point(355, 76);
-            this.label5.Margin = new System.Windows.Forms.Padding(1);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(27, 21);
-            this.label5.TabIndex = 39;
-            this.label5.Text = "new";
-            this.label5.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // label1
-            // 
-            this.label1.Anchor = System.Windows.Forms.AnchorStyles.None;
-            this.label1.Location = new System.Drawing.Point(355, 44);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(27, 21);
-            this.label1.TabIndex = 38;
-            this.label1.Text = "old";
-            this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // newTextBox
             // 
-            this.newTextBox.Location = new System.Drawing.Point(137, 79);
+            this.newTextBox.Location = new System.Drawing.Point(315, 122);
+            this.newTextBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.newTextBox.Name = "newTextBox";
-            this.newTextBox.Size = new System.Drawing.Size(214, 20);
+            this.newTextBox.Size = new System.Drawing.Size(267, 26);
             this.newTextBox.TabIndex = 37;
             // 
             // directoryNameBox
             // 
-            this.directoryNameBox.Location = new System.Drawing.Point(137, 16);
+            this.directoryNameBox.Location = new System.Drawing.Point(176, 25);
+            this.directoryNameBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.directoryNameBox.Name = "directoryNameBox";
-            this.directoryNameBox.Size = new System.Drawing.Size(245, 20);
+            this.directoryNameBox.Size = new System.Drawing.Size(406, 26);
             this.directoryNameBox.TabIndex = 36;
             // 
             // renameDirBtn
             // 
-            this.renameDirBtn.Location = new System.Drawing.Point(6, 15);
+            this.renameDirBtn.Location = new System.Drawing.Point(2, 23);
+            this.renameDirBtn.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.renameDirBtn.Name = "renameDirBtn";
-            this.renameDirBtn.Size = new System.Drawing.Size(125, 21);
+            this.renameDirBtn.Size = new System.Drawing.Size(174, 32);
             this.renameDirBtn.TabIndex = 35;
             this.renameDirBtn.Text = "New directory name";
             // 
@@ -427,54 +439,60 @@ namespace ImageProcessor
             this.tabPage3.Controls.Add(this.runningInfoIcon);
             this.tabPage3.Controls.Add(this.findSimilarImagesBtn);
             this.tabPage3.Controls.Add(this.imageInfoBtn);
-            this.tabPage3.Location = new System.Drawing.Point(4, 22);
+            this.tabPage3.Location = new System.Drawing.Point(4, 29);
+            this.tabPage3.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.tabPage3.Name = "tabPage3";
-            this.tabPage3.Size = new System.Drawing.Size(388, 179);
+            this.tabPage3.Size = new System.Drawing.Size(586, 282);
             this.tabPage3.TabIndex = 2;
             this.tabPage3.Text = "Processes";
             this.tabPage3.UseVisualStyleBackColor = true;
             // 
             // label3
             // 
-            this.label3.Location = new System.Drawing.Point(262, 107);
+            this.label3.Location = new System.Drawing.Point(393, 165);
+            this.label3.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(22, 19);
+            this.label3.Size = new System.Drawing.Size(33, 29);
             this.label3.TabIndex = 41;
             this.label3.Text = "pix";
             this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // imageSizeBox
             // 
-            this.imageSizeBox.Location = new System.Drawing.Point(196, 107);
+            this.imageSizeBox.Location = new System.Drawing.Point(294, 165);
+            this.imageSizeBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.imageSizeBox.Name = "imageSizeBox";
-            this.imageSizeBox.Size = new System.Drawing.Size(60, 20);
+            this.imageSizeBox.Size = new System.Drawing.Size(88, 26);
             this.imageSizeBox.TabIndex = 40;
             this.imageSizeBox.Text = "2000";
             this.imageSizeBox.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             // 
             // reduceButton
             // 
-            this.reduceButton.Location = new System.Drawing.Point(35, 106);
+            this.reduceButton.Location = new System.Drawing.Point(52, 163);
+            this.reduceButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.reduceButton.Name = "reduceButton";
-            this.reduceButton.Size = new System.Drawing.Size(131, 20);
+            this.reduceButton.Size = new System.Drawing.Size(196, 31);
             this.reduceButton.TabIndex = 42;
             this.reduceButton.Text = "Resize to";
             this.reduceButton.TextAlign = System.Drawing.ContentAlignment.TopCenter;
             // 
             // mangleBtn
             // 
-            this.mangleBtn.Location = new System.Drawing.Point(35, 70);
+            this.mangleBtn.Location = new System.Drawing.Point(52, 108);
+            this.mangleBtn.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.mangleBtn.Name = "mangleBtn";
-            this.mangleBtn.Size = new System.Drawing.Size(131, 21);
+            this.mangleBtn.Size = new System.Drawing.Size(196, 32);
             this.mangleBtn.TabIndex = 39;
             this.mangleBtn.Text = "Mangle file names";
             // 
             // runningSimilarIcon
             // 
             this.runningSimilarIcon.Image = global::ImageProcessor.Properties.Resources.wspinner_1_;
-            this.runningSimilarIcon.Location = new System.Drawing.Point(13, 45);
+            this.runningSimilarIcon.Location = new System.Drawing.Point(20, 69);
+            this.runningSimilarIcon.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.runningSimilarIcon.Name = "runningSimilarIcon";
-            this.runningSimilarIcon.Size = new System.Drawing.Size(16, 16);
+            this.runningSimilarIcon.Size = new System.Drawing.Size(24, 25);
             this.runningSimilarIcon.TabIndex = 38;
             this.runningSimilarIcon.TabStop = false;
             this.runningSimilarIcon.Visible = false;
@@ -482,35 +500,39 @@ namespace ImageProcessor
             // runningInfoIcon
             // 
             this.runningInfoIcon.Image = global::ImageProcessor.Properties.Resources.wspinner_1_;
-            this.runningInfoIcon.Location = new System.Drawing.Point(13, 18);
+            this.runningInfoIcon.Location = new System.Drawing.Point(20, 28);
+            this.runningInfoIcon.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.runningInfoIcon.Name = "runningInfoIcon";
-            this.runningInfoIcon.Size = new System.Drawing.Size(16, 16);
+            this.runningInfoIcon.Size = new System.Drawing.Size(24, 25);
             this.runningInfoIcon.TabIndex = 37;
             this.runningInfoIcon.TabStop = false;
             this.runningInfoIcon.Visible = false;
             // 
             // findSimilarImagesBtn
             // 
-            this.findSimilarImagesBtn.Location = new System.Drawing.Point(35, 43);
+            this.findSimilarImagesBtn.Location = new System.Drawing.Point(52, 66);
+            this.findSimilarImagesBtn.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.findSimilarImagesBtn.Name = "findSimilarImagesBtn";
-            this.findSimilarImagesBtn.Size = new System.Drawing.Size(131, 21);
+            this.findSimilarImagesBtn.Size = new System.Drawing.Size(196, 32);
             this.findSimilarImagesBtn.TabIndex = 36;
             this.findSimilarImagesBtn.Text = "Find similar images";
             // 
             // imageInfoBtn
             // 
-            this.imageInfoBtn.Location = new System.Drawing.Point(35, 16);
+            this.imageInfoBtn.Location = new System.Drawing.Point(52, 25);
+            this.imageInfoBtn.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.imageInfoBtn.Name = "imageInfoBtn";
-            this.imageInfoBtn.Size = new System.Drawing.Size(131, 21);
+            this.imageInfoBtn.Size = new System.Drawing.Size(196, 32);
             this.imageInfoBtn.TabIndex = 35;
             this.imageInfoBtn.Text = "Update ImageInfo";
             // 
             // pravateAccessBox
             // 
             this.pravateAccessBox.AutoSize = true;
-            this.pravateAccessBox.Location = new System.Drawing.Point(8, 10);
+            this.pravateAccessBox.Location = new System.Drawing.Point(12, 15);
+            this.pravateAccessBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.pravateAccessBox.Name = "pravateAccessBox";
-            this.pravateAccessBox.Size = new System.Drawing.Size(125, 17);
+            this.pravateAccessBox.Size = new System.Drawing.Size(180, 24);
             this.pravateAccessBox.TabIndex = 26;
             this.pravateAccessBox.Text = "Allow Private Access";
             this.pravateAccessBox.UseVisualStyleBackColor = true;
@@ -518,17 +540,18 @@ namespace ImageProcessor
             // 
             // NavigatorForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(639, 734);
+            this.ClientSize = new System.Drawing.Size(950, 1129);
             this.Controls.Add(this.pravateAccessBox);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.outputBox);
             this.Controls.Add(this.locationTreeView);
             this.Controls.Add(this.outputList);
             this.Controls.Add(this.infoImagePanel);
-            this.MaximumSize = new System.Drawing.Size(655, 875);
-            this.MinimumSize = new System.Drawing.Size(655, 705);
+            this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.MaximumSize = new System.Drawing.Size(972, 1316);
+            this.MinimumSize = new System.Drawing.Size(972, 1054);
             this.Name = "NavigatorForm";
             this.Text = "Image Selector";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.NavigatorForm_FormClosing);
@@ -547,13 +570,19 @@ namespace ImageProcessor
 
 		}
 		#endregion
-        public NavigatorForm()              
+        public NavigatorForm(bool privateAccess = false)              
 		{
             try
             {
                 navigator = new Navigator();
                 navigator.onNewImageSelection = NewImageSelected;
                 InitializeComponent();
+                if (!privateAccess)
+                {
+                    outputBox.Location = new System.Drawing.Point(12, 12);
+                    this.outputBox.Size = new System.Drawing.Size(936, 26);
+                    pravateAccessBox.Visible = false;
+                }
                 imageAdjustmentWorker = new BackgroundWorker();
                 imageAdjustmentWorker.DoWork += new DoWorkEventHandler(ImageAdjustment);
                 imageAdjustmentWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(ImageAdjustmentCompleted);
@@ -630,7 +659,7 @@ namespace ImageProcessor
             searchImagePath = imagePath;
             findImagePanel.Invalidate();
             userAction = false;
-            patternBox.Text = ImageFileName.UnMangleText(Path.GetFileNameWithoutExtension(imagePath));
+            patternBox.Text = FileName.UnMangle(Path.GetFileNameWithoutExtension(imagePath));
             userAction = true;
         }
         void DrawSearchImage(object sender, PaintEventArgs e)
@@ -797,7 +826,7 @@ namespace ImageProcessor
 			DirectoryInfo[] dia=navigator.GetDirectories(((DirectoryInfo)node.Tag));
             string[] fna = new string[dia.Length];
             for(int i=0; i<dia.Length; i++)
-                fna[i] = ImageFileName.UnMangleText(dia[i].Name);
+                fna[i] = FileName.UnMangle(dia[i].Name);
             Array.Sort(fna, dia, new ImageFileInfo.NameComparer());
             for (int i = 0; i < dia.Length; i++)
             {
@@ -855,7 +884,7 @@ namespace ImageProcessor
             DirectoryInfo di = new DirectoryInfo(dirPath);
             if (!di.Exists)
             {
-                dirPath = ImageFileName.FSMangle(dirPath);
+                dirPath = FileName.MangleFile(dirPath);
                 di = new DirectoryInfo(dirPath);
                 if (!di.Exists)
                     return null;
@@ -866,7 +895,7 @@ namespace ImageProcessor
             FileSystemInfo fi = new FileInfo(filePath);
             if (!fi.Exists)
             {
-                filePath = ImageFileName.FSMangle(filePath);
+                filePath = FileName.MangleFile(filePath);
                 fi = new FileInfo(filePath);
             }
             return fi.Exists ? fi : null;
@@ -1053,10 +1082,11 @@ namespace ImageProcessor
                 outputBox.Text = passwordText;
                 outputBox.ForeColor = System.Drawing.Color.Red;
                 outputBox.PasswordChar = '\0';
+                FileName.DoMangle = true;
             }
             else
             {
-                DataAccess.PrivateAccessAllowed = false;
+                DataAccess.PrivateAccessAllowed = FileName.DoMangle = false;
             }
         }
     }

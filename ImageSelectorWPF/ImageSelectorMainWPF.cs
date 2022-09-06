@@ -13,7 +13,8 @@ namespace ImageProcessor
             {
                 var app = new ImageSelectorApp();
                 app.ShutdownMode= ShutdownMode.OnExplicitShutdown;
-                NavigatorForm nf = new NavigatorForm();
+                string[] args = Environment.GetCommandLineArgs();
+                NavigatorForm nf = (args.Length>1 && args[1] == "-privateaccess") ? new NavigatorForm(true) : new NavigatorForm();
                 nf.Show();
                 nf.FormClosing += new System.Windows.Forms.FormClosingEventHandler(NavigatorFormClosing);
                 app.Run();
