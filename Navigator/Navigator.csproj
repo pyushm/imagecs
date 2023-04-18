@@ -56,7 +56,7 @@
   <ItemGroup>
     <Compile Include="ImageDirHash.cs" />
     <Compile Include="FileManager.cs" />
-    <Compile Include="ImageFileData.cs" />
+    <Compile Include="ImageFile.cs" />
     <Compile Include="ImageHash.cs" />
     <Compile Include="Navigator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

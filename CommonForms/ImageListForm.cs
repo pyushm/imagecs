@@ -24,7 +24,7 @@ namespace ImageProcessor
 		private System.ComponentModel.Container components = null;
         IAssociatedPath associatedPath;
         ImageDirInfo sourceDir;	                // direcory to build sourceCollection from
-        bool infoMode;                          // shows  info images if true
+        bool subdirListMode;                    // if true shows info images of subdirectories
         string[] extList;
         bool tempStore;                         // underlying directory is new article temp store if true
         ImageFileInfo.Collection imageCollection = null; // currently displayed images
@@ -223,9 +223,9 @@ namespace ImageProcessor
             listUpdateTimer.Interval = updateListFrequency;
             listUpdateTimer.Tick += new EventHandler(UpdateList);
             listUpdateTimer.Start();
-            try { infoMode = !tempStore_ && (list != null || sourceDir.DirInfo.GetDirectories().Length > 0); }
+            try { subdirListMode = !tempStore_ && (list != null || sourceDir.DirInfo.GetDirectories().Length > 0); }
             catch { }
-            infoModeBox.Visible = infoMode;
+            infoModeBox.Visible = subdirListMode;
             ShowImages();
             Load += ImageViewForm_Load;
         }
@@ -327,16 +327,15 @@ namespace ImageProcessor
 		}
 		void DeleteSelected(object s, System.EventArgs e)
 		{
-            if (imageCollection.DirMode)
-			{
-                ListViewItem lvi = s as ListViewItem;
-                Debug.Assert(lvi != null);
-                MessageBox.Show("Image " + lvi.Text + " indicates directory. It can't be deleted");
-				return;
-			}
 			int nDeleted=imageListView.SelectedIndices.Count;
 			if(nDeleted==0)
 				return;
+            if (imageCollection.DirMode)
+			{
+                ListViewItem lvi = s as ListViewItem;
+                MessageBox.Show("Image " + lvi?.Text + " is a directory. Deleting directories not supported");
+				return;
+			}
 			DialogResult res;
 			if(nDeleted>1)
 				res=MessageBox.Show(this, "Are you sure you want to delete "+nDeleted+" image?", 
@@ -438,10 +437,10 @@ namespace ImageProcessor
             int items = files.Length;
             if (items > 0)
             {
-                string war = sourceDir.RealPath + " contains no images"+Environment.NewLine;
-                war += "Directory contains " + (items > 1 ? items.ToString() + " items" : files[0].Name) + Environment.NewLine;
-                DialogResult res = MessageBox.Show(war + "Do you want to delete directory?",
-                                                    "Delete directory warning", MessageBoxButtons.YesNo);
+                DialogResult res = items > 1 ? MessageBox.Show(sourceDir.RealPath + " contains no images" + Environment.NewLine +
+                                                    "Directory contains " + items.ToString() + " items" + Environment.NewLine +
+                                                    "Do you want to delete directory?",
+                                                    "Delete directory warning", MessageBoxButtons.YesNo) : DialogResult.Yes;
                 if (res == DialogResult.Yes)
                 {
                     foreach (var f in files)
@@ -555,7 +554,7 @@ namespace ImageProcessor
                     scale = 255.0 / si.Height;
                 thumbnails.ImageSize = new Size((int)(si.Width * scale), (int)(si.Height * scale));
                 imageCollection = extList != null ? new ImageFileInfo.Collection(sourceDir, extList) :
-                    infoMode ? new ImageFileInfo.Collection(sourceDir, infoType, tempStore) : new ImageFileInfo.Collection(sourceDir, tempStore);
+                    subdirListMode ? new ImageFileInfo.Collection(sourceDir, infoType, tempStore) : new ImageFileInfo.Collection(sourceDir, tempStore);
                 imageCollection.notifyEmptyDir += EmptyDirHandler;
                 imageListView.VirtualListSize = 0;
                 imageListView.ArrangeIcons(ListViewAlignment.SnapToGrid);
@@ -576,7 +575,7 @@ namespace ImageProcessor
             try
             {
                 ImageFileInfo f = imageCollection[e.ItemIndex];
-                e.Item = new ListViewItem(f.RealName);
+                e.Item = new ListViewItem(subdirListMode ? f.GetDirInfoName() : f.RealName);
                 FontStyle fs = f.IsMultiLayer ? FontStyle.Underline : f.IsExact ? FontStyle.Italic : FontStyle.Regular;
                 e.Item.Font = new Font("Arial", 10, fs);
                 e.Item.Tag = f;
@@ -612,6 +611,7 @@ namespace ImageProcessor
                 else
                     e.Graphics.DrawImage(im, e.Bounds.X + (rw - iw) / 2, e.Bounds.Y + (rh - ih) / 2, iw, ih);
                 e.DrawText(TextFormatFlags.HorizontalCenter | TextFormatFlags.Bottom);
+                //e.DrawText(TextFormatFlags.Left | TextFormatFlags.Bottom);
             }
             catch (Exception ex)
             {

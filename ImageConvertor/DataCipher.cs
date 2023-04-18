@@ -102,12 +102,12 @@ namespace ImageProcessor
             try
             {
                 byte[] verify = new byte[] { 72, 172, 189,  51, 209, 144,  39,  65, 106, 171,  99,  52,  63, 102,  77, 195,
-                                        241, 108, 118,  33, 201,  89,  38, 153, 149, 175,  51,  64,  45, 118,  11, 188,
-                                         21,  45, 164, 157, 188, 185, 132, 252,   4,  84, 216, 233,   7, 219,  55,  73 };
+                                            241, 108, 118,  33, 201,  89,  38, 153, 149, 175,  51,  64,  45, 118,  11, 188,
+                                             21,  45, 164, 157, 188, 185, 132, 252,   4,  84, 216, 233,   7, 219,  55,  73 };
                 byte[] test = ds.Decrypt(verify);
                 if (test.Length != 43)
                     return null;
-                byte[] bytes = new byte[] { 109, 112, 100, 32, 112, 101, 32, 109, 110, 116, 104, 107, 111, 114, 97 };
+                byte[] bytes = new byte[] {  109, 112, 100,  32, 112, 101,  32, 109, 110, 116, 104, 107, 111, 114,  97 };
                 for (int i = 0; i < bytes.Length; i++)
                     if (test[3 * i] != bytes[i])
                         return null;
@@ -141,11 +141,7 @@ namespace ImageProcessor
                     using (CryptoStream cs = new CryptoStream(ms, alg.CreateDecryptor(), CryptoStreamMode.Write))
                         cs.Write(src, 0, src.Length);
                 }
-                catch (Exception ex)
-                {
-                    // Debug.WriteLine(ex.Message);
-                }
-                res = ms.ToArray();
+                finally { res = ms.ToArray(); }
             }
             return res;
         }

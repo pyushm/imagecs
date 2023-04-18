@@ -108,7 +108,7 @@ namespace ImageProcessor
                         continue;
                     }
                     string name = file.Name;   // name with extension
-                    if (adjustmentType == ImageAdjustmentType.Mangle && ImageFileName.InfoMode(name) == null)
+                    if (adjustmentType == ImageAdjustmentType.Mangle && ImageFileName.InfoType(name) == null)
                         name = FileName.MangleFile(name);
                     else if (adjustmentType == ImageAdjustmentType.Encrypt)
                     {
@@ -176,7 +176,7 @@ namespace ImageProcessor
             {
                 string name = file.Name;   // name with extension
                 //name = ImageFileName.NameWithoutTempPrefix(name);
-                if (ImageFileName.InfoMode(name) != null)
+                if (ImageFileName.InfoType(name) != null)
                     continue;
                 name = FileName.UnMangleFile(name);
                 try

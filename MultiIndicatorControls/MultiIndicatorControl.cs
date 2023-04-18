@@ -23,17 +23,17 @@ namespace CustomControls
         protected float ratio;                  // border width to height ratio
         protected float range = 1;              // value range
         protected float offset = 0;             // value offset (value at left boundary)
-        protected int iSize = 6;                // indicator capture size
-        protected int mSize = 3;                // indicator marker size
+        protected const int mSize = 4;          // indicator marker size
+        protected const int iSize = 2 * mSize;  // indicator capture size
         protected int activePoint = -1;         // index of active control indicator
         Timer valueChangeTimer;                 // timer firing ValueChanged event only after value is the same after valueChangeDelay
         int valueChangeDelay = 1;
         bool timerToStop;                       // request timer to stop on leaving control
         protected Point[] iLocPrev;		        // indicator value at previous valueChangeTimer tick
         protected Point[] iLocLast;		        // indicator value at last ValueChanged firing
-        protected Point[] arrow = new Point[]   { new Point(-5, -5), new Point(-9, 0), new Point(-3, 5), new Point(-5, 2), 
+        protected Point[] arrow = new Point[]   { new Point(-5, -5), new Point(-9, 0), new Point(-5, 5), new Point(-5, 2), 
             new Point(5, 2), new Point(5, 5), new Point(9, 0), new Point(5, -5), new Point(5, -2), new Point(-5, -2)};
-        Point[] shiftedArrow;
+        Point[] shiftedArrow;                   // arrow in current position
         protected int NValues                   { get { return nPoints * PointDimension; } } // number of output values
         public int LastPointInd                 { get { return nPoints - 1; } }
         protected virtual int PointDimension    { get { return 0; } } // number of coordinates of control point
@@ -73,30 +73,30 @@ namespace CustomControls
                 iLocPrev[i] = iLoc[i];
         }
         public event EventHandler ValueChanged; // issued when indicators position changed (long enough in one location or key up)
-        protected override void ScaleControl(SizeF factor, BoundsSpecified specified)
-        {
-            if ((specified & BoundsSpecified.Size) == BoundsSpecified.Size)
-            {
-                iSize = (int)(iSize * factor.Width + 0.5);
-                mSize = (int)(mSize * factor.Height + 0.5);
-                Width = (int)(Width * factor.Width + 0.5);
-                Height = (int)(Height * factor.Height + 0.5);
-                topOffset = (int)(Font.Height * 1.25);
-                leftOffset = (int)(Font.Height * 1.6);
-                bottomOffset = (int)(Font.Height * 1.0);
-                int iaw = Width - leftOffset - mSize - 1;
-                int iah = nPoints > 1 ? Height - topOffset - bottomOffset : Height - topOffset - 1;
-                border = new Rectangle(leftOffset, topOffset, iaw, iah);
-                ratio = (float)iaw / iah;
-                SetBrushes();
-                for (int i = 0; i < arrow.Length; i++)
-                    arrow[i] = new Point((int)(arrow[i].X * factor.Width + 0.5), (int)(arrow[i].Y * factor.Height + 0.5));
-                for (int i = 0; i < nPoints; i++)
-                    iLoc[i] = initialLoc[i];
-            }
-            if ((specified & BoundsSpecified.Location) == BoundsSpecified.Location)
-                Location = new Point((int)(Location.X * factor.Width), (int)(Location.Y * factor.Height));
-        }
+        //protected override void ScaleControl(SizeF factor, BoundsSpecified specified)
+        //{
+        //    if ((specified & BoundsSpecified.Size) == BoundsSpecified.Size)
+        //    {
+        //        iSize = (int)(iSize * factor.Width + 0.5);
+        //        mSize = (int)(mSize * factor.Height + 0.5);
+        //        Width = (int)(Width * factor.Width + 0.5);
+        //        Height = (int)(Height * factor.Height + 0.5);
+        //        topOffset = (int)(Font.Height * 1.25);
+        //        leftOffset = (int)(Font.Height * 1.6);
+        //        bottomOffset = (int)(Font.Height * 1.0);
+        //        int iaw = Width - leftOffset - mSize - 1;
+        //        int iah = nPoints > 1 ? Height - topOffset - bottomOffset : Height - topOffset - 1;
+        //        border = new Rectangle(leftOffset, topOffset, iaw, iah);
+        //        ratio = (float)iaw / iah;
+        //        SetBrushes();
+        //        for (int i = 0; i < arrow.Length; i++)
+        //            arrow[i] = new Point((int)(arrow[i].X * factor.Width + 0.5), (int)(arrow[i].Y * factor.Height + 0.5));
+        //        for (int i = 0; i < nPoints; i++)
+        //            iLoc[i] = initialLoc[i];
+        //    }
+        //    if ((specified & BoundsSpecified.Location) == BoundsSpecified.Location)
+        //        Location = new Point((int)(Location.X * factor.Width), (int)(Location.Y * factor.Height));
+        //}
         public void Reset()
         {
             for (int i = 0; i < nPoints; i++)
@@ -170,7 +170,6 @@ namespace CustomControls
         }
         public abstract float[] ControlPoints { set; }
         protected abstract void SetIndicatorValues(Point p);
-        //protected abstract Point[] IndicatorLocations(Point[] vals);
         protected virtual void SetBrushes() { }
         protected void DrawCommonElements(Graphics g)
         {
@@ -216,19 +215,18 @@ namespace CustomControls
             if (activePoint < 0)
                 return;
             activePoint = -1;
-            //if (ValueChanged != null)
-            //    ValueChanged(this, null);
             Invalidate();
         }
         bool IsInProximity(Point p, PointF loc) { return Math.Abs(p.X - loc.X) < iSize && Math.Abs(p.Y - loc.Y) < iSize; }
         int ActiveIndicator(Point p)            // finds active indicator from point
         {
-            for (int i = 0; i < arrow.Length; i++) 
-                if (IsInProximity(p, shiftedArrow[i]))
-                    return nPoints;
             for (int i = 0; i < nPoints; i++)
                 if (IsInProximity(p, iLoc[i]))
                     return i;
+            if (shiftedArrow != null)
+                foreach(var a in shiftedArrow)
+                    if(IsInProximity(p, a))
+                        return nPoints; 
             return -1;
         }
         void _MouseLeave(object s, EventArgs e) { /*ResetIndicators();*/ }

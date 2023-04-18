@@ -495,12 +495,22 @@ namespace ImageProcessor
         public Rect Rect { get { return new Rect(left, top, Math.Max(right - left, 1), Math.Max(bottom - top, 1)); } }
         public CropRect(IntSize size, double x, double y)
         {
+            size = new IntSize((size.Width + 1) / 2 * 2, (size.Height + 1) / 2 * 2); // both dimentions multiple of 2 to avoid saving qulity deterioration
             Center = new Point(x, y);
             left = Center.X - size.Width / 2.0;
             right = Center.X + size.Width / 2.0;
             top = Center.Y - size.Height / 2.0; ;
             bottom = Center.Y + size.Height / 2.0;
             CatchSize = (size.Width + size.Height) / 10.0;
+        }
+        public void FlipXY()
+        {
+            var w = right - left;
+            var h = bottom - top;
+            left = Center.X - h / 2.0;
+            right = Center.X + h / 2.0;
+            top = Center.Y - w / 2.0; ;
+            bottom = Center.Y + w / 2.0;
         }
         public void SetToDrawingTransform(double scale, double w, double h)
         {
@@ -513,11 +523,11 @@ namespace ImageProcessor
             int mouseActionInd = (int)mouseAction;
             if (mouseActionInd < iLoc.Length)
                 return false;
-            mouseActionInd -= iLoc.Length;
-            if (mouseActionInd == 0) top = (int)d.Y;
-            if (mouseActionInd == 1) right = (int)d.X;
-            if (mouseActionInd == 2) bottom = (int)d.Y;
-            if (mouseActionInd == 3) left = (int)d.X;
+            mouseActionInd -= iLoc.Length;  // both dimentions multiple of 2 to avoid saving qulity deterioration
+            if (mouseActionInd == 0) top = bottom - (int)(bottom - d.Y + 1) / 2 * 2;
+            if (mouseActionInd == 1) right = left + (int)(d.X - left + 1) / 2 * 2;
+            if (mouseActionInd == 2) bottom = top + (int)(d.Y - top + 1) / 2 * 2;
+            if (mouseActionInd == 3) left = right - (int)(right - d.X + 1) / 2 * 2;
             return true;
         }
         public override MouseOperation OperationFromLine(Point p) { return Scaled ? base.OperationFromLine(p) : OperationFromMouse; }
@@ -534,6 +544,7 @@ namespace ImageProcessor
             g.DrawGeometry(null, pen, geom);
         }
         public override string ToString() { return ((int)(Rect.Width + 0.5)).ToString() + 'x' + (int)(Rect.Height + 0.5); }
+        public string ToRectString() { return Rect.ToString(); }
     }
     public class MatrixControl : MouseAction
     {   // matrix is represented as a product of rotation (R), shear (H), scale (S), and aspect (A) matrixes

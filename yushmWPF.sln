@@ -31,8 +31,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShaderEditor", "ShaderEdito
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirTreeCompare", "DirTreeCompare\DirTreeCompare.csproj", "{498CD285-00FC-4A57-9FA2-FC11E0846419}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CommonWindows", "CommonWindows\CommonWindows.csproj", "{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeEditor", "CodeEditor\CodeEditor.csproj", "{379C5C68-1BB2-4F42-ADC9-87E5B3C8AD7B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeBox", "CodeBox\CodeBox.csproj", "{FAFC1291-82F4-4A3A-B70F-111DBF2EC194}"
@@ -237,22 +235,6 @@ Global
 		{498CD285-00FC-4A57-9FA2-FC11E0846419}.Release|x64.Build.0 = Release|Any CPU
 		{498CD285-00FC-4A57-9FA2-FC11E0846419}.Release|x86.ActiveCfg = Release|Any CPU
 		{498CD285-00FC-4A57-9FA2-FC11E0846419}.Release|x86.Build.0 = Release|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Debug|x64.Build.0 = Debug|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Debug|x86.Build.0 = Debug|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Release|x64.ActiveCfg = Release|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Release|x64.Build.0 = Release|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Release|x86.ActiveCfg = Release|Any CPU
-		{C49F2D2F-F64A-4751-B0A0-2DF5993A39DD}.Release|x86.Build.0 = Release|Any CPU
 		{379C5C68-1BB2-4F42-ADC9-87E5B3C8AD7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{379C5C68-1BB2-4F42-ADC9-87E5B3C8AD7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{379C5C68-1BB2-4F42-ADC9-87E5B3C8AD7B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU

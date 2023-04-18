@@ -28,6 +28,7 @@ namespace ImageProcessor
         public MatrixControl MatrixControl { get; private set; } 
         public List<MorthPoint> morthPoints = new List<MorthPoint>();
         public virtual void SetEffectParameters(double weight, double middle, double resolution) { }
+        //public void SetEffectParameters(double[] pa) { SetEffectParameters(pa[0], pa[1], pa[2]); }
         public virtual EffectType DerivativeType { get { return EffectType.None; } }
         bool deleting = false;      // marked for delayed deletion (do not display in layer list)
         public bool FromSelection { get; set; } = false;
@@ -247,7 +248,6 @@ namespace ImageProcessor
         }
         public void RedrawImage()
         {
-            //image = image.Clone(); ?? 
             children.Clear();
             children.Add(CreateImageDrawing());
             //Debug.WriteLine("RedrawImage: RT=" + RenderTransform.Value.ToString());
@@ -255,8 +255,7 @@ namespace ImageProcessor
         public override void SetEffectParameters(double strength, double level, double size)
         {
             ParametricEffect cae = Effect as ParametricEffect;
-            if (cae != null)
-                cae.SetParameters(colorTransform, strength, level, size);
+            cae?.SetParameters(colorTransform, strength, level, size);
             //Debug.WriteLine("SetEffectParameters: image=" + image.Path);
         }
         protected DrawingVisual CreateImageDrawing()

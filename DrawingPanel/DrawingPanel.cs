@@ -45,11 +45,11 @@ namespace ImageProcessor
         {
             get
             {
-                string s = frameLayoutSize.ToString();
+                string s = backgroundLayoutSize.ToString();
                 return CropRectangle != null ? s + " selection: " + CropRectangle.ToString() : s;
             }
         }
-        IntSize frameLayoutSize         { get { return BackgroundLayer == null ? new IntSize((int)Width, (int)Height) : BackgroundLayer.LayoutSize; } }
+        IntSize backgroundLayoutSize         { get { return BackgroundLayer == null ? new IntSize((int)Width, (int)Height) : BackgroundLayer.LayoutSize; } }
         public bool XYmirroredFrame     { get; set; }
         public Point SavedPosition      { get; private set; } // position saved from last operation
         public CropRect CropRectangle   { get; private set; } // rectangle area to save
@@ -183,13 +183,13 @@ namespace ImageProcessor
             double dAngle = 0;
             if (scale == 0)    // fit to size up to max scale
             {
-                scale = Math.Min(Math.Min((double)hostW / BackgroundLayer.LayoutSize.Width, (double)hostH / frameLayoutSize.Height), 2);
+                scale = Math.Min(Math.Min((double)hostW / BackgroundLayer.LayoutSize.Width, (double)hostH / backgroundLayoutSize.Height), 2);
                 if (scale == 0)
                     return false;
                 scaleCoef = scale / getBackgroundScale();
             }
-            Width = Math.Max(hostW, frameLayoutSize.Width * scale);
-            Height = Math.Max(hostH, frameLayoutSize.Height * scale);
+            Width = Math.Max(hostW, backgroundLayoutSize.Width * scale);
+            Height = Math.Max(hostH, backgroundLayoutSize.Height * scale);
             Point center = getBackgroundCenter();
             Transform prev = BackgroundLayer.RenderTransform;
 
@@ -244,17 +244,21 @@ namespace ImageProcessor
                 }
             }
             CropRectangle?.SetToDrawingTransform(BackgroundLayer.MatrixControl.RenderScale, Width, Height);
-            double offsetX = Width / 2 - frameLayoutSize.Width / 2 * BackgroundLayer.MatrixControl.RenderScale;
-            double offsetY = Height / 2 - frameLayoutSize.Height / 2 * BackgroundLayer.MatrixControl.RenderScale;
+            //Debug.WriteLine("Resize: Crop set to " + CropRectangle?.ToString());
+            double offsetX = Width / 2 - backgroundLayoutSize.Width / 2 * BackgroundLayer.MatrixControl.RenderScale;
+            double offsetY = Height / 2 - backgroundLayoutSize.Height / 2 * BackgroundLayer.MatrixControl.RenderScale;
             MatrixTransform drawing = new MatrixTransform(BackgroundLayer.MatrixControl.RenderScale, 0, 0, BackgroundLayer.MatrixControl.RenderScale, offsetX, offsetY);
-            //Matrix m = ToCanvas = BackgroundLayer.RenderTransform.Value;
+            //Debug.WriteLine("Transform set: offsetX=" + offsetX.ToString() + " offsetY=" + offsetY.ToString() + " scale=" + BackgroundLayer.MatrixControl.RenderScale.ToString());
             Matrix m = ToCanvas = drawing.Matrix;
-            //Debug.WriteLine("ToCanvas: " + drawing.Matrix.ToString());
             m.Invert();
             FromCanvas = m;
+            //Debug.WriteLine("FromCanvas: " + m.ToString());
             if (Selection != null)
                 Selection.ToDrawing = new MatrixTransform(ToCanvas);
             UpdateToolDrawing();
+            Point c0 = ToCanvas.Transform(new Point(0, 0));
+            Point cx = ToCanvas.Transform(new Point(backgroundLayoutSize.Width, backgroundLayoutSize.Height));
+            Debug.WriteLine("ImageSize=" + backgroundLayoutSize.ToString() + " c0=" + c0.ToString() + "cm=" + cx.ToString() + " 0->" + FromCanvas.Transform(c0).ToString() + " x->" + FromCanvas.Transform(cx).ToString()); 
             return true;
         }
         public int AddVisualLayer(VisualLayer vl)
@@ -287,10 +291,25 @@ namespace ImageProcessor
             return AddVisualLayer(vl);
         }
         public int AddVisualLayer(VisualLayer vl, VisualLayer renderSrc) { return AddVisualLayer(vl, renderSrc, new Vector()); }
+        public int ReplaceVisuallLayer(VisualLayer vl, VisualLayer renderSrc) 
+        {   // returns index of incerted layer
+            if (renderSrc == null || vl == null)
+                return -1;
+            int ind = Children.IndexOf(renderSrc);
+            if (ind < 0)
+                return -2;
+            vl.InitializeTransforms(renderSrc);
+            vl.Name = renderSrc.Name + "#";
+            Children.RemoveAt(ind);
+            Children.Insert(ind, vl);
+            if(ind == 0 ) { BackgroundLayer = vl; }
+            ActiveLayer = vl;
+            return ind;
+        }
         public int AddStrokeLayer(string name)
         {
             name = UniqueName(name);
-            VisualLayer vl = new DrawingLayer(name, frameLayoutSize);
+            VisualLayer vl = new DrawingLayer(name, backgroundLayoutSize);
             vl.InitializeTransforms(Width, Height, -1);
             Children.Insert(LayerCount, vl);
             return LayerCount++;
@@ -326,7 +345,7 @@ namespace ImageProcessor
             // border !=0 leaves image outside selection for processing with average or contrastiong (only A set to 0)
             return bl.Image.SetSelectionBitmap(rect, lp.Poly, offset == 0);
         }
-        public void InitializeToolDrawing() { InitializeToolDrawing(frameLayoutSize); } // scalable selection rectangle
+        public void InitializeToolDrawing() { InitializeToolDrawing(backgroundLayoutSize); } // scalable selection rectangle
         public void InitializeToolDrawing(IntSize size)
         {
             CropRectangle = null;
@@ -337,8 +356,9 @@ namespace ImageProcessor
             {
                 if (XYmirroredFrame)
                     size = size.XYmirrored;
-                CropRectangle = new CropRect(size, frameLayoutSize.Width / 2.0, frameLayoutSize.Height / 2.0);
+                CropRectangle = new CropRect(size, backgroundLayoutSize.Width / 2.0, backgroundLayoutSize.Height / 2.0);
                 CropRectangle.SetToDrawingTransform(BackgroundLayer.MatrixControl.RenderScale, Width, Height);
+                //Debug.WriteLine("Tool: Frame=" + backgroundLayoutSize.ToString() + "Crop set to " + CropRectangle.ToString());
             }
             else if (panelHolder.ToolMode == ToolMode.InfoImage)
             {
@@ -525,7 +545,7 @@ namespace ImageProcessor
         {
             if (CropRectangle == null)
             {
-                CropRectangle = new CropRect(frameLayoutSize, frameLayoutSize.Width / 2.0, frameLayoutSize.Height / 2.0);
+                CropRectangle = new CropRect(backgroundLayoutSize, backgroundLayoutSize.Width / 2.0, backgroundLayoutSize.Height / 2.0);
                 CropRectangle.ToDrawing = new MatrixTransform(ToCanvas);
             }
             IntSize saveSize = ScaleToSize(CropRectangle, maxSize);
@@ -540,37 +560,32 @@ namespace ImageProcessor
                 double offsetX = -CropRectangle.Rect.Left * scale;
                 double offsetY = -CropRectangle.Rect.Top * scale;
                 t.Translate(offsetX, offsetY);
-                //Debug.WriteLine("SerializeImage Scaled: " + t.ToString());
+                //Debug.WriteLine("SerializeImage Scaled: Crop=" + CropRectangle.ToString() + " saveSize=" + saveSize.ToString() + Environment.NewLine + t.ToString());
             }
             else
             {
                 t = new Matrix(scale, 0, 0, scale, -CropRectangle.Rect.Left, -CropRectangle.Rect.Top);
                 //Debug.WriteLine("SerializeImage NOT Scaled: " + t.ToString());
             }
+            Point c0 = ToCanvas.Transform(new Point(0, 0));
+            Point cx = ToCanvas.Transform(new Point(backgroundLayoutSize.Width, backgroundLayoutSize.Height));
+            Debug.WriteLine("Image=" + backgroundLayoutSize.ToString() + " c0=" + c0.ToString() + "cm=" + cx.ToString() + " 0->" + FromCanvas.Transform(c0).ToString() + " x->" + FromCanvas.Transform(cx).ToString());
+            Debug.WriteLine("save=" + saveSize.ToString() + " c0=" + c0.ToString() + "cm=" + cx.ToString() + " 0->" + t.Transform(c0).ToString() + " x->" + t.Transform(cx).ToString());
             RenderTransform = new MatrixTransform(t);
             tools.Clear();
-            //Debug.WriteLine("LayerCount=" + LayerCount + " Children=" + Children.Count);
             for (int i = 0; i < Children.Count; i++)
             {
-                var vi = GetLayer(i);
-                var bdl = vi as BitmapDerivativeLayer;
-                if (bdl != null && bdl.DerivativeType == EffectType.ViewPoint)
-                {
-                    //Rect bounds = VisualTreeHelper.GetDescendantBounds(vi);
-                    //Debug.WriteLine("bounds=" + bounds.ToString() + ' ' + vi.ToString() + vi.ToTransformString()); 
-                    //Debug.WriteLine(bdl.MatrixControl.ToString());
-                    //Debug.WriteLine(bdl.ToEffectString());
-                    //Debug.WriteLine(bdl.ToDerivativeEffectString());
-                    if (bdl != null && bdl.DerivativeType == EffectType.ViewPoint)
-                        bdl.SetEffectParameters(panelHolder.SelectedSensitivity(), bdl.MatrixControl.ViewDistortion.X + 0.1, bdl.MatrixControl.ViewDistortion.Y + 0.1);
-                }
-                //RenderTargetBitmap rt = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
-                //vi.RenderToBitmap(rt);
-                //BitmapAccess.DebugSave("testLayer" + i + ".png", rt);
+                var bdl = GetLayer(i) as BitmapDerivativeLayer;
+                if (bdl != null && bdl.DerivativeType == EffectType.ViewPoint) // any clip is a ViewPoint derivative; 0.0001 needed to activate drawing in case effect never activated
+                    bdl.SetEffectParameters(panelHolder.SelectedSensitivity(), bdl.MatrixControl.ViewDistortion.X+0.0001, bdl.MatrixControl.ViewDistortion.Y + 0.0001);
             }
             UpdateLayout();
             RenderTargetBitmap rtb = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
-            rtb.Render(this); bitmapEncoder.Frames.Add(BitmapFrame.Create(rtb));
+            rtb.Render(this);
+            var enc = bitmapEncoder as JpegBitmapEncoder;
+            if (enc != null) // ~87 for 3 Mpixels, ~93 fpr 1 Mpixel, 99 for 0
+                enc.QualityLevel = Math.Min((int)(77 + 55 / (w * h / 1.0e6 + 2.5)), 100);
+            bitmapEncoder.Frames.Add(BitmapFrame.Create(rtb));
             MemoryStream ms = new MemoryStream();
             bitmapEncoder.Save(ms);
             return ms.ToArray();
@@ -623,22 +638,22 @@ namespace ImageProcessor
                 if (scale < saveRect.Height / maxSize)
                     scale = saveRect.Height / maxSize;
             }
-            int w = (int)((saveRect.Width + 0.5f) / scale);
-            int h = (int)((saveRect.Height + 0.5f) / scale);
-            if (maxSize > 0 && (w > 800 || h > 800))
-            {
+            int w = (int)((saveRect.Width + 0.5) / scale);
+            int h = (int)((saveRect.Height + 0.5) / scale);
+            if (maxSize > 0 && (w > 1200 || h > 1200))
+            {   // resizing to standard dimentions multiple of 8
                 if (w > h)
                 {
                     w = (w + 4) / 8 * 8;
-                    h = (int)(w * (float)saveRect.Height / saveRect.Width);
+                    h = (int)(w * (double)saveRect.Height / saveRect.Width);
                 }
                 else
                 {
                     h = (h + 4) / 8 * 8;
-                    w = (int)(h * (float)saveRect.Width / saveRect.Height);
+                    w = (int)(h * (double)saveRect.Width / saveRect.Height);
                 }
             }
-            return new IntSize(w, h);
+            return new IntSize((w + 1) / 2 * 2, (h + 1) / 2 * 2); // both dimentions multiple of 2 to avoid saving qulity deterioration
         }
         #endregion
         Cursor ActionCursor

@@ -366,9 +366,10 @@ namespace ImageProcessor
         }
         public void DrawPoly(DrawingContext g, FlexiblePolygon curve, bool showMarkers)
         {
+            if (curve.ToDrawing == null)
+                return;
             Point[] points = curve.Poly.ToArray();
-            if(curve.ToDrawing != null)
-                curve.ToDrawing.Value.Transform(points);
+            curve.ToDrawing.Value.Transform(points);
             curve.PathGeometry = SmoothPath(curve, points); // points, proprties, closed); // in canvas coordinates
             g.DrawGeometry(null, curve.Pen, curve.PathGeometry);
             if(showMarkers)

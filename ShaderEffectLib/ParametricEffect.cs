@@ -362,8 +362,8 @@ namespace ShaderEffects
         {   // image = C0*original + C1*average(radius/2) + (1-C0-C1)*average(radius)
             Debug.Assert(trasform.BrightnessValues.Length == 6);
             int i = 0;
-            SetParameter(inputProperties[i++], (size + 0.5) * (size / 4 + 0.5) / pixelSize.Width);
-            SetParameter(inputProperties[i++], (double)pixelSize.Width / pixelSize.Height);
+            SetParameter(inputProperties[i++], (size + 0.5) * (size / 4 + 0.5) / (1000 + pixelSize.Average / 2));
+            SetParameter(inputProperties[i++], pixelSize.WtoH);
             SetParameter(inputProperties[i++], 4*strength); // C0
             SetParameter(inputProperties[i++], level+0.33); // C1
             //Debug.Write(ToString());

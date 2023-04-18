@@ -10,6 +10,8 @@ namespace ImageProcessor
         public IntSize(int w, int h) { Width = w; Height = h; }
         public Size Size { get { return new Size(Width, Height); } }
         public IntSize XYmirrored { get { return new IntSize(Height, Width); } }
+        public double Average { get { return (Width + Height) / 2.0; } }
+        public double WtoH { get { return (double)Width / Height; } }
         public int Width;
         public int Height;
         public override string ToString() { return Width.ToString() + 'x' + Height; }
