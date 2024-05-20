@@ -27,16 +27,13 @@ namespace ImageProcessor
         FlexiblePolygonEditor strokeEditor;
         Brush toolBrush = null;
         Pen toolPen = null;
-        Point getBackgroundCenter() { return BackgroundLayer?.MatrixControl != null ? BackgroundLayer.MatrixControl.Center : new Point(); }
-        double getBackgroundScale() { return BackgroundLayer?.MatrixControl != null ? BackgroundLayer.MatrixControl.RenderScale : 1; }
-        double getBackgroundAngle() { return BackgroundLayer?.MatrixControl != null ? BackgroundLayer.MatrixControl.Angle : 0; }
+        double BackgroundRenderScale { get { return BackgroundLayer?.MatrixControl != null ? BackgroundLayer.MatrixControl.RenderScale : 1; } }
+        double BackgroundRenderAngle { get { return BackgroundLayer?.MatrixControl != null ? BackgroundLayer.MatrixControl.Angle : 0; } }
         Polygon collectedPolygon = null; // temporary selection: mouse path in image pixels
         bool strokeEdit = false;
         IPanelHolder panelHolder;
         string lastImageFile = "lastImageFile";
         Size previousHostSize;
-        //string loadedFilePath = "";
-        //bool newSelection = true;
         bool mouseDown;                 // true between mouseDown and MouseUp events
         MouseOperation mouseAction;     // support of mouse control manipulations
         VisualLayer tools = new VisualLayer("tools");
@@ -49,8 +46,7 @@ namespace ImageProcessor
                 return CropRectangle != null ? s + " selection: " + CropRectangle.ToString() : s;
             }
         }
-        IntSize backgroundLayoutSize         { get { return BackgroundLayer == null ? new IntSize((int)Width, (int)Height) : BackgroundLayer.LayoutSize; } }
-        public bool XYmirroredFrame     { get; set; }
+        IntSize backgroundLayoutSize    { get { return BackgroundLayer == null ? new IntSize((int)Width, (int)Height) : BackgroundLayer.LayoutSize; } }
         public Point SavedPosition      { get; private set; } // position saved from last operation
         public CropRect CropRectangle   { get; private set; } // rectangle area to save
         public FlexiblePolygon Selection{ get; private set; }
@@ -118,25 +114,32 @@ namespace ImageProcessor
             Children.Insert(LayerCount - 1, moved);
             return true;
         }
-        string UniqueName(string inName)
+        string UniqueName(string na)
         {
             foreach (var l in Children)
             {
                 VisualLayer vl = l as VisualLayer;
-                if (vl != null && string.Compare(inName, vl.Name) == 0)
+                if (vl != null && string.Compare(na, vl.Name) == 0)
                 {
-                    inName = inName + '|';
-                    return UniqueName(inName);
+                    int pos = na.IndexOf('|');
+                    na = pos < 0 ? na + '|' : na.Substring(0, pos + 1) + (pos + 1 == na.Length ? 1 : int.TryParse(na.Substring(pos + 1), out int ind) ? ind + 1 : 0);
+                    //if (pos<0)
+                    //    na = na + '|';
+                    //else
+                    //{
+                    //    int ind = pos + 1 == na.Length ? 1 : int.TryParse(na.Substring(pos + 1), out ind) ? ind + 1 : 0;
+                    //    na = na.Substring(0, pos + 1) + ind;
+                    //}
+                    return UniqueName(na);
                 }
             }
-            return inName;
+            return na;
         }
         public void RenameActiveLayer(string name) { if (ActiveLayer != null) ActiveLayer.Name = UniqueName(name); }
         #endregion
         public DrawingPanel(IPanelHolder tool)
         {
-            XYmirroredFrame = false;
-            CreateToolBrushes(Colors.Black, Colors.Yellow, Colors.Transparent);
+            CreateToolBrushes(Colors.Black, Colors.Cyan, Colors.Transparent);
             Background = Brushes.Transparent;
             FlexiblePolygon.Smoother = new PolygonSmoother(0.4, 10);
             strokeEditor = new FlexiblePolygonEditor(this);
@@ -150,7 +153,7 @@ namespace ImageProcessor
             int d = 10;  // cheker size
             RadialGradientBrush rgb = new RadialGradientBrush();
             rgb.GradientOrigin = new Point(0.5, 0.5);
-            rgb.GradientStops.Add(new GradientStop(Colors.Transparent, 0.0));
+            rgb.GradientStops.Add(new GradientStop(markerCenter, 0.0));
             rgb.GradientStops.Add(new GradientStop(core, 1.0));
             //rgb.Opacity = 0.5;
             toolBrush = rgb;
@@ -167,52 +170,42 @@ namespace ImageProcessor
             dg.Children.Add(new GeometryDrawing(bcore, null, new RectangleGeometry(new Rect(d, 0, d, d))));
             dg.Children.Add(new GeometryDrawing(bcore, null, new RectangleGeometry(new Rect(0, d, d, d))));
             db.Opacity = 1;
-            toolPen = new Pen(db, 0.5);
+            toolPen = new Pen(db, 0.8);
         }
-        public bool Resize(bool firstTime, double scale, float hostW, float hostH)
+        public bool ResizeImage(bool firstTime, double scale, float hostW, float hostH)
         {
             if (BackgroundLayer == null)
                 return false;
-            bool matrixControlSet = BackgroundLayer.MatrixControl != null;
-            Debug.Assert(firstTime || matrixControlSet);
-            if (!firstTime && !matrixControlSet) // !init assumes resize event: all MatrixControl has to be set and be changing according to resize
-                return false;                     // init creates new MatrixControls if !matrixControlSet, otherwize (loaded from file) only shifts center
+            Debug.Assert(firstTime || BackgroundLayer.MatrixControl != null);
+            if (!firstTime && BackgroundLayer.MatrixControl == null)
+                return false;
+            bool fit = firstTime && scale == 0;
             Vector centerShift = new Vector((hostW - previousHostSize.Width) / 2.0, (hostH - previousHostSize.Height) / 2.0);
-            double scaleCoef = 1;
             previousHostSize = new Size(hostW, hostH);
-            double dAngle = 0;
-            if (scale == 0)    // fit to size up to max scale
-            {
-                scale = Math.Min(Math.Min((double)hostW / BackgroundLayer.LayoutSize.Width, (double)hostH / backgroundLayoutSize.Height), 2);
-                if (scale == 0)
-                    return false;
-                scaleCoef = scale / getBackgroundScale();
+            double scaleCoef = 1;   // set when 'scale' is specified (!= 0) in calls from ImageEditForm
+            if (scale == 0)
+            {   // set 'scale' to fit host size (up to max scale) in calls from ImageviewForm
+                scale = Math.Min(Math.Min((double)hostW / backgroundLayoutSize.Width, (double)hostH / backgroundLayoutSize.Height), 2);
+                scaleCoef = fit ? scale : scale / BackgroundRenderScale; 
             }
+            if (scale == 0)
+                return false;
             Width = Math.Max(hostW, backgroundLayoutSize.Width * scale);
             Height = Math.Max(hostH, backgroundLayoutSize.Height * scale);
-            Point center = getBackgroundCenter();
             Transform prev = BackgroundLayer.RenderTransform;
-
-            double prevAngle = getBackgroundAngle();
-            //Debug.WriteLine("---------->>> " + (firstTime ? "NEW IMAGE " : "RESIZE EXISTING ") + BackgroundLayer.Name+ " Layers=" + LayerCount + " Children=" + Children.Count + " " + hostW + "x" + hostH);
+            double prevAngle = BackgroundRenderAngle;
+            double dAngle = 0;
             if (!firstTime)
-            {
+            {   // updates background RenderTransform when MatrixControl changed or host resized
                 BackgroundLayer.Translate(centerShift);
                 BackgroundLayer.MatrixControl.RenderScale *= scaleCoef;
                 BackgroundLayer.UpdateRenderTransform();
-                dAngle = prevAngle - getBackgroundAngle();
+                dAngle = prevAngle - BackgroundRenderAngle;
                 //Debug.WriteLine("RESIZE Background " + BackgroundLayer.ToTransformString());
             }
-            else if (matrixControlSet)
-            {
-                BackgroundLayer.InitializeTransforms(hostW, hostH, scale, BackgroundLayer.MatrixControl);
-                Debug.WriteLine("APPLY EXISTING MatrixControl to Background " + BackgroundLayer.ToTransformString());
-            }
             else
-            {
-                scaleCoef = scale / getBackgroundScale();
-                BackgroundLayer.InitializeTransforms(hostW, hostH, scale);
-                //Debug.WriteLine("APPLY NEW MatrixControl to Background " + BackgroundLayer.ToTransformString());
+            {   // creates new MatrixControl if BackgroundLayer.MatrixControl == null, otherwize only shifts center 
+                BackgroundLayer.InitializeTransforms(hostW, hostH, scale, fit ? null : BackgroundLayer.MatrixControl);
             }
             Matrix current = BackgroundLayer.RenderTransform.Value;
             for (int i = 1; i < LayerCount; i++)
@@ -221,8 +214,7 @@ namespace ImageProcessor
                 if (vl == null)
                     continue;
                 if (!firstTime)
-                {
-                    //string mc = vl.MatrixControl.ToString();
+                { // updates layer RenderTransform when layer or background MatrixControl changed
                     Point oldC = vl.MatrixControl.Center;
                     Matrix rm = prev.Value;
                     rm.Invert();
@@ -231,16 +223,9 @@ namespace ImageProcessor
                     vl.SetResizedRenderTransform(tp - oldC, scaleCoef, dAngle);
                     //Debug.WriteLine("RESIZE Layer " + i + " {" +vl.ToString() + "} " + vl.ToTransformString());
                 }
-                else if (matrixControlSet && vl.MatrixControl != null)
-                {
-                    vl.InitializeTransforms(hostW, hostH, scale, vl.MatrixControl);
-                    //Debug.WriteLine("APPLY EXISTING MatrixControl to Layer " + i + " {" + vl.ToString() + "} " + vl.ToTransformString());
-                }
                 else
-                {
-                    Debug.Assert(vl.MatrixControl == null && !matrixControlSet);
-                    vl.InitializeTransforms(hostW, hostH, scale);
-                    //Debug.WriteLine("APPLY NEW MatrixControl to Layer " + i + " {" + vl.ToString() + "} " + vl.ToTransformString());
+                { // creates new MatrixControl if vl.MatrixControl == null, otherwize only shifts center
+                    vl.InitializeTransforms(hostW, hostH, scale, fit ? null : vl.MatrixControl);
                 }
             }
             CropRectangle?.SetToDrawingTransform(BackgroundLayer.MatrixControl.RenderScale, Width, Height);
@@ -256,9 +241,9 @@ namespace ImageProcessor
             if (Selection != null)
                 Selection.ToDrawing = new MatrixTransform(ToCanvas);
             UpdateToolDrawing();
-            Point c0 = ToCanvas.Transform(new Point(0, 0));
-            Point cx = ToCanvas.Transform(new Point(backgroundLayoutSize.Width, backgroundLayoutSize.Height));
-            Debug.WriteLine("ImageSize=" + backgroundLayoutSize.ToString() + " c0=" + c0.ToString() + "cm=" + cx.ToString() + " 0->" + FromCanvas.Transform(c0).ToString() + " x->" + FromCanvas.Transform(cx).ToString()); 
+            //Point c0 = ToCanvas.Transform(new Point(0, 0));
+            //Point cx = ToCanvas.Transform(new Point(backgroundLayoutSize.Width, backgroundLayoutSize.Height));
+            //Debug.WriteLine("ImageSize=" + backgroundLayoutSize.ToString() + " c0=" + c0.ToString() + " cm=" + cx.ToString() + " 0->" + FromCanvas.Transform(c0).ToString() + " x->" + FromCanvas.Transform(cx).ToString()); 
             return true;
         }
         public int AddVisualLayer(VisualLayer vl)
@@ -299,10 +284,11 @@ namespace ImageProcessor
             if (ind < 0)
                 return -2;
             vl.InitializeTransforms(renderSrc);
-            vl.Name = renderSrc.Name + "#";
+            vl.Name = renderSrc.Name;
+            //Children[ind] = vl;
             Children.RemoveAt(ind);
             Children.Insert(ind, vl);
-            if(ind == 0 ) { BackgroundLayer = vl; }
+            if (ind == 0 ) { BackgroundLayer = vl; }
             ActiveLayer = vl;
             return ind;
         }
@@ -354,8 +340,6 @@ namespace ImageProcessor
                 return;
             if (panelHolder.ToolMode == ToolMode.Crop)
             {
-                if (XYmirroredFrame)
-                    size = size.XYmirrored;
                 CropRectangle = new CropRect(size, backgroundLayoutSize.Width / 2.0, backgroundLayoutSize.Height / 2.0);
                 CropRectangle.SetToDrawingTransform(BackgroundLayer.MatrixControl.RenderScale, Width, Height);
                 //Debug.WriteLine("Tool: Frame=" + backgroundLayoutSize.ToString() + "Crop set to " + CropRectangle.ToString());
@@ -429,7 +413,6 @@ namespace ImageProcessor
         }
         public string LoadFile(ImageFileInfo loadInfo, double replaceDuration)
         {
-            XYmirroredFrame = false;
             CropRectangle = null;
             if (replaceDuration > 0 && LayerCount > 0)
                 FadeAway(replaceDuration);
@@ -569,8 +552,8 @@ namespace ImageProcessor
             }
             Point c0 = ToCanvas.Transform(new Point(0, 0));
             Point cx = ToCanvas.Transform(new Point(backgroundLayoutSize.Width, backgroundLayoutSize.Height));
-            Debug.WriteLine("Image=" + backgroundLayoutSize.ToString() + " c0=" + c0.ToString() + "cm=" + cx.ToString() + " 0->" + FromCanvas.Transform(c0).ToString() + " x->" + FromCanvas.Transform(cx).ToString());
-            Debug.WriteLine("save=" + saveSize.ToString() + " c0=" + c0.ToString() + "cm=" + cx.ToString() + " 0->" + t.Transform(c0).ToString() + " x->" + t.Transform(cx).ToString());
+            //Debug.WriteLine("Image=" + backgroundLayoutSize.ToString() + " c0=" + c0.ToString() + " cm=" + cx.ToString() + " 0->" + FromCanvas.Transform(c0).ToString() + " x->" + FromCanvas.Transform(cx).ToString());
+            //Debug.WriteLine("save=" + saveSize.ToString() + " c0=" + c0.ToString() + " cm=" + cx.ToString() + " 0->" + t.Transform(c0).ToString() + " x->" + t.Transform(cx).ToString());
             RenderTransform = new MatrixTransform(t);
             tools.Clear();
             for (int i = 0; i < Children.Count; i++)
@@ -723,7 +706,7 @@ namespace ImageProcessor
                     {
                         mouseAction = panelHolder.ToolMode == ToolMode.Distortion3D ? ActiveLayer.MatrixControl.OperationFromPoint(position) :
                             panelHolder.ToolMode == ToolMode.Morph ? morphControl.OperationFromPoint(position) :
-                            panelHolder.ToolMode == ToolMode.None ? MouseAction.OperationFromMouse :
+                            panelHolder.ToolMode == ToolMode.Basic ? MouseAction.OperationFromMouse :
                             MouseOperation.None;
                     }
                     if (mouseAction == MouseOperation.Move || mouseAction == MouseOperation.None) // if higher than active layer clicked, set clicked layer as active
@@ -882,8 +865,7 @@ namespace ImageProcessor
             {
                 if (!collectedPolygon.IsEmpty)
                 {
-                    bool rect = panelHolder.ToolMode == ToolMode.RectSelection;
-                    if (rect)
+                    if (panelHolder.ToolMode == ToolMode.RectSelection)
                     {
                         collectedPolygon.SetRectangle(collectedPolygon.FromDrawing.Transform(position));
                         Selection = FlexiblePolygon.CreateFromRect(collectedPolygon);
@@ -891,8 +873,8 @@ namespace ImageProcessor
                     else
                     {
                         collectedPolygon.Close(collectedPolygon.FromDrawing.Transform(position));
-                        double len = Math.Sqrt(collectedPolygon.TotalLength() / getBackgroundScale()) + 1;
-                        //Debug.WriteLine("tot len=" + collectedPolygon.TotalLength().ToString("f1") + " scale=" + getBackgroundScale().ToString("f1") + " avr len=" + len.ToString("f1")+' '+ size.ToString());
+                        double len = Math.Sqrt(collectedPolygon.TotalLength() / BackgroundRenderScale) + 1;
+                        //Debug.WriteLine("tot len=" + collectedPolygon.TotalLength().ToString("f1") + " scale=" + BackgroundRenderScale.ToString("f1") + " avr len=" + len.ToString("f1")+' '+ size.ToString());
                         Polygon src = builder.CreateSmoothedPolygon(collectedPolygon, len);
                         Selection = new FlexiblePolygon(src);
                     }
@@ -900,12 +882,9 @@ namespace ImageProcessor
                     Int32Rect ir = Selection.IntRect(0);
                     if (!ir.IsEmpty)
                     {
-                        double dn = l * l / (ir.Width + ir.Height);
-                        //Debug.WriteLine("before " + flexPolygon.ToPointString());
-                        int changed = strokeEditor.StickToEdge(Selection, dn);
-                        //Debug.WriteLine("after " + flexPolygon.ToPointString());
-                        //Debug.WriteLine("len=" + len.ToString("f1") + " l=" + l.ToString("f1") + " dn=" + dn.ToString("f1") + " changed=" + changed);
-                        //Debug.WriteLine("strokeEdit SET");
+                        int searchRange = (int)(l * l / (ir.Width + ir.Height) + 0.5);
+                        int changed = strokeEditor.TryStickToImageEdge(Selection, searchRange);
+                        //Debug.WriteLineIf(changed > 0, " l=" + l.ToString("f1") + " searchRange=" + searchRange.ToString("f1") + " changed=" + changed);
                         strokeEdit = true;
                     }
                 }

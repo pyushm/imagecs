@@ -607,10 +607,10 @@ namespace ImageProcessor
                 locationTreeView.DoubleClick += (object s, EventArgs e) => { if (selectedNode != null) ShowImageListForm(selectedNode); };
                 displayResultsBtn.Click += (object o, EventArgs e) => { onSearchClick?.Invoke(); };
 
-                TreeNode nodeRoot = locationTreeView.Nodes.Add(navigator.Root.Name);
-                nodeRoot.Tag = navigator.Root;
+                TreeNode nodeRoot = locationTreeView.Nodes.Add(Navigator.Root.Name);
+                nodeRoot.Tag = Navigator.Root;
                 nodeRoot.Nodes.Add("fake");
-                itemInfoImages = new DirectoryInfoImages(locationTreeView, infoImagePanel, navigator.AllDevicy.Name);
+                itemInfoImages = new DirectoryInfoImages(locationTreeView, infoImagePanel, Enum.GetName(typeof(SpecName), SpecName.AllDevicy));
                 findImagePanel.Paint += new PaintEventHandler(DrawSearchImage);
                 findLookBtn.Enabled = false;
                 fileManager = new FileManager(navigator);
@@ -700,9 +700,9 @@ namespace ImageProcessor
         {
             DirectoryInfo dii = new DirectoryInfo(outputBox.Text);
             DirectoryInfo[] dirList=null;
-            if (navigator.IsAllDevicy(dii.Parent))
+            if (Navigator.IsSpecDir(dii.Parent, SpecName.AllDevicy))
                 dirList = dii.GetDirectories();
-            else if (navigator.IsAllDevicy(dii.Parent.Parent))
+            else if (Navigator.IsSpecDir(dii.Parent.Parent, SpecName.AllDevicy))
                 dirList = new DirectoryInfo[] { dii };
             foreach (DirectoryInfo dev in dirList)
             {
@@ -857,8 +857,8 @@ namespace ImageProcessor
                 MessageBox.Show("Directory " + di.FullName + " does not exist");
                 return;
             }
-            string allName = navigator.AllDevicy.Name;
-            ImageListForm sif = new ImageListForm(di, di.FullName == navigator.DirInfo(DirName.NewArticles).FullName, navigator);
+            //string allName = Navigator.AllDevicy.Name;
+            ImageListForm sif = new ImageListForm(di, di.FullName == Navigator.SpecDir(SpecName.NewArticles).FullName, navigator);
             invoked.Add(sif);
             try
             {

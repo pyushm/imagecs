@@ -562,7 +562,7 @@ namespace NNTP
 			try
 			{
 				if(imageListForm==null || imageListForm.IsDisposed)
-                    imageListForm = new ImageListForm(groupManager.Navigator.DirInfo(DirName.NewArticles), groupManager);
+                    imageListForm = new ImageListForm(ImageProcessor.Navigator.SpecDir(SpecName.NewArticles), groupManager);
 				imageListForm.Show();
 				if(fullFileName!=null && fullFileName.Length>0)
 					imageListForm.ViewImage(fullFileName);

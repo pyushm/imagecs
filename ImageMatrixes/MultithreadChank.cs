@@ -10,6 +10,8 @@ namespace ImageProcessor
         public int EndRow { get; private set; }
         public IntPtr FromData { get; private set; }    // start of from row data
         public IntPtr ToData { get; private set; }      // start of to row data
+        public int FromStride { get; private set; }
+        public int ToStride { get; private set; }
         public static Chank[] CreateChanks(int height, int rowsPerChank, WriteableBitmap from, WriteableBitmap to)
         {
             IntPtr fromBuffer = from != null ? from.BackBuffer : IntPtr.Zero;
@@ -28,6 +30,8 @@ namespace ImageProcessor
                 rowStart[i] = (ushort)(i == 0 ? margin : i == count ? height - margin : i * rows);
             for (ushort i = 0; i < count; i++)
             {
+                chanks[i].FromStride = fromStride;
+                chanks[i].ToStride = toStride;
                 chanks[i].StartRow = rowStart[i];
                 chanks[i].EndRow = rowStart[i + 1];
                 chanks[i].FromData = fromBuffer + rowStart[i] * fromStride;
@@ -39,14 +43,5 @@ namespace ImageProcessor
         {
             return "StartRow=" + StartRow + " EndRow=" + EndRow + " FromData=" + FromData + " ToData=" + ToData;
         }
-        //public static Chank[] CreateChanks(ByteMatrix mask, WriteableBitmap from, WriteableBitmap to)
-        //{
-        //    Chank[] chanks = new Chank[1];
-        //    chanks[0].StartRow = (ushort)mask.RowStart;
-        //    chanks[0].EndRow = (ushort)mask.RowEnd;
-        //    chanks[0].FromData = from.BackBuffer + chanks[0].StartRow * from.BackBufferStride + mask.RowOffset * from.Format.BitsPerPixel/8;
-        //    chanks[0].ToData = to.BackBuffer + chanks[0].StartRow * to.BackBufferStride + mask.RowOffset * 4; ;
-        //    return chanks;
-        //}
     }
 }

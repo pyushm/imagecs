@@ -8,6 +8,7 @@ using System.Windows.Forms.Integration;
 using System.Diagnostics;
 using CustomControls;
 using System.Windows.Media.Imaging;
+using System.Media;
 using ShaderEffects;
 
 namespace ImageProcessor
@@ -18,7 +19,6 @@ namespace ImageProcessor
         DrawingPanel canvas;
         float dpiScaleX = 1;
         float dpiScaleY = 1;
-        //double[] effectParameters = new double[] { 0, 0, 1 };
         ImageEditForm editForm = null;
         int viewingAreaOffset;				// viewing area offset from left of client rectangle
         ImageListForm parent;				// parent image list form
@@ -33,13 +33,14 @@ namespace ImageProcessor
         bool userInput = false;
         string deletedImageName = null;
         string deletedImageFile = "deletedImage";
+        int direction = 0;
         private Label label2;
         private NumericUpDown angleCtrl;
         private Label label1;
         private NumericUpDown scaleCtrl;
         private Button nextSetButton;
         private Button previousSetButton;
-        private ComboBox saveTypeBox;
+        private ComboBox actionBox;
         private Button sharpenButton;
         private Button restoreButton;
         private Button applyEffectsButton;
@@ -62,6 +63,8 @@ namespace ImageProcessor
         private ComboBox sensitivityBox;
         private Panel nextImagePanel;
         private TextBox warningBox;
+        private Label label3;
+        private NumericUpDown delayBox;
         private Label mouseSensitivityLabel;
         protected override void Dispose(bool disposing)
         {
@@ -84,7 +87,7 @@ namespace ImageProcessor
             this.scaleCtrl = new System.Windows.Forms.NumericUpDown();
             this.nextSetButton = new System.Windows.Forms.Button();
             this.previousSetButton = new System.Windows.Forms.Button();
-            this.saveTypeBox = new System.Windows.Forms.ComboBox();
+            this.actionBox = new System.Windows.Forms.ComboBox();
             this.sharpenButton = new System.Windows.Forms.Button();
             this.restoreButton = new System.Windows.Forms.Button();
             this.applyEffectsButton = new System.Windows.Forms.Button();
@@ -108,19 +111,22 @@ namespace ImageProcessor
             this.panel = new System.Windows.Forms.Panel();
             this.nextImagePanel = new System.Windows.Forms.Panel();
             this.warningBox = new System.Windows.Forms.TextBox();
+            this.label3 = new System.Windows.Forms.Label();
+            this.delayBox = new System.Windows.Forms.NumericUpDown();
             ((System.ComponentModel.ISupportInitialize)(this.angleCtrl)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.scaleCtrl)).BeginInit();
             this.groupBox5.SuspendLayout();
             this.imageGroupBox.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.delayBox)).BeginInit();
             this.SuspendLayout();
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(20, 738);
-            this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label2.Location = new System.Drawing.Point(27, 922);
+            this.label2.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(50, 20);
+            this.label2.Size = new System.Drawing.Size(67, 25);
             this.label2.TabIndex = 83;
             this.label2.Text = "Angle";
             // 
@@ -132,8 +138,8 @@ namespace ImageProcessor
             0,
             0,
             65536});
-            this.angleCtrl.Location = new System.Drawing.Point(94, 735);
-            this.angleCtrl.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.angleCtrl.Location = new System.Drawing.Point(125, 919);
+            this.angleCtrl.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.angleCtrl.Maximum = new decimal(new int[] {
             999,
             0,
@@ -145,16 +151,16 @@ namespace ImageProcessor
             0,
             -2147483648});
             this.angleCtrl.Name = "angleCtrl";
-            this.angleCtrl.Size = new System.Drawing.Size(93, 26);
+            this.angleCtrl.Size = new System.Drawing.Size(124, 31);
             this.angleCtrl.TabIndex = 82;
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(20, 703);
-            this.label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label1.Location = new System.Drawing.Point(27, 879);
+            this.label1.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(49, 20);
+            this.label1.Size = new System.Drawing.Size(66, 25);
             this.label1.TabIndex = 80;
             this.label1.Text = "Scale";
             // 
@@ -166,15 +172,15 @@ namespace ImageProcessor
             0,
             0,
             196608});
-            this.scaleCtrl.Location = new System.Drawing.Point(94, 700);
-            this.scaleCtrl.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.scaleCtrl.Location = new System.Drawing.Point(125, 875);
+            this.scaleCtrl.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.scaleCtrl.Minimum = new decimal(new int[] {
             1,
             0,
             0,
             131072});
             this.scaleCtrl.Name = "scaleCtrl";
-            this.scaleCtrl.Size = new System.Drawing.Size(93, 26);
+            this.scaleCtrl.Size = new System.Drawing.Size(124, 31);
             this.scaleCtrl.TabIndex = 81;
             this.scaleCtrl.Value = new decimal(new int[] {
             1,
@@ -186,32 +192,32 @@ namespace ImageProcessor
             // 
             this.nextSetButton.Font = new System.Drawing.Font("Webdings", 12F);
             this.nextSetButton.Image = ((System.Drawing.Image)(resources.GetObject("nextSetButton.Image")));
-            this.nextSetButton.Location = new System.Drawing.Point(154, 18);
-            this.nextSetButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.nextSetButton.Location = new System.Drawing.Point(205, 22);
+            this.nextSetButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.nextSetButton.Name = "nextSetButton";
-            this.nextSetButton.Size = new System.Drawing.Size(39, 34);
+            this.nextSetButton.Size = new System.Drawing.Size(52, 42);
             this.nextSetButton.TabIndex = 78;
             // 
             // previousSetButton
             // 
             this.previousSetButton.Font = new System.Drawing.Font("Webdings", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
             this.previousSetButton.Image = ((System.Drawing.Image)(resources.GetObject("previousSetButton.Image")));
-            this.previousSetButton.Location = new System.Drawing.Point(16, 18);
-            this.previousSetButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.previousSetButton.Location = new System.Drawing.Point(21, 22);
+            this.previousSetButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.previousSetButton.Name = "previousSetButton";
-            this.previousSetButton.Size = new System.Drawing.Size(39, 34);
+            this.previousSetButton.Size = new System.Drawing.Size(52, 42);
             this.previousSetButton.TabIndex = 77;
             // 
-            // saveTypeBox
+            // actionBox
             // 
-            this.saveTypeBox.AccessibleRole = System.Windows.Forms.AccessibleRole.None;
-            this.saveTypeBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.saveTypeBox.FormattingEnabled = true;
-            this.saveTypeBox.Location = new System.Drawing.Point(16, 102);
-            this.saveTypeBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
-            this.saveTypeBox.Name = "saveTypeBox";
-            this.saveTypeBox.Size = new System.Drawing.Size(175, 28);
-            this.saveTypeBox.TabIndex = 76;
+            this.actionBox.AccessibleRole = System.Windows.Forms.AccessibleRole.None;
+            this.actionBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.actionBox.FormattingEnabled = true;
+            this.actionBox.Location = new System.Drawing.Point(21, 128);
+            this.actionBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.actionBox.Name = "actionBox";
+            this.actionBox.Size = new System.Drawing.Size(232, 33);
+            this.actionBox.TabIndex = 76;
             // 
             // sharpenButton
             // 
@@ -219,10 +225,10 @@ namespace ImageProcessor
             this.sharpenButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Red;
             this.sharpenButton.ForeColor = System.Drawing.SystemColors.HighlightText;
             this.sharpenButton.Image = ((System.Drawing.Image)(resources.GetObject("sharpenButton.Image")));
-            this.sharpenButton.Location = new System.Drawing.Point(112, 218);
-            this.sharpenButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.sharpenButton.Location = new System.Drawing.Point(149, 272);
+            this.sharpenButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.sharpenButton.Name = "sharpenButton";
-            this.sharpenButton.Size = new System.Drawing.Size(81, 34);
+            this.sharpenButton.Size = new System.Drawing.Size(108, 42);
             this.sharpenButton.TabIndex = 75;
             this.sharpenButton.Text = "Sharpen";
             // 
@@ -230,10 +236,10 @@ namespace ImageProcessor
             // 
             this.restoreButton.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
             this.restoreButton.Image = ((System.Drawing.Image)(resources.GetObject("restoreButton.Image")));
-            this.restoreButton.Location = new System.Drawing.Point(112, 175);
-            this.restoreButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.restoreButton.Location = new System.Drawing.Point(149, 219);
+            this.restoreButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.restoreButton.Name = "restoreButton";
-            this.restoreButton.Size = new System.Drawing.Size(81, 34);
+            this.restoreButton.Size = new System.Drawing.Size(108, 42);
             this.restoreButton.TabIndex = 74;
             this.restoreButton.Text = "Restore";
             // 
@@ -243,10 +249,10 @@ namespace ImageProcessor
             this.applyEffectsButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Red;
             this.applyEffectsButton.ForeColor = System.Drawing.SystemColors.HighlightText;
             this.applyEffectsButton.Image = ((System.Drawing.Image)(resources.GetObject("applyEffectsButton.Image")));
-            this.applyEffectsButton.Location = new System.Drawing.Point(16, 218);
-            this.applyEffectsButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.applyEffectsButton.Location = new System.Drawing.Point(21, 272);
+            this.applyEffectsButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.applyEffectsButton.Name = "applyEffectsButton";
-            this.applyEffectsButton.Size = new System.Drawing.Size(81, 34);
+            this.applyEffectsButton.Size = new System.Drawing.Size(108, 42);
             this.applyEffectsButton.TabIndex = 73;
             this.applyEffectsButton.Text = "Effects";
             // 
@@ -256,10 +262,10 @@ namespace ImageProcessor
             this.saveAsButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Red;
             this.saveAsButton.ForeColor = System.Drawing.SystemColors.HighlightText;
             this.saveAsButton.Image = ((System.Drawing.Image)(resources.GetObject("saveAsButton.Image")));
-            this.saveAsButton.Location = new System.Drawing.Point(112, 58);
-            this.saveAsButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.saveAsButton.Location = new System.Drawing.Point(149, 72);
+            this.saveAsButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.saveAsButton.Name = "saveAsButton";
-            this.saveAsButton.Size = new System.Drawing.Size(81, 34);
+            this.saveAsButton.Size = new System.Drawing.Size(108, 42);
             this.saveAsButton.TabIndex = 72;
             this.saveAsButton.Text = "Save as";
             this.saveAsButton.Click += new System.EventHandler(this.saveAsButton_Click);
@@ -270,10 +276,10 @@ namespace ImageProcessor
             this.saveButton.FlatAppearance.MouseOverBackColor = System.Drawing.Color.Red;
             this.saveButton.ForeColor = System.Drawing.SystemColors.HighlightText;
             this.saveButton.Image = ((System.Drawing.Image)(resources.GetObject("saveButton.Image")));
-            this.saveButton.Location = new System.Drawing.Point(16, 58);
-            this.saveButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.saveButton.Location = new System.Drawing.Point(21, 72);
+            this.saveButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.saveButton.Name = "saveButton";
-            this.saveButton.Size = new System.Drawing.Size(81, 34);
+            this.saveButton.Size = new System.Drawing.Size(108, 42);
             this.saveButton.TabIndex = 69;
             this.saveButton.Text = "Save";
             this.saveButton.Click += new System.EventHandler(this.saveButton_Click);
@@ -284,11 +290,11 @@ namespace ImageProcessor
             this.groupBox5.Controls.Add(this.rotateLeftButton);
             this.groupBox5.Controls.Add(this.rotateRightButton);
             this.groupBox5.Controls.Add(this.flipHorisontalButton);
-            this.groupBox5.Location = new System.Drawing.Point(2, 628);
-            this.groupBox5.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.groupBox5.Location = new System.Drawing.Point(3, 785);
+            this.groupBox5.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.groupBox5.Name = "groupBox5";
-            this.groupBox5.Padding = new System.Windows.Forms.Padding(4, 5, 4, 5);
-            this.groupBox5.Size = new System.Drawing.Size(204, 68);
+            this.groupBox5.Padding = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.groupBox5.Size = new System.Drawing.Size(272, 85);
             this.groupBox5.TabIndex = 66;
             this.groupBox5.TabStop = false;
             this.groupBox5.Text = "Flip/Rotate";
@@ -297,40 +303,40 @@ namespace ImageProcessor
             // 
             this.flipVerticalButton.Font = new System.Drawing.Font("Webdings", 12F);
             this.flipVerticalButton.Image = ((System.Drawing.Image)(resources.GetObject("flipVerticalButton.Image")));
-            this.flipVerticalButton.Location = new System.Drawing.Point(104, 25);
-            this.flipVerticalButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.flipVerticalButton.Location = new System.Drawing.Point(139, 31);
+            this.flipVerticalButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.flipVerticalButton.Name = "flipVerticalButton";
-            this.flipVerticalButton.Size = new System.Drawing.Size(33, 34);
+            this.flipVerticalButton.Size = new System.Drawing.Size(44, 42);
             this.flipVerticalButton.TabIndex = 25;
             // 
             // rotateLeftButton
             // 
             this.rotateLeftButton.Font = new System.Drawing.Font("Webdings", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
             this.rotateLeftButton.Image = ((System.Drawing.Image)(resources.GetObject("rotateLeftButton.Image")));
-            this.rotateLeftButton.Location = new System.Drawing.Point(16, 23);
-            this.rotateLeftButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.rotateLeftButton.Location = new System.Drawing.Point(21, 29);
+            this.rotateLeftButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.rotateLeftButton.Name = "rotateLeftButton";
-            this.rotateLeftButton.Size = new System.Drawing.Size(33, 34);
+            this.rotateLeftButton.Size = new System.Drawing.Size(44, 42);
             this.rotateLeftButton.TabIndex = 23;
             // 
             // rotateRightButton
             // 
             this.rotateRightButton.Font = new System.Drawing.Font("Webdings", 12F);
             this.rotateRightButton.Image = ((System.Drawing.Image)(resources.GetObject("rotateRightButton.Image")));
-            this.rotateRightButton.Location = new System.Drawing.Point(60, 25);
-            this.rotateRightButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.rotateRightButton.Location = new System.Drawing.Point(80, 31);
+            this.rotateRightButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.rotateRightButton.Name = "rotateRightButton";
-            this.rotateRightButton.Size = new System.Drawing.Size(33, 34);
+            this.rotateRightButton.Size = new System.Drawing.Size(44, 42);
             this.rotateRightButton.TabIndex = 24;
             // 
             // flipHorisontalButton
             // 
             this.flipHorisontalButton.Font = new System.Drawing.Font("Webdings", 12F);
             this.flipHorisontalButton.Image = ((System.Drawing.Image)(resources.GetObject("flipHorisontalButton.Image")));
-            this.flipHorisontalButton.Location = new System.Drawing.Point(147, 23);
-            this.flipHorisontalButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.flipHorisontalButton.Location = new System.Drawing.Point(196, 29);
+            this.flipHorisontalButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.flipHorisontalButton.Name = "flipHorisontalButton";
-            this.flipHorisontalButton.Size = new System.Drawing.Size(33, 34);
+            this.flipHorisontalButton.Size = new System.Drawing.Size(44, 42);
             this.flipHorisontalButton.TabIndex = 26;
             // 
             // imageGroupBox
@@ -340,11 +346,11 @@ namespace ImageProcessor
             this.imageGroupBox.Controls.Add(this.sameTransformButton);
             this.imageGroupBox.Controls.Add(this.saturationControl);
             this.imageGroupBox.Controls.Add(this.brightnessControl);
-            this.imageGroupBox.Location = new System.Drawing.Point(2, 262);
-            this.imageGroupBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.imageGroupBox.Location = new System.Drawing.Point(3, 328);
+            this.imageGroupBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.imageGroupBox.Name = "imageGroupBox";
-            this.imageGroupBox.Padding = new System.Windows.Forms.Padding(4, 5, 4, 5);
-            this.imageGroupBox.Size = new System.Drawing.Size(204, 357);
+            this.imageGroupBox.Padding = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.imageGroupBox.Size = new System.Drawing.Size(272, 446);
             this.imageGroupBox.TabIndex = 71;
             this.imageGroupBox.TabStop = false;
             this.imageGroupBox.Text = "Adjust image";
@@ -352,19 +358,19 @@ namespace ImageProcessor
             // sensitivityBox
             // 
             this.sensitivityBox.IntegralHeight = false;
-            this.sensitivityBox.Location = new System.Drawing.Point(136, 62);
-            this.sensitivityBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.sensitivityBox.Location = new System.Drawing.Point(181, 78);
+            this.sensitivityBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.sensitivityBox.Name = "sensitivityBox";
-            this.sensitivityBox.Size = new System.Drawing.Size(60, 28);
+            this.sensitivityBox.Size = new System.Drawing.Size(79, 33);
             this.sensitivityBox.TabIndex = 46;
             // 
             // mouseSensitivityLabel
             // 
             this.mouseSensitivityLabel.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
-            this.mouseSensitivityLabel.Location = new System.Drawing.Point(2, 62);
-            this.mouseSensitivityLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.mouseSensitivityLabel.Location = new System.Drawing.Point(3, 78);
+            this.mouseSensitivityLabel.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
             this.mouseSensitivityLabel.Name = "mouseSensitivityLabel";
-            this.mouseSensitivityLabel.Size = new System.Drawing.Size(134, 28);
+            this.mouseSensitivityLabel.Size = new System.Drawing.Size(179, 35);
             this.mouseSensitivityLabel.TabIndex = 46;
             this.mouseSensitivityLabel.Text = "Mouse sensitivity";
             this.mouseSensitivityLabel.TextAlign = System.Drawing.ContentAlignment.TopRight;
@@ -372,10 +378,10 @@ namespace ImageProcessor
             // sameTransformButton
             // 
             this.sameTransformButton.AutoSize = true;
-            this.sameTransformButton.Location = new System.Drawing.Point(15, 26);
-            this.sameTransformButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.sameTransformButton.Location = new System.Drawing.Point(20, 32);
+            this.sameTransformButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.sameTransformButton.Name = "sameTransformButton";
-            this.sameTransformButton.Size = new System.Drawing.Size(130, 24);
+            this.sameTransformButton.Size = new System.Drawing.Size(170, 29);
             this.sameTransformButton.TabIndex = 31;
             this.sameTransformButton.TabStop = true;
             this.sameTransformButton.Text = "Repeat same";
@@ -385,21 +391,23 @@ namespace ImageProcessor
             // saturationControl
             // 
             this.saturationControl.Colors = null;
-            this.saturationControl.Location = new System.Drawing.Point(3, 240);
+            this.saturationControl.Location = new System.Drawing.Point(4, 300);
+            this.saturationControl.Margin = new System.Windows.Forms.Padding(4);
             this.saturationControl.Name = "saturationControl";
             this.saturationControl.Offset = -0.4F;
             this.saturationControl.Range = 0.8F;
-            this.saturationControl.Size = new System.Drawing.Size(198, 105);
+            this.saturationControl.Size = new System.Drawing.Size(264, 131);
             this.saturationControl.TabIndex = 21;
             this.saturationControl.Title = "Saturation";
             // 
             // brightnessControl
             // 
-            this.brightnessControl.Location = new System.Drawing.Point(3, 93);
+            this.brightnessControl.Location = new System.Drawing.Point(4, 116);
+            this.brightnessControl.Margin = new System.Windows.Forms.Padding(4);
             this.brightnessControl.Name = "brightnessControl";
             this.brightnessControl.Offset = -0.4F;
             this.brightnessControl.Range = 0.8F;
-            this.brightnessControl.Size = new System.Drawing.Size(198, 131);
+            this.brightnessControl.Size = new System.Drawing.Size(264, 164);
             this.brightnessControl.TabIndex = 29;
             this.brightnessControl.Title = "Brightness";
             // 
@@ -407,10 +415,10 @@ namespace ImageProcessor
             // 
             this.deleteButton.ForeColor = System.Drawing.SystemColors.ButtonHighlight;
             this.deleteButton.Image = ((System.Drawing.Image)(resources.GetObject("deleteButton.Image")));
-            this.deleteButton.Location = new System.Drawing.Point(16, 177);
-            this.deleteButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.deleteButton.Location = new System.Drawing.Point(21, 221);
+            this.deleteButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.deleteButton.Name = "deleteButton";
-            this.deleteButton.Size = new System.Drawing.Size(81, 34);
+            this.deleteButton.Size = new System.Drawing.Size(108, 42);
             this.deleteButton.TabIndex = 70;
             this.deleteButton.Text = "Delete";
             // 
@@ -418,29 +426,29 @@ namespace ImageProcessor
             // 
             this.nextImageButton.Font = new System.Drawing.Font("Webdings", 12F);
             this.nextImageButton.Image = ((System.Drawing.Image)(resources.GetObject("nextImageButton.Image")));
-            this.nextImageButton.Location = new System.Drawing.Point(112, 18);
-            this.nextImageButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.nextImageButton.Location = new System.Drawing.Point(149, 22);
+            this.nextImageButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.nextImageButton.Name = "nextImageButton";
-            this.nextImageButton.Size = new System.Drawing.Size(39, 34);
+            this.nextImageButton.Size = new System.Drawing.Size(52, 42);
             this.nextImageButton.TabIndex = 67;
             // 
             // previousImageButton
             // 
             this.previousImageButton.Font = new System.Drawing.Font("Webdings", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(2)));
             this.previousImageButton.Image = ((System.Drawing.Image)(resources.GetObject("previousImageButton.Image")));
-            this.previousImageButton.Location = new System.Drawing.Point(58, 18);
-            this.previousImageButton.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.previousImageButton.Location = new System.Drawing.Point(77, 22);
+            this.previousImageButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.previousImageButton.Name = "previousImageButton";
-            this.previousImageButton.Size = new System.Drawing.Size(39, 34);
+            this.previousImageButton.Size = new System.Drawing.Size(52, 42);
             this.previousImageButton.TabIndex = 68;
             // 
             // resizeBox
             // 
             this.resizeBox.AutoSize = true;
-            this.resizeBox.Location = new System.Drawing.Point(24, 140);
-            this.resizeBox.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.resizeBox.Location = new System.Drawing.Point(32, 175);
+            this.resizeBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.resizeBox.Name = "resizeBox";
-            this.resizeBox.Size = new System.Drawing.Size(136, 24);
+            this.resizeBox.Size = new System.Drawing.Size(184, 29);
             this.resizeBox.TabIndex = 65;
             this.resizeBox.Text = "Max size 2000";
             this.resizeBox.UseVisualStyleBackColor = true;
@@ -448,35 +456,66 @@ namespace ImageProcessor
             // 
             // panel
             // 
-            this.panel.Location = new System.Drawing.Point(208, 0);
-            this.panel.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
+            this.panel.Location = new System.Drawing.Point(277, 0);
+            this.panel.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.panel.Name = "panel";
-            this.panel.Size = new System.Drawing.Size(1450, 1520);
+            this.panel.Size = new System.Drawing.Size(1933, 1900);
             this.panel.TabIndex = 84;
             // 
             // nextImagePanel
             // 
             this.nextImagePanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.nextImagePanel.Location = new System.Drawing.Point(5, 775);
+            this.nextImagePanel.Location = new System.Drawing.Point(7, 969);
             this.nextImagePanel.Margin = new System.Windows.Forms.Padding(0);
             this.nextImagePanel.Name = "nextImagePanel";
-            this.nextImagePanel.Size = new System.Drawing.Size(200, 213);
+            this.nextImagePanel.Size = new System.Drawing.Size(266, 266);
             this.nextImagePanel.TabIndex = 85;
             // 
             // warningBox
             // 
-            this.warningBox.Location = new System.Drawing.Point(8, 1004);
+            this.warningBox.Location = new System.Drawing.Point(7, 1285);
             this.warningBox.Margin = new System.Windows.Forms.Padding(1);
             this.warningBox.Multiline = true;
             this.warningBox.Name = "warningBox";
-            this.warningBox.Size = new System.Drawing.Size(195, 232);
+            this.warningBox.Size = new System.Drawing.Size(266, 289);
             this.warningBox.TabIndex = 86;
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(27, 1249);
+            this.label3.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(67, 25);
+            this.label3.TabIndex = 87;
+            this.label3.Text = "Delay";
+            // 
+            // delayBox
+            // 
+            this.delayBox.DecimalPlaces = 1;
+            this.delayBox.Increment = new decimal(new int[] {
+            5,
+            0,
+            0,
+            65536});
+            this.delayBox.Location = new System.Drawing.Point(125, 1247);
+            this.delayBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.delayBox.Maximum = new decimal(new int[] {
+            60,
+            0,
+            0,
+            0});
+            this.delayBox.Name = "delayBox";
+            this.delayBox.Size = new System.Drawing.Size(124, 31);
+            this.delayBox.TabIndex = 88;
             // 
             // ImageViewForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(2073, 1903);
+            this.ClientSize = new System.Drawing.Size(2764, 2379);
+            this.Controls.Add(this.delayBox);
+            this.Controls.Add(this.label3);
             this.Controls.Add(this.warningBox);
             this.Controls.Add(this.nextImagePanel);
             this.Controls.Add(this.panel);
@@ -486,7 +525,7 @@ namespace ImageProcessor
             this.Controls.Add(this.scaleCtrl);
             this.Controls.Add(this.nextSetButton);
             this.Controls.Add(this.previousSetButton);
-            this.Controls.Add(this.saveTypeBox);
+            this.Controls.Add(this.actionBox);
             this.Controls.Add(this.sharpenButton);
             this.Controls.Add(this.restoreButton);
             this.Controls.Add(this.applyEffectsButton);
@@ -499,8 +538,8 @@ namespace ImageProcessor
             this.Controls.Add(this.previousImageButton);
             this.Controls.Add(this.resizeBox);
             this.KeyPreview = true;
-            this.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
-            this.MinimumSize = new System.Drawing.Size(928, 958);
+            this.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.MinimumSize = new System.Drawing.Size(1229, 1180);
             this.Name = "ImageViewForm";
             this.Text = "Image Editing Form";
             this.Resize += new System.EventHandler(this.FormResize);
@@ -509,6 +548,7 @@ namespace ImageProcessor
             this.groupBox5.ResumeLayout(false);
             this.imageGroupBox.ResumeLayout(false);
             this.imageGroupBox.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.delayBox)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -537,8 +577,8 @@ namespace ImageProcessor
             brightnessControl.ControlPoints = new float[] { 50, 0, 50, 50, 50, 100 };
             viewingAreaOffset = panel.Location.X;
             panel.Size = new System.Drawing.Size(ClientSize.Width - viewingAreaOffset, ClientSize.Height);
-            nextImageButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles?.NavigateTo(1)); };
-            previousImageButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles?.NavigateTo(-1)); };
+            nextImageButton.Click += delegate (object sender, EventArgs e) { direction = 1; ShowNewImage(imageFiles?.NavigateTo(direction)); };
+            previousImageButton.Click += delegate (object sender, EventArgs e) { direction = -1; ShowNewImage(imageFiles?.NavigateTo(direction)); };
             nextSetButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles?.NavigateToGroup(true)); };
             previousSetButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles?.NavigateToGroup(false)); };
             scaleCtrl.ValueChanged += delegate (object sender, EventArgs e) { GeometryTransformChanged(); };
@@ -557,11 +597,11 @@ namespace ImageProcessor
             sensitivityBox.Items.AddRange(NumEnum.Values(typeof(MouseSensitivity), 0.1));
             sensitivityBox.SelectedIndex = 2;
             KeyUp += CaptureCtrlC;
-            saveTypeBox.Items.Add("Crop");
-            saveTypeBox.Items.AddRange(Enum.GetNames(typeof(InfoType)));
-            saveTypeBox.Items.Add("Selection");
-            saveTypeBox.Items.Add("RectSelection");
-            saveTypeBox.KeyPress += delegate (object sender, KeyPressEventArgs e) { if (ModifierKeys == Keys.Control) e.Handled = true; };
+            actionBox.Items.Add("Crop");
+            actionBox.Items.AddRange(Enum.GetNames(typeof(InfoType)));
+            actionBox.Items.Add("Selection");
+            actionBox.Items.Add("RectSelection");
+            actionBox.KeyPress += delegate (object sender, KeyPressEventArgs e) { if (ModifierKeys == Keys.Control) e.Handled = true; };
             parent = parentListForm;
             if (parent != null)             // launched from parent list form
                 imageFiles = parent.ImageCollection;
@@ -573,7 +613,7 @@ namespace ImageProcessor
                 nextSetButton.Enabled = false;
                 previousSetButton.Enabled = false;
             }
-            saveTypeBox.DropDownClosed += new EventHandler(SaveTypeChanged);
+            actionBox.DropDownClosed += new EventHandler(SaveTypeChanged);
             Load += ImageViewForm_Load;
         }
         private void ImageViewForm_Load(object sender, EventArgs e)
@@ -591,22 +631,10 @@ namespace ImageProcessor
         {
             //Debug.WriteLine("View Modifier=" + Keyboard.Modifiers.ToString() + " key=" + e.KeyCode.ToString() + " " + Keyboard.IsKeyDown(Key.LeftCtrl));
             if (e.KeyCode == Keys.C && Keyboard.IsKeyDown(Key.LeftCtrl))
+            {
                 canvas.SetClipboardFromSelection();
-        }
-        void SetInitialState(bool XYmirrored = false)
-        {
-            canvas.XYmirroredFrame = XYmirrored;
-            RescaleCanvas(true);
-            //if (saveTypeBox.SelectedIndex != 0)
-            //    saveTypeBox.SelectedIndex = 0;
-            saveTypeBox.SelectedItem = SaveTypeString();
-            infoMode = false;
-            saveButton.Enabled = resizeBox.Checked;
-            imageModified = false;
-            deleteButton.Enabled = true;
-            angleCtrl.Value = 0;
-            scaleCtrl.Value = 1;
-            SetCutRectangle();
+                SystemSounds.Beep.Play();
+            }
         }
         void SetCutRectangle()
         {
@@ -623,12 +651,11 @@ namespace ImageProcessor
             {
                 nextImagePanel.Invalidate();
                 userInput = false;
-                //effectParameters = new double[] { 0, 0, 1 };
                 saveButton.Enabled = resizeBox.Checked;
                 imageModified = false;
                 deleteButton.Enabled = true;
                 imageInfo = new ImageFileInfo(new FileInfo(fsPath));
-                string warn = canvas.LoadFile(imageInfo, 0.5);
+                string warn = canvas.LoadFile(imageInfo, (double)delayBox.Value+0.3);
                 if (warn.Length > 0)
                 {
                     if (imageInfo.IsEncrypted && warn == DataAccess.NullCipher)
@@ -643,7 +670,15 @@ namespace ImageProcessor
                 if(!colorTransform.IsIdentical)
                     previousColorTransform.CopyFrom(colorTransform);
                 colorTransform.Set();
-                SetInitialState();
+                RescaleCanvas(true);
+                actionBox.SelectedItem = ToolMode == ToolMode.FreeSelection ? "Selection" : ToolMode == ToolMode.RectSelection ? "RectSelection" : "Crop";
+                infoMode = false;
+                saveButton.Enabled = resizeBox.Checked;
+                imageModified = false;
+                deleteButton.Enabled = true;
+                angleCtrl.Value = 0;
+                scaleCtrl.Value = 1;
+                SetCutRectangle();
                 canvas.UpdateActiveLayer(0);
                 SetWindowTitle();
                 UpdateColorControls();
@@ -658,12 +693,35 @@ namespace ImageProcessor
                 Debug.WriteLine("ShowNewImage: Unable to diplay image " + imageInfo.FSPath + ": " + ex.Message);
             }
         }
+        void DrawNextImage(object sender, PaintEventArgs e)
+        {
+            if (imageFiles == null || imageFiles.Count < 1)
+                return;
+            try
+            {
+                int ind = imageFiles.NewInd(direction);
+                var file = ind >= 0 ? imageFiles[ind] : null;
+                ImageFileInfo ifi = new ImageFileInfo(new FileInfo(file.FSPath));
+                Image im = ifi.SynchronizeThumbnail();
+                float areaSize = 138 * e.Graphics.DpiX / 96;
+                float scale = Math.Min(areaSize / im.Width, areaSize / im.Height);
+                float iw = im.Width * scale;
+                float ih = im.Height * scale;
+                float d = (iw - ih) / 2;
+                PointF del = d < 0 ? new PointF(-d, 0) : new PointF(0, d);
+                e.Graphics.DrawImage(im, del.X, del.Y, iw, ih);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+        }
         void SetWindowTitle()
         {
             string dir = imageFiles != null ? imageFiles.RealName : Path.GetDirectoryName(imageInfo.RealPath);
             Text = dir + '/'+ imageInfo.RealName + ' ' + imageInfo.StoreTypeString + ' ' + canvas.FrameSizeString;
         }
-        void RescaleCanvas(bool initial) { canvas.Resize(initial, 0, panel.Width / dpiScaleX, panel.Height / dpiScaleY); }
+        void RescaleCanvas(bool initial) { canvas.ResizeImage(initial, 0, panel.Width / dpiScaleX, panel.Height / dpiScaleY); }
         void FormResize(object s, EventArgs e)
         {
             panel.Size = new System.Drawing.Size(ClientSize.Width - viewingAreaOffset, ClientSize.Height);
@@ -735,8 +793,6 @@ namespace ImageProcessor
             var vl = new BitmapDerivativeLayer("", bl.Image, new GradientContrastEffect(), 0);
             if (vl == null) 
                 return;
-            //effectParameters = new double[] { 0.5, 1, 2 };
-            //vl.SetEffectParameters(effectParameters);
             vl.SetEffectParameters(0.5, 1, 2);
             canvas.ReplaceVisuallLayer(vl, bl);
             backgroundLayer = canvas.ActiveLayer;
@@ -784,41 +840,9 @@ namespace ImageProcessor
             else
                 ShowNewImage(path);
         }
-        void DrawNextImage(object sender, PaintEventArgs e)
-        {
-            if (imageFiles == null || imageFiles.Count < 1)
-                return;
-            try
-            {
-                int ind = imageFiles.NewInd(1);
-                var file = ind >= 0 ? imageFiles[ind] : null;
-                ImageFileInfo ifi = new ImageFileInfo(new FileInfo(file.FSPath));
-                Image im = ifi.SynchronizeThumbnail();
-                float areaSize = 138 * e.Graphics.DpiX / 96;
-                float scale = Math.Min(areaSize / im.Width, areaSize / im.Height);
-                float iw = im.Width * scale;
-                float ih = im.Height * scale;
-                float d = (iw - ih) / 2;
-                PointF del = d < 0 ? new PointF(-d, 0) : new PointF(0, d);
-                e.Graphics.DrawImage(im, del.X, del.Y, iw, ih);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-            }
-        }
-        string SaveTypeString()
-        {
-            switch(ToolMode)
-            {
-                case ToolMode.FreeSelection:    return "Selection";
-                case ToolMode.RectSelection:    return "RectSelection";
-                default:                        return "Crop";
-            }
-        }
         void SaveTypeChanged(object sender, EventArgs e)
         {
-            string str = (string)saveTypeBox.SelectedItem;
+            string str = (string)actionBox.SelectedItem;
             if (str.StartsWith("Selection"))
             {
                 ToolMode = ToolMode.FreeSelection;
@@ -834,13 +858,13 @@ namespace ImageProcessor
             else if (str.StartsWith("Crop"))
             {
                 ToolMode = ToolMode.Crop;
-                SetInitialState();
+                SetCutRectangle();
             }
             else
             {
                 object o = Enum.Parse(typeof(InfoType), str);
                 infoMode = o is InfoType;
-                ToolMode = infoMode ? ToolMode.InfoImage : ToolMode.None;
+                ToolMode = infoMode ? ToolMode.InfoImage : ToolMode.Basic;
                 if (infoMode)
                 {
                     infoType = (InfoType)o;
@@ -871,7 +895,6 @@ namespace ImageProcessor
             {
                 iml.ColorTransform.CopyFrom(colorTransform);
                 iml.SetEffectParameters(0, 0, 1);
-                //iml.SetEffectParameters(effectParameters);
                 saveButton.Enabled = true;
                 if (userInput)
                     imageModified = true;

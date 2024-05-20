@@ -23,6 +23,16 @@ namespace ImageProcessor
         static ImageHash.Comparer imageInfoComparer = new ImageHash.Comparer(56);
         string[] textPatterns;   // 1 item - search for pattern in string; >1 - serch exact string for each item (1 extra char at the end allowed)
         static DirectoryInfo[] specialDirectories;
+        public static DirectoryInfo SpecDir(SpecName sd) { return specialDirectories[(int)sd]; }
+        public static DirectoryInfo Root        { get { return specialDirectories[(int)SpecName.Root]; } }
+        public static bool IsSpecDir(DirectoryInfo testdi)
+        {
+            foreach (DirectoryInfo di in specialDirectories)
+                if (di.FullName == testdi.FullName)
+                    return true;
+            return false;
+        }
+        public static bool IsSpecDir(DirectoryInfo testdi, SpecName sd) { return specialDirectories[(int)sd].FullName == testdi.FullName; }
         SoundLike soundPattern;
         int searchDaysOld = int.MaxValue;
         SearchResult searchResult;
@@ -55,10 +65,6 @@ namespace ImageProcessor
         public string MediaTmpLocation  { get { return "_._"; } }
         public string ActiveImageName   { get { return activeImageName; } set { activeImageName = value; onNewImageSelection?.Invoke(activeImageName); } }
         public bool StopSearch          { get { return stopSearch; } set { stopSearch = value; } }
-        public DirectoryInfo DirInfo(int i) { return specialDirectories[i]; }
-        public DirectoryInfo DirInfo(DirName sd) { return DirInfo((int)sd); }
-        public DirectoryInfo Root       { get { return specialDirectories[(int)DirName.Root]; } }
-        public DirectoryInfo AllDevicy  { get { return specialDirectories[(int)DirName.AllDevicy]; } }
         public string[] GetMatchingDirNames()
         {
             List<string> ret = new List<string>();
@@ -74,7 +80,7 @@ namespace ImageProcessor
             EditorExe = settings.GetString("path.editor");
             MediaExe = settings.GetString("path.media");
             searchResult = new SearchResult();
-            string[] dirNames = Enum.GetNames(typeof(DirName));
+            string[] dirNames = Enum.GetNames(typeof(SpecName));
             specialDirectories = new DirectoryInfo[dirNames.Length];
             for (int i = 0; i < dirNames.Length; i++)
             {
@@ -94,33 +100,25 @@ namespace ImageProcessor
             {
                 if (di == null || !di.Exists)
                     return new DirectoryInfo[0];
-                if (di.FullName != Root.FullName)
+                if(!IsSpecDir(di, SpecName.Root))
                     return di.GetDirectories();
-                int nChildren = (int)DirName.Root;
-                DirectoryInfo[] children = new DirectoryInfo[nChildren];
-                for (int i = 0; i < nChildren; i++)
-                    children[i] = DirInfo(i);
-                return children;
+                List<DirectoryInfo> rootList = new List<DirectoryInfo>();
+                foreach (var sd in specialDirectories)
+                    if (!IsSpecDir(sd, SpecName.Root))
+                        rootList.Add(sd);
+                return rootList.ToArray();
             }
             catch
             {
                 return new DirectoryInfo[0];
             }
 		}
-        public static bool IsSpecialDirectory(DirectoryInfo testdi)
-        {
-            foreach (DirectoryInfo di in specialDirectories)
-                if (di.FullName == testdi.FullName)
-                    return true;
-            return false;
-        }
-        public bool IsAllDevicy(DirectoryInfo testdi) { return AllDevicy.FullName == testdi.FullName; }
         public DirectoryInfo GetSearchRoot(string name)
         {
             if (name == null || name.Length == 0 || !Directory.Exists(name))
                 return Root;
             DirectoryInfo di = new DirectoryInfo(name);
-            if (IsAllDevicy(di) || IsAllDevicy(di.Parent) || IsSpecialDirectory(di))
+            if (IsSpecDir(di.Parent, SpecName.AllDevicy) || IsSpecDir(di))
                 return di;
             return Root;
         }
@@ -162,7 +160,7 @@ namespace ImageProcessor
         }
         public void CreateImageHashes(DirectoryInfo dirNode)
         {
-            if (!IsSpecialDirectory(dirNode) && !IsSpecialDirectory(dirNode.Parent))
+            if (!IsSpecDir(dirNode) && !IsSpecDir(dirNode.Parent))
             {
                 ImageDirHash dii = new ImageDirHash(dirNode);
                 dii.Update();
@@ -175,7 +173,7 @@ namespace ImageProcessor
         {
             if (StopSearch)
                 return;
-            if (!IsSpecialDirectory(dirNode) && !IsSpecialDirectory(dirNode.Parent))
+            if (!IsSpecDir(dirNode) && !IsSpecDir(dirNode.Parent))
             {
                 ImageDirHash dii = new ImageDirHash(dirNode);
                 dii.Update();
@@ -314,7 +312,7 @@ namespace ImageProcessor
             if (textPatterns != null && textPatterns.Length>0) // by name
             {
                 string item = FileName.UnMangle(dirNode.Name.ToLower());
-                string[] fields = item.Split(new char[] { ImageFileInfo.multiNameChar, ImageFileInfo.synonymChar });
+                string[] fields = item.Split(new char[] { ImageFileName.multiNameChar, ImageFileName.synonymChar });
                 double dif = int.MaxValue;
                 if (textPatterns.Length == 1)
                 {
@@ -358,7 +356,7 @@ namespace ImageProcessor
             {
                 int dif = int.MaxValue;
                 string item = FileName.UnMangle(dirNode.Name.ToLower());
-                string[] fields = item.Split(new char[] { ImageFileInfo.multiNameChar, ImageFileInfo.synonymChar });
+                string[] fields = item.Split(new char[] { ImageFileName.multiNameChar, ImageFileName.synonymChar });
                 foreach (string field in fields)
                 {
                     int i = field.Length - 1;

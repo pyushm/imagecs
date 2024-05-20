@@ -11,15 +11,15 @@ using ShaderEffects;
 namespace ImageProcessor
 {
     public enum ToolMode
-    {
-        None,       // no tool - basic geometry transform
-        Distortion3D,
-        FreeSelection,
-        RectSelection,
-        ContourEdit, // editing contour drawing
-        InfoImage,
-        Crop,
-        Morph,
+    {   // user set mouse controll modes; Basic is default and does not have associated graphic tool
+        Basic,          // basic transform (shift, scale, rotate)
+        Distortion3D,   // handles scale, rotate, aspect, shear, ViewDistortion with parallelogram 
+        FreeSelection,  // creates FlexiblePolygon from free selection
+        RectSelection,  // creates FlexiblePolygon  from rectangle
+        ContourEdit,    // editing FlexiblePolygon drawing
+        InfoImage,      // choice of info images cut rectangles
+        Crop,           // cut part of image
+        Morph,          // image morph
     }
     public class VisualLayer : UIElement
     {   // collection of visual items comprizing one UIElement (similar to DrawingGroup, but working with DependencyProperties)
@@ -28,15 +28,13 @@ namespace ImageProcessor
         public MatrixControl MatrixControl { get; private set; } 
         public List<MorthPoint> morthPoints = new List<MorthPoint>();
         public virtual void SetEffectParameters(double weight, double middle, double resolution) { }
-        //public void SetEffectParameters(double[] pa) { SetEffectParameters(pa[0], pa[1], pa[2]); }
         public virtual EffectType DerivativeType { get { return EffectType.None; } }
-        bool deleting = false;      // marked for delayed deletion (do not display in layer list)
         public bool FromSelection { get; set; } = false;
         public string Name { get; set; }
         public bool IsImage         { get { return this as BitmapLayer != null; } }
         public IntSize LayoutSize   { get; protected set; } // image size used by layout system 
         public VisualLayerType Type { get; protected set; }
-        public bool Deleted         { get { return deleting; } set { deleting = value; } }
+        public bool Deleted         { get; set; }   // marked for delayed deletion (do not display in layer list)
         public Rect RenderRect      { get { var diag = new Point[] { new Point(0, 0), new Point(LayoutSize.Width, LayoutSize.Height) }; RenderTransform.Value.Transform(diag); return new Rect(diag[0], diag[1]); } }
         public bool IntersectsWith(VisualLayer vl) { return RenderRect.IntersectsWith(vl.RenderRect); }
         public ColorTransform ColorTransform { get { return colorTransform; } set { colorTransform.CopyFrom(value); } }
@@ -121,9 +119,8 @@ namespace ImageProcessor
                 MatrixControl.Center = new Point(w / 2, h / 2);
                 MatrixControl.RenderScale = scale;
             }
-            else
+            else    // RenderTransform built from MatrixControl with account for MatrixControl.Center shift
             {
-                //MatrixControl.MoveCenter(new Vector(w / 2 - MatrixControl.Center.X, h / 2 - MatrixControl.Center.Y));
                 UpdateRenderTransform();
                 Matrix m = RenderTransform.Value;
                 m.Translate(MatrixControl.Center.X - w / 2, MatrixControl.Center.Y - h / 2);
@@ -225,7 +222,8 @@ namespace ImageProcessor
                     image.UpdateTransparency(transparencyMask); // works only for Pbgra32
                 }
                 Color borderColor = image.BorderColor();
-                if (borderColor != ColorTransform.ColorNull)
+                if (borderColor == ColorTransform.ColorNull)
+                    borderColor=Color.FromArgb(255,255,255,255);
                 {   //apply transparent edge
                     bool borderSet = false;
                     colorTransform = new ColorTransform(borderColor);
@@ -282,7 +280,6 @@ namespace ImageProcessor
         {
             try
             {
-                //type = VisualLayerType.Bitmap;
                 Type = VisualLayerType.Derivative;
                 LayoutSize = new IntSize(ba.Width, ba.Height);
                 derivative = new BitmapLayer("", ba, edge);

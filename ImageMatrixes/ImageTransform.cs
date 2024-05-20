@@ -52,11 +52,8 @@ namespace ImageProcessor
             {
                 if (arg >= points[2 * np - 2])
                     res = points[2 * np - 3] + (arg - points[2 * np - 4]) * (points[2 * np - 1] - points[2 * np - 3]) / (points[2 * np - 2] - points[2 * np - 4]);
-                //res = points[2 * np - 1];
                 else
                 {
-                    //float prevX = float.MinValue;
-                    //float prevY = res;
                     float prevX = points[3];
                     float prevY = points[2];
                     for (int i = 0; i < np; i++)
@@ -117,57 +114,48 @@ namespace ImageProcessor
     }
     public class ColorTransform                 
     {
-        static public Color unsetColor = Color.FromArgb(0, 0, 0, 0);
         static float saturationNormCoef = 3;
-        static public Color ColorNull { get { return unsetColor; } }
+        static public Color ColorNull { get; private set; } = Color.FromArgb(0, 0, 0, 0);
         static public ColorTransform BWTransform
         {
             get
             {
                 ColorTransform BWTransform = new ColorTransform();
-                BWTransform.sat = 0;
+                BWTransform.Sat = 0;
                 return BWTransform;
             }
-        }
-        InterpolationFunction brightnessAdjustment;
-        InterpolationFunction transparencyAdjustment;
-        float rCoeff;	            // red brightness adjustment
-        float gCoeff;	            // green brightness adjustment
-        float bCoeff;	            // blue brightness adjustment
-        float sat;                  // saturation adjustment
+        }              
         Color transparentColor;     // specifies color set as transparent
         Color matchPattern;         // specifies color relative to which transform is applied 
-        public InterpolationFunction BrightnessAdjustment { get { return brightnessAdjustment; } }
-        public InterpolationFunction TransparencyAdjustment { get { return transparencyAdjustment; } }
-        public Color TransparentColor { get { return transparentColor; } set { transparentColor = value; } }
-        public Color Pattern { get { return matchPattern; } set { matchPattern = value; } }
-        public float RCoef { get { return rCoeff; } }
-        public float GCoef { get { return gCoeff; } }
-        public float BCoef { get { return bCoeff; } }
-        public float Sat { get { return sat; } }
-        public bool IsIdentical { get { return rCoeff == 1 && gCoeff == 1 && bCoeff == 1 && sat == 1 && 
-                    brightnessAdjustment.IsLinear && transparencyAdjustment.IsNullValue && !IsColorSet; } }
-        public bool IsColorSet { get { return transparentColor != unsetColor; } }
+        public InterpolationFunction BrightnessAdjustment { get; private set; }     // brightness linear interpolation
+        public InterpolationFunction TransparencyAdjustment { get; private set; }   // transparency linear interpolation
+        public float RCoef { get; private set; }   // red brightness adjustment
+        public float GCoef { get; private set; }   // green brightness adjustment
+        public float BCoef { get; private set; }   // blue brightness adjustment
+        public float Sat { get; private set; }     // saturation adjustment
+        public bool IsIdentical { get { return RCoef == 1 && GCoef == 1 && BCoef == 1 && Sat == 1 && 
+                    BrightnessAdjustment.IsLinear && TransparencyAdjustment.IsNullValue && !IsTransparentColorSet; } }
+        public bool IsTransparentColorSet { get { return transparentColor != ColorNull; } }
         public ColorTransform() { Set(); }
         public ColorTransform(Color color) { Set(); transparentColor = color; }
         public void CopyFrom(ColorTransform src)
         {
-            rCoeff = src.rCoeff;
-            bCoeff = src.bCoeff;
-            gCoeff = src.gCoeff;
-            sat = src.sat;
-            brightnessAdjustment = src.brightnessAdjustment.Clone();
-            transparencyAdjustment = src.transparencyAdjustment.Clone();
+            RCoef = src.RCoef;
+            GCoef = src.GCoef;
+            BCoef = src.BCoef;
+            Sat = src.Sat;
+            BrightnessAdjustment = src.BrightnessAdjustment.Clone();
+            TransparencyAdjustment = src.TransparencyAdjustment.Clone();
             transparentColor = src.transparentColor;
             matchPattern = src.matchPattern;
         }
         public bool Set()
         {
-            rCoeff = gCoeff = bCoeff = sat = 1;
+            RCoef = GCoef = BCoef = Sat = 1;
             SetBrightnessValues(new float[] { 0, 0, 0.5f, 0, 1, 0 });
             SetTransparencyValues(new float[] { 0, 0, 1, 0 });
-            transparentColor = unsetColor;
-            matchPattern = unsetColor;
+            transparentColor = ColorNull;
+            matchPattern = ColorNull;
             return true;
         }
         public bool Set(float[] brightnessValues)
@@ -181,8 +169,8 @@ namespace ImageProcessor
         }
         public bool Set(float[] brightnessValues, float[] saturationValues, float[] singleSlopeValue)
         {
-            transparentColor = unsetColor;
-            matchPattern = unsetColor;
+            transparentColor = ColorNull;
+            matchPattern = ColorNull;
             bool changed = SetBrightnessValues(brightnessValues);
             changed = SetColorValues(saturationValues) || changed;
             return SetTransparencyValues(singleSlopeValue) || changed;
@@ -196,19 +184,19 @@ namespace ImageProcessor
                 ba[i + 1] = ba[i] + brightnessValues[i + 1];
             }
             InterpolationFunction newAdjustment = new InterpolationFunction(ba, 0, 1);
-            bool same = newAdjustment.Equals(brightnessAdjustment);
-            brightnessAdjustment = newAdjustment;
+            bool same = newAdjustment.Equals(BrightnessAdjustment);
+            BrightnessAdjustment = newAdjustment;
             return !same;
         }
         public float[] BrightnessValues
         {
             get
             {
-                float[] fa = new float[brightnessAdjustment.Points.Length];
+                float[] fa = new float[BrightnessAdjustment.Points.Length];
                 for (int i = 0; i < fa.Length; i = i + 2)
                 {
-                    fa[i] = brightnessAdjustment.Points[i];
-                    fa[i + 1] = brightnessAdjustment.Points[i + 1] - fa[i];
+                    fa[i] = BrightnessAdjustment.Points[i];
+                    fa[i + 1] = BrightnessAdjustment.Points[i + 1] - fa[i];
                 }
                 return fa;
             }
@@ -225,11 +213,11 @@ namespace ImageProcessor
             float ngCoeff = Math.Max(0, (saturationValues[1] - nsat) / saturationNormCoef + 1);
             float nbCoeff = Math.Max(0, (saturationValues[2] - nsat) / saturationNormCoef + 1);
             nsat++;
-            bool changed = sat != nsat || rCoeff != nrCoeff || gCoeff != ngCoeff || bCoeff != nbCoeff;
-            sat = nsat;
-            rCoeff = nrCoeff;
-            gCoeff = ngCoeff;
-            bCoeff = nbCoeff;
+            bool changed = Sat != nsat || RCoef != nrCoeff || GCoef != ngCoeff || BCoef != nbCoeff;
+            Sat = nsat;
+            RCoef = nrCoeff;
+            GCoef = ngCoeff;
+            BCoef = nbCoeff;
             return changed;
         }
         public float[] ColorValues
@@ -237,9 +225,9 @@ namespace ImageProcessor
             get
             {
                 float[] fa = new float[3];
-                fa[0] = saturationNormCoef * (rCoeff - 1) + sat - 1;
-                fa[1] = saturationNormCoef * (gCoeff - 1) + sat - 1;
-                fa[2] = saturationNormCoef * (bCoeff - 1) + sat - 1;
+                fa[0] = saturationNormCoef * (RCoef - 1) + Sat - 1;
+                fa[1] = saturationNormCoef * (GCoef - 1) + Sat - 1;
+                fa[2] = saturationNormCoef * (BCoef - 1) + Sat - 1;
                 return fa;
             }
         }
@@ -252,29 +240,30 @@ namespace ImageProcessor
                 ba[i + 1] = transparency[i + 1];
             }
             InterpolationFunction newAdjustment = new InterpolationFunction(ba, 0, 1);
-            bool same = newAdjustment.Equals(transparencyAdjustment);
-            transparencyAdjustment = newAdjustment;
+            bool same = newAdjustment.Equals(TransparencyAdjustment);
+            TransparencyAdjustment = newAdjustment;
             return !same;
         }
         public float[] TransparencyValues
         {
             get
             {
-                float[] fa = new float[transparencyAdjustment.Points.Length];
+                float[] fa = new float[TransparencyAdjustment.Points.Length];
                 for (int i = 0; i < fa.Length; i = i + 2)
                 {
-                    fa[i] = transparencyAdjustment.Points[i];
-                    fa[i + 1] = transparencyAdjustment.Points[i + 1] ;
+                    fa[i] = TransparencyAdjustment.Points[i];
+                    fa[i + 1] = TransparencyAdjustment.Points[i + 1] ;
                 }
                 return fa;
             }
         }
         public double Opacity { get { return 1 - TransparencyValues[1]; } }
         public double OpacitySlope { get { return (TransparencyValues[3] - TransparencyValues[1]) / (TransparencyValues[2] - TransparencyValues[0] + 0.0001); } }
-        public byte Apply(byte p) { return (byte)(brightnessAdjustment.Apply((float)p / byte.MaxValue) * byte.MaxValue); }
+        public byte Apply(byte p) { return (byte)(BrightnessAdjustment.Apply((float)p / byte.MaxValue) * byte.MaxValue); }
         public void Apply(ref byte a, ref byte r, ref byte g, ref byte b)
         {
-            if (a == 0 || (IsColorSet && transparentColor.R == r && transparentColor.G == g && transparentColor.B == b))
+            if (a == 0 || (transparentColor.R == r && transparentColor.G == g && transparentColor.B == b))
+            //    if (a == 0 || (IsTransparentColorSet && transparentColor.R == r && transparentColor.G == g && transparentColor.B == b))
             {
                 a = r = g = b = 0;
                 return;
@@ -295,11 +284,11 @@ namespace ImageProcessor
                 l = Math.Max(Math.Max(r, g), b);
             }
             float br = lbr / (float)byte.MaxValue + 0.0001f;
-            float brcoef = brightnessAdjustment.Apply(br)/br;
-            r = (byte)Math.Min(byte.MaxValue, Math.Max(0, (matchPattern.R + (l - (l - r) * sat) * brcoef) * rCoeff));
-            g = (byte)Math.Min(byte.MaxValue, Math.Max(0, (matchPattern.G + (l - (l - g) * sat) * brcoef) * gCoeff));
-            b = (byte)Math.Min(byte.MaxValue, Math.Max(0, (matchPattern.B + (l - (l - b) * sat) * brcoef) * bCoeff));
-            float acoef = 1 - Math.Min(1, Math.Max(0, transparencyAdjustment.Apply(br)));
+            float brcoef = BrightnessAdjustment.Apply(br)/br;
+            r = (byte)Math.Min(byte.MaxValue, Math.Max(0, (matchPattern.R + (l - (l - r) * Sat) * brcoef) * RCoef));
+            g = (byte)Math.Min(byte.MaxValue, Math.Max(0, (matchPattern.G + (l - (l - g) * Sat) * brcoef) * GCoef));
+            b = (byte)Math.Min(byte.MaxValue, Math.Max(0, (matchPattern.B + (l - (l - b) * Sat) * brcoef) * BCoef));
+            float acoef = 1 - Math.Min(1, Math.Max(0, TransparencyAdjustment.Apply(br)));
             a = (byte)(a * acoef);
             acoef = a / (float)byte.MaxValue;
             r = (byte)(r * acoef);
@@ -308,8 +297,8 @@ namespace ImageProcessor
         }
         public override string ToString()
         {
-            string str = "r=" + rCoeff.ToString("f2") + " g=" + gCoeff.ToString("f2") + " b=" + bCoeff.ToString("f2") + " sat=" + sat.ToString("f2")+
-                " brightness=" +brightnessAdjustment.ToString() + " transparency=" + transparencyAdjustment.ToString() + ':' + transparentColor.ToString();
+            string str = "r=" + RCoef.ToString("f2") + " g=" + GCoef.ToString("f2") + " b=" + BCoef.ToString("f2") + " sat=" + Sat.ToString("f2")+
+                " brightness=" +BrightnessAdjustment.ToString() + " transparency=" + TransparencyAdjustment.ToString() + ':' + transparentColor.ToString();
             return str;
         }
     }

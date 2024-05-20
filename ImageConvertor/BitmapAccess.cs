@@ -55,12 +55,14 @@ namespace ImageProcessor
             Chank[] chanks = Chank.CreateChanks(height, 500, null, bmn);
             unsafe
             {
-                foreach (var chank in chanks)
-                //Parallel.ForEach(chanks, (chank) =>
+                //foreach (var chank in chanks)
+                Parallel.ForEach(chanks, (chank) =>
                 {
-                    byte* ptrn = (byte*)chank.ToData;
+                    byte* ptr0 = (byte*)chank.ToData;
                     for (int i = chank.StartRow; i < chank.EndRow; i++)
                     {
+                        byte* ptrn = ptr0;
+                        ptr0 += chank.ToStride;
                         if (colors.Length == 1)
                         {
                             ByteMatrix b = colors[0];
@@ -100,8 +102,8 @@ namespace ImageProcessor
                             }
                         }
                     }
-                }
-                //});
+                //}
+                });
             }
             bmn.Unlock();
             return new BitmapAccess(bmn);
@@ -233,12 +235,12 @@ namespace ImageProcessor
         {   // returns null if !Pbgra32 or not all pixels on perimeter are transparent
             if (PixelFormat != PixelFormats.Pbgra32)
                 return null;
-            for (int i = 0; i < Width; i++)
-                if (GetPixel(i, 0).A != 0 || GetPixel(i, Height - 1).A != 0)
-                    return null;
-            for (int j = 0; j < Height; j++)
-                if (GetPixel(0, j).A != 0 || GetPixel(Width - 1, j).A != 0)
-                    return null;
+            //for (int i = 0; i < Width; i++)
+            //    if (GetPixel(i, 0).A != 0 || GetPixel(i, Height - 1).A != 0)
+            //        return null;
+            //for (int j = 0; j < Height; j++)
+            //    if (GetPixel(0, j).A != 0 || GetPixel(Width - 1, j).A != 0)
+            //        return null;
             ByteMatrix transparencyMask = new ByteMatrix(Height, Width);
             Chank[] chanks = Chank.CreateChanks(Height, 500, Source, null);
             int w = Width;
@@ -318,7 +320,7 @@ namespace ImageProcessor
                             ptr++;
                             *ptr = (byte)(*ptr * coef); // r
                             ptr++;
-                            *ptr = (byte)(byte.MaxValue * coef);// ignore image traparency
+                            *ptr = (byte)(byte.MaxValue * coef);// ignore image transparency
                             ptr++;
                         }
                     }
@@ -501,7 +503,7 @@ namespace ImageProcessor
                 //foreach(var chank in chanks)
                 Parallel.ForEach(chanks, (chank) =>
                 {   // setting original ByteMatrixes
-                    byte* ptr = (byte*)chank.FromData;
+                    byte* ptr0 = (byte*)chank.FromData;
                     if (Bytespp == 1)
                     {
                         if(isIndexed)
@@ -513,6 +515,8 @@ namespace ImageProcessor
                             {
                                 for (ushort j = 0; j < w; j++)
                                 {
+                                    byte* ptr = ptr0;
+                                    ptr0 += chank.FromStride;
                                     Color c = palette.Colors[*ptr++];
                                     b[i, j] = c.B;
                                     g[i, j] = c.G;
@@ -525,6 +529,8 @@ namespace ImageProcessor
                             ByteMatrix b = bmpa[0];
                             for (int i = chank.StartRow; i < chank.EndRow; i++)
                             {
+                                byte* ptr = ptr0;
+                                ptr0 += chank.FromStride;
                                 for (ushort j = 0; j < w; j++)
                                     b[i, j] = *ptr++;
                             }
@@ -538,6 +544,8 @@ namespace ImageProcessor
                         ByteMatrix r = bmpa[2];
                         for (int i = chank.StartRow; i < chank.EndRow; i++)
                         {
+                            byte* ptr = ptr0;
+                            ptr0 += chank.FromStride;
                             for (ushort j = 0; j < w; j++)
                             {
                                 b[i, j] = *ptr++;
@@ -554,6 +562,8 @@ namespace ImageProcessor
                         ByteMatrix a = bmpa[3];
                         for (int i = chank.StartRow; i < chank.EndRow; i++)
                         {
+                            byte* ptr = ptr0;
+                            ptr0 += chank.FromStride;
                             for (ushort j = 0; j < w; j++)
                             {
                                 b[i, j] = *ptr++;
@@ -563,7 +573,7 @@ namespace ImageProcessor
                             }
                         }
                     }
-                    //}
+                //}
                 });
             }
             Source.Unlock();
@@ -600,6 +610,7 @@ namespace ImageProcessor
             ByteMatrix[] newColors = new ByteMatrix[original.Length];
             for (int i = 0; i < pairLength; i++)
                 newColors[i] = bmpa[i].transformed;
+                //newColors[i] = bmpa[i].original;
             if (original.Length == 4)
                 newColors[3] = transparency;
             return CreateFromColorMatrixes(newColors);
@@ -608,7 +619,7 @@ namespace ImageProcessor
         {
             if ((transform == null || transform.IsIdentical) && (PixelFormat == PixelFormats.Pbgra32 || PixelFormat == PixelFormats.Bgra32))
                 return Source.Clone();
-            bool alphaIgnored = (transform != null && transform.IsColorSet) || (PixelFormat != PixelFormats.Pbgra32 && PixelFormat != PixelFormats.Bgra32);
+            bool alphaIgnored = (transform != null && transform.IsTransparentColorSet) || (PixelFormat != PixelFormats.Pbgra32 && PixelFormat != PixelFormats.Bgra32);
             WriteableBitmap bmn = new WriteableBitmap(Width, Height, 96, 96, PixelFormats.Pbgra32, null);
             bmn.Lock();
             if (mask != null)
@@ -677,19 +688,9 @@ namespace ImageProcessor
         {
             using (MemoryStream outStream = new MemoryStream())
             {
-                //source.s(soutStream);
                 BitmapEncoder enc = new BmpBitmapEncoder();
-                enc.Frames.Add(BitmapFrame.Create(Source)); // , BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.Default
+                enc.Frames.Add(BitmapFrame.Create(Source)); 
                 enc.Save(outStream);
-                //using (Stream file = File.Create("test.bmp"))
-                //{
-                //    byte[] buffer = new byte[8 * 1024];
-                //    int len;
-                //    while ((len = outStream.Read(buffer, 0, buffer.Length)) > 0)
-                //    {
-                //        file.Write(buffer, 0, len);
-                //    }
-                //}
                 System.Drawing.Bitmap bitmap = new System.Drawing.Bitmap(outStream);
                 return new System.Drawing.Bitmap(bitmap);
             }

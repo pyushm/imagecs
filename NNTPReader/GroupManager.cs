@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Runtime.Serialization.Formatters.Soap;
 using System.Runtime.Serialization.Formatters.Binary;
+using ImageProcessor;
 
 namespace NNTP
 {
@@ -129,7 +130,7 @@ namespace NNTP
             messages.Add(msg, level);
         }
     }
-    public class GroupManager : HostManager, ImageProcessor.IAssociatedPath
+    public class GroupManager : HostManager, IAssociatedPath
 	{
 		public delegate string OnNeedName(string group, int id);
         string paintExe;
@@ -141,7 +142,7 @@ namespace NNTP
         {
             return Path.Combine(dataDirName, fileName);
         }
-        ImageProcessor.Navigator navigator;
+        Navigator navigator;
         NewArticleStorage storage;
 		DateTime firstDateToKeep;				// the earlist date of the message to keep
 		string busyDataFileName;				// file containing groups in use
@@ -178,7 +179,7 @@ namespace NNTP
         public string MediaTmpLocation          { get { return navigator.MediaTmpLocation; } }
         public string ActiveImageName           { set { navigator.ActiveImageName = value; } }
         public string ArchiveExe                { get { return archiveExe; } }
-        public ImageProcessor.Navigator Navigator { get { return navigator; } }
+        public Navigator Navigator              { get { return navigator; } }
 		public HostGroup CurrentGroup			{ get { return currentGroup; } }
         public Group[] SubscribedGroups         { get { return subscribedGroups; } }
 		public bool CancelingDownload			{ get { return downloadingCanceled; } }
@@ -203,8 +204,8 @@ namespace NNTP
                 settings.SaveToFile();
                 if (server == null || server.Length == 0)
                     throw new Exception("NNTP server name is not specified");
-                navigator = new ImageProcessor.Navigator();
-                dataDirName = navigator.Root.FullName + "groupData";
+                navigator = new Navigator();
+                dataDirName =Navigator.Root.FullName + "groupData";
                 hostDisplayName = server.Replace('.', '_');
                 subscribedGroupFileName = DataFileName(hostDisplayName + "_groups.txt");
                 serverGroupFileName = DataFileName(hostDisplayName + "_server_groups.txt");
@@ -215,7 +216,7 @@ namespace NNTP
                 hostName = server;
                 reader = new Reader(server, user, password, SendMessage);
                 LoadSubscribedGroups();
-                storage = new NewArticleStorage(navigator.DirInfo(ImageProcessor.DirName.NewArticles));
+                storage = new NewArticleStorage(Navigator.SpecDir(SpecName.NewArticles));
                 articlesToDownload = new ArticleHeader.Item.Collection();
                 newArticlesToDownload = new ArticleHeader.Item.Collection();
                 downloadedArticles = new ArticleHeader.Item.Collection();
@@ -248,7 +249,7 @@ namespace NNTP
 		string FileNameFromUserInput(string subjectBase, int id) 
 		{
             //Console.WriteLine("FileNameFromUserInput called");
-            string[] files = Directory.GetFiles(navigator.DirInfo(ImageProcessor.DirName.NewArticles).FullName);
+            string[] files = Directory.GetFiles(Navigator.SpecDir(SpecName.NewArticles).FullName);
             List<string> matches = new List<string>();
             foreach (string fp in files)
             {

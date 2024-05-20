@@ -25,6 +25,8 @@ namespace ImageProcessor
         enum EdgeGap
         {
             Gap0 = 0,
+            Gap1 = 1,
+            Gap2 = 2,
             Gap3 = 3,
             Gap5 = 5,
             Gap8 = 8,
@@ -35,8 +37,8 @@ namespace ImageProcessor
             Gap66 = 66,
             Gap99 = 99,
         }
-        string[] imageModes = new string[] { ToolMode.None.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.Morph.ToString() };//, ToolMode.FreeSelection.ToString(), ToolMode.Crop.ToString() };
-        string[] drawingeModes = new string[] { ToolMode.None.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.ContourEdit.ToString() };
+        string[] imageModes = new string[] { ToolMode.Basic.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.Morph.ToString() };
+        string[] drawingModes = new string[] { ToolMode.Basic.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.ContourEdit.ToString() };
         private System.ComponentModel.Container components = null;
         private ValueControl saturationControl;
         private RangeControl brightnessControl;
@@ -439,8 +441,8 @@ namespace ImageProcessor
                 new MenuItem("Remove odd", delegate (object s, EventArgs e) { AddNoOddsLayer(); }),
                 new MenuItem("To background", delegate (object s, EventArgs e) { CopyToBackground(1); }),
                 new MenuItem("To back 1/2", delegate (object s, EventArgs e) { CopyToBackground(2); }),
-                new MenuItem("To back 1/4", delegate (object s, EventArgs e) { CopyToBackground(4); }),
-                new MenuItem("To back 1/8", delegate (object s, EventArgs e) { CopyToBackground(8); }),
+                //new MenuItem("To back 1/4", delegate (object s, EventArgs e) { CopyToBackground(4); }),
+                //new MenuItem("To back 1/8", delegate (object s, EventArgs e) { CopyToBackground(8); }),
                 new MenuItem("Delete", new EventHandler(DeleteLayer)) });
             layerListView.ContextMenu = selectMenu;
             layerListView.HideSelection = false;
@@ -465,7 +467,7 @@ namespace ImageProcessor
             if (vl.IsImage)
                 CreateControls(imageModes, null);
             else
-                CreateControls(drawingeModes, new string[] { "Thickness" });
+                CreateControls(drawingModes, new string[] { "Thickness" });
         }
         RadioButton CreateControls(string[] bns, string[] inp)
         {
@@ -651,13 +653,15 @@ namespace ImageProcessor
                 BitmapAccess clip = new BitmapAccess(ClipboardBitmapAccess.GetImage());
                 panel.Focus();
                 int transparencyEdge = SelectedEdge();
-                //Debug.WriteLine("AddClipboardLayer");
-                //Debug.WriteLine(clip.ToString());
-                //VisualLayer vl = new BitmapLayer("Clip" + transparencyEdge, clip, transparencyEdge);
+                Debug.WriteLine("AddClipboardLayer: " + clip.ToString());
+                Cursor = System.Windows.Forms.Cursors.WaitCursor;
+                canvas.Cursor = System.Windows.Input.Cursors.Wait;
                 VisualLayer vl = new BitmapDerivativeLayer("Clip" + transparencyEdge, clip, new ViewPointEffect(), transparencyEdge);
                 vl?.SetEffectParameters(SelectedSensitivity(), 0, 0);
                 UpdateLayerList(canvas.AddVisualLayer(vl, canvas.BackgroundLayer.MatrixControl.RenderScale));
-                SetMode(ToolMode.None);
+                canvas.Cursor = System.Windows.Input.Cursors.Arrow;
+                Cursor = System.Windows.Forms.Cursors.Default;
+                SetMode(ToolMode.Basic);
             }
             catch (Exception ex)
             {
@@ -668,14 +672,14 @@ namespace ImageProcessor
         {
             return System.Windows.Media.Color.FromArgb(nc.A, nc.R, nc.G, nc.B);
         }
-        void RescaleCanvas(bool initial) { canvas.Resize(initial, DisplayScale, panel.Width / dpiScaleX, panel.Height / dpiScaleY); }
+        void RescaleCanvas(bool initial) { canvas.ResizeImage(initial, DisplayScale, panel.Width / dpiScaleX, panel.Height / dpiScaleY); }
         void saveSameLocation_Click(object s, EventArgs e) { save(savePath == null ? Path.GetDirectoryName(imageInfo.FSPath) : savePath); }
         void saveButton_Click(object s, EventArgs e) { save(Path.GetDirectoryName(imageInfo.FSPath)); }
         void save(string dir)
         {
             if (DisplayScale != 0)
             {   // to ensure that all background image saved
-                canvas.Resize(false, 1, panel.Width, panel.Height);
+                canvas.ResizeImage(false, 1, panel.Width, panel.Height);
             }
             SaveFileDialog saveAsDialog = new SaveFileDialog();
             saveAsDialog.FileName = imageInfo.RealName;
@@ -696,7 +700,7 @@ namespace ImageProcessor
                         ShowNewImage(info);
                     else
                         System.Windows.Forms.MessageBox.Show(ret, "Saving " + info.FSPath + " failed");
-                    SetMode(ToolMode.None);
+                    SetMode(ToolMode.Basic);
                 }
                 catch (Exception ex)
                 {

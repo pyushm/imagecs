@@ -12,7 +12,6 @@ namespace ImageProcessor
         DrawingPanel panel;             // parent drawing panel
         BitmapAccess img;
         int threshold = 3;              // max dif has to be > thereshold*average to change point
-        int range = 5;                  // search range
         internal void SetEdgeDetector(BitmapAccess ba) { img = ba; }
         FlexiblePolygon activeStroke = null;
         public BitmapAccess BackgroundImage { set { SetEdgeDetector(value); } }
@@ -85,7 +84,7 @@ namespace ImageProcessor
             //{ // edit contour drawing
             //    Vector shift = ss.FromDrawing.Value.Transform(canvasShift);
             //    if (ss.MoveSelectedPoints(shift))
-            //        editOperation = MouseOperations.None;
+            //        editOperation = MouseOperations.Basic;
             //}
             return true;
         }
@@ -102,19 +101,18 @@ namespace ImageProcessor
             activeStroke.RemoveProperty(PointProperties.Selected);
             //Debug.WriteLine("SE up " + editOperation.ToString());
         }
-        public int StickToEdge(FlexiblePolygon fp, double del)
+        public int TryStickToImageEdge(FlexiblePolygon fp, int gradSearchRange)
         {
             if (fp.IsEmpty)
                 return 0;
             int changed = 0;
-            range = (int)(del+0.5);
             for (int i = 0; i < fp.Count; i++)
                 if (!fp.HasProperty(i, PointProperties.Sharp))
                 {
                     Point prev = i == 0 ? fp[fp.Count - 2] : fp[i - 1];
                     Point next = i == fp.Count-1 ? fp[1] : fp[i + 1];
                     Point p = fp[i];
-                    if (EdgeCorrection(ref p, next - prev))
+                    if (SetsToMaxGradLocation(ref p, gradSearchRange, next - prev))
                     {
                         changed++;
                         fp[i] = p;
@@ -122,7 +120,7 @@ namespace ImageProcessor
                 }
             return changed;
         }
-        bool EdgeCorrection(ref Point p, Vector edgeDirection)
+        bool SetsToMaxGradLocation(ref Point p, int range, Vector edgeDirection)
         {   // finds max grad on the line [p-n, p+n] within range
             if (img == null)
                 return false;

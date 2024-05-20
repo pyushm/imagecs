@@ -252,12 +252,25 @@ namespace ImageProcessor
         }
         void SetCenter()
         {
-            if (Poly.Count > 1)
+            if (Poly.Count > 2)
             {
+                var wsum = 0.0;
                 Vector c = (Vector)Poly[0];
-                for (int i = 1; i < Poly.Count; i++)
-                    c += (Vector)Poly[i];
-                Center = (Point)(c / Poly.Count);
+                double prev = (Poly[0] - Poly[Poly.Count - 1]).Length;
+                var ends = prev;
+                double w;
+                for (int i = 0; i < Poly.Count-1; i++)
+                {
+                    double curr = (Poly[i + 1] - Poly[i]).Length;
+                    w = curr + prev;
+                    c += (Vector)Poly[i] * w;
+                    wsum += w;
+                    prev = curr;
+                }
+                w = ends + prev;
+                c += (Vector)Poly[Poly.Count - 1] * w;
+                wsum += w;
+                Center = (Point)(c / wsum);
             }
             else
                 Center = new Point();

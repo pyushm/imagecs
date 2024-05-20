@@ -94,6 +94,8 @@ namespace ImageProcessor
         };
         static Hashtable knownExtensions = new Hashtable();
         static Hashtable storeTypeString = new Hashtable();
+        public const char synonymChar = '=';
+        public const char multiNameChar = '+';
         public static string NameWithoutTempPrefix(string name)
         {   // consitent with temp prefix set in GroupManager
             int ind = name.IndexOf('.');
@@ -224,7 +226,11 @@ namespace ImageProcessor
                 else if (temp)
                     RealName = NameWithoutTempPrefix(RealName);
                 else if (IsInfoImage)
-                    RealName = FileName.UnMangle(fsi.Directory.Name) + '_' + RealName[1];
+                {
+                    string dirName = FileName.UnMangle(fsi.Directory.Name);
+                    string[] fields = dirName.Split(new char[] { synonymChar });
+                    RealName = (fields.Length == 1 ? fields[0] : fields[0] + synonymChar) + ':' + RealName[1];
+                }
                 else if (header)
                     RealName = Path.GetFileName("dir_" + fsi.DirectoryName);
             }
@@ -245,8 +251,6 @@ namespace ImageProcessor
         static Image localImage;
         static Image multiLayerImage;
         static Image notLoadedImage;
-        public const char synonymChar = '=';
-        public const char multiNameChar = '+';
         const int infoImageWidth = 144;
         const int infoImageHeight = 208;
         static ImageFileInfo()              
@@ -474,7 +478,6 @@ namespace ImageProcessor
                 }
             }
             bool isTemp;                    // true if directory is a temp store of new articles
-            //bool isLocked = false;
             DirectoryInfo directory = null; // underlying directory; set up at construction and not changed
             string[] extList = null;        // if specified contains list to display (alternative to directory)
             DateTime lastUpdated;           // last access time of underlying directory
@@ -497,10 +500,9 @@ namespace ImageProcessor
             public bool IsFirst             { get { return ImageFileIndex(ActiveFileFSPath) == 0; } }
             public bool IsLast              { get { return ImageFileIndex(ActiveFileFSPath) == Count - 1; } }
             public ImageFileInfo Last       { get { return Count>0 ? imageFileList[Count - 1] : null; } }
-            //public bool IsSubDirs           { get { return subDirList != null; } }
             public bool IsAdded             { get { return added != null; } }
-            public ImageFileInfo Added { get { ImageFileInfo ret = added; added = null; return ret; } }
-            public bool ValidDirectory { get { return directory!=null && directory.Exists; } }
+            public ImageFileInfo Added      { get { ImageFileInfo ret = added; added = null; return ret; } }
+            public bool ValidDirectory      { get { return directory!=null && directory.Exists; } }
             public ImageFileInfo this[int i]
             {
                 get
@@ -774,15 +776,12 @@ namespace ImageProcessor
             }
             bool UpdateImageList()          
             {
-                //while (isLocked)
-                //    Thread.Sleep(300);
                 if (directory != null && directory.Exists)
                     directory = new DirectoryInfo(directory.FullName);  // updates info
                 if (directory == null || !directory.Exists)
                     return false;
                 lock (this)
                 {
-                    //isLocked = true;
                     //DateTime lat = directory.LastAccessTime;
                     DateTime lat = directory.LastWriteTime;
                     if (lastUpdated < lat)
@@ -800,14 +799,13 @@ namespace ImageProcessor
                                 indexes[i] = ImageFileIndex(deletedFiles[i]);
                             Array.Sort(indexes);
                             for (int i = indexes.Length - 1; i >= 0; i--)
-                                if(indexes[i]>=0)
+                                if (indexes[i] >= 0)
                                     imageFileList.RemoveAt(indexes[i]);
                             //Debug.WriteLine(imageFileList.Count.ToString() + (dirMode ? " subDirs" : " images") + " left");
                             RebuildIndexTable();
                             if (imageFileList.Count == 0)
                             {
                                 abortSynchronization = true;
-                                //isLocked = false;
                                 return false;
                             }
                         }
@@ -826,7 +824,6 @@ namespace ImageProcessor
                     }
                     if (loaded == 0)
                         UpdateHiddenThumbnails(3);
-                    //isLocked = false;
                     return !abortSynchronization;
                 }
             }
@@ -906,24 +903,35 @@ namespace ImageProcessor
                 else
                 {
                     FileInfo[] files = directory.GetFiles();
+                    var downloaded = Navigator.IsSpecDir(directory, SpecName.Downloaded);
                     foreach (var fn in files)
-                        AppendImageFile(FileType(fn.Name), fn, isTemp, false);
+                        if(downloaded)
+                            AddImageFileToFront(FileType(fn.Name), fn, isTemp, false);
+                        else
+                            AppendImageFile(FileType(fn.Name), fn, isTemp, false);
                 }
                 lastUpdated = directory.LastAccessTime;
             }
-            void AppendImageFile(DataType dt, FileInfo fn, bool temp, bool header)
-            {
+            void AddImageFileToFront(DataType dt, FileInfo fn, bool temp, bool header)
+            {   // insert new item to the front of list and indexTable
                 if (indexTable.ContainsKey(fn.FullName) || dt == DataType.Unknown)
                     return;
-                //while (isLocked)
-                //    Thread.Sleep(300);
                 lock (this)
                 {
-                    //isLocked = true;
+                    added = new ImageFileInfo(dt, fn, temp, header);
+                    imageFileList.Insert(0, added);
+                    RebuildIndexTable();
+                }
+            }
+            void AppendImageFile(DataType dt, FileInfo fn, bool temp, bool header)
+            {   // append new item to the list and indexTable
+                if (indexTable.ContainsKey(fn.FullName) || dt == DataType.Unknown)
+                    return;
+                lock (this)
+                {
                     added = new ImageFileInfo(dt, fn, temp, header);
                     imageFileList.Add(added);
                     indexTable.Add(fn.FullName, imageFileList.Count - 1);
-                    //isLocked = false;
                 }
             }
             void RebuildIndexTable()        

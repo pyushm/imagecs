@@ -62,9 +62,7 @@ namespace ImageProcessor
             }
             if (ind < 0)
                 ind = indb;
-            if (ind < 0)
-                return null;
-            if (vlda[ind].Data == null)
+            if (ind < 0 || vlda[ind].Data == null)
                 return null;
             byte[] dec = DataAccess.ReadBytes(vlda[ind].Data, encrypted);
             return dec;

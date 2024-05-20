@@ -15,10 +15,10 @@ namespace ImageProcessor
         {
             navigator = new Navigator();
             InitializeComponent();
-            TreeNode node = locationTreeView.Nodes.Add(navigator.Root.Name);
-            node.Tag = navigator.Root;
+            TreeNode node = locationTreeView.Nodes.Add(Navigator.Root.Name);
+            node.Tag = Navigator.Root;
             node.Nodes.Add("fake");
-            itemInfoImages = new DirectoryInfoImages(locationTreeView, infoImagePanel, navigator.AllDevicy.Name);
+            itemInfoImages = new DirectoryInfoImages(locationTreeView, infoImagePanel, Enum.GetName(typeof(SpecName), SpecName.AllDevicy));
         }
         public static DirectoryInfo GetDirectory()
         {
@@ -53,7 +53,7 @@ namespace ImageProcessor
             {
                 itemInfoImages.ShowInfoImages(selectedNode);
                 inputOutputBox.Text = Path.Combine(selectedNode.Parent.FullName, FileName.UnMangle(selectedNode.Name));
-                if (selectedNode.Parent.Name == navigator.AllDevicy.Name)
+                if (Navigator.IsSpecDir(selectedNode.Parent, SpecName.AllDevicy))
                     inputOutputBox.Text += '/';
             }
         }

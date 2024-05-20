@@ -71,7 +71,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(374, 514);
+            this.ClientSize = new System.Drawing.Size(374, 516);
             this.Controls.Add(this.inputOutputBox);
             this.Controls.Add(this.moveToButton);
             this.Controls.Add(this.infoImagePanel);
