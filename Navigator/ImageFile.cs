@@ -24,9 +24,8 @@ namespace ImageProcessor
         PNG,
         Draw,       // multi-layer drawing
         Movie,      // any video original
-        Animation,
+        //Animation,
         Dir,
-        LocalImages,
         Exact,      // encrypted png image
         Regular,    // encrypted jpg image
         MLI,        // encrypted exact layers
@@ -36,7 +35,6 @@ namespace ImageProcessor
     public static class FileName
     {
         const char mangleChar = '\u13B7';
-        public static bool DoMangle { get; set; } = false;
         public static bool IsMangled(string text) { return text != null && text.Length > 0 && text[0] == mangleChar; }
         public static string UnMangleFile(string filePath) // returns path with last component of path (dir or file) replaced by human readable name
         {
@@ -47,7 +45,7 @@ namespace ImageProcessor
         }
         public static string MangleFile(string filePath) // returns path with last component of path (dir or file) replaced by scrambled name
         {
-            if (!DoMangle || filePath == null || filePath.Length == 0)
+            if (!DataAccess.PrivateAccessEnforced || filePath == null || filePath.Length == 0)
                 return filePath;
             string fileName = Path.GetFileNameWithoutExtension(filePath);
             return Path.Combine(Path.GetDirectoryName(filePath), Mangle(fileName) + Path.GetExtension(filePath));
@@ -69,7 +67,7 @@ namespace ImageProcessor
         }
         public static string Mangle(string src)  // return scrambled src if src not scrambled; otherwise returns src
         {
-            if (!DoMangle || src == null || src.Length == 0 || src[0] == mangleChar)
+            if (!DataAccess.PrivateAccessEnforced || src == null || src.Length == 0 || src[0] == mangleChar)
                 return src;
             char[] res = new char[src.Length + 1];
             res[0] = mangleChar;
@@ -193,8 +191,8 @@ namespace ImageProcessor
         public bool IsInfoImage { get; private set; }   // true if it is a directory info image
         public bool KnownType { get { return Type != DataType.Unknown; } }
         public bool IsDir { get { return Type == DataType.Dir; } }
-        public bool IsLocalImages { get { return Type == DataType.LocalImages; } }
-        public bool IsUnencryptedImage { get { return Type == DataType.GIF || Type == DataType.JPG || Type == DataType.PNG; } }  // unencrypted image of any format
+        public bool IsLocalFile { get { return KnownType && !IsDir; } }                 // any known file but not dir
+        public bool IsUnencryptedImage { get { return Type == DataType.GIF || Type == DataType.JPG || Type == DataType.PNG; } } // unencrypted image of any format
         public bool IsEncryptedImage { get { return Type == DataType.Exact || Type == DataType.Regular; } } // any encrypted image
         public bool IsRegularImage { get { return IsImage && !RealName.StartsWith(infoImagePrefix); } }     // not an info
         public bool IsImage { get { return IsUnencryptedImage || IsEncryptedImage; } }  // single layer
@@ -208,33 +206,49 @@ namespace ImageProcessor
         {
             Type = FileType(fileName);
             FSName = Path.GetFileNameWithoutExtension(fileName);
+            var di = new DirectoryInfo(fileName);
             RealName = FileName.UnMangle(FSName);
+            if (Navigator.IsSpecDir(di, SpecName.NewArticles))
+                RealName = NameWithoutTempPrefix(RealName);
             IsInfoImage = InfoType(RealName) != null;
-        }
-        public ImageFileName(DataType dt, FileInfo fsi, bool temp, bool header)
-        {
-            Type = dt;
-            if (fsi == null)
-                FSName = RealName = "";
-            else
+            if (IsInfoImage)
             {
-                FSName = Path.GetFileNameWithoutExtension(fsi.Name);
-                RealName = FileName.UnMangle(FSName);
-                IsInfoImage = InfoType(RealName) != null;
-                if (dt == DataType.LocalImages)
-                    RealName = "LocalImages";
-                else if (temp)
-                    RealName = NameWithoutTempPrefix(RealName);
-                else if (IsInfoImage)
-                {
-                    string dirName = FileName.UnMangle(fsi.Directory.Name);
-                    string[] fields = dirName.Split(new char[] { synonymChar });
-                    RealName = (fields.Length == 1 ? fields[0] : fields[0] + synonymChar) + ':' + RealName[1];
-                }
-                else if (header)
-                    RealName = Path.GetFileName("dir_" + fsi.DirectoryName);
+                string dirName = FileName.UnMangle(di.Name);
+                string[] fields = dirName.Split(new char[] { synonymChar });
+                RealName = (fields.Length == 1 ? fields[0] : fields[0] + synonymChar) + ':' + RealName[1];
             }
         }
+        public ImageFileName() // name with extension
+        {
+            Type = DataType.Unknown;
+            FSName = "";
+            RealName = "";
+            IsInfoImage = false;
+        }
+        //    public ImageFileName(DataType dt, FileInfo fsi, bool temp, bool header)
+        //    {
+        //        Type = dt;
+        //        if (fsi == null)
+        //            FSName = RealName = "";
+        //        else
+        //        {
+        //            FSName = Path.GetFileNameWithoutExtension(fsi.Name);
+        //            RealName = FileName.UnMangle(FSName);
+        //            IsInfoImage = InfoType(RealName) != null;
+        //            if (dt == DataType.LocalFile)
+        //                RealName = "LocalImages";
+        //            else if (temp)
+        //                RealName = NameWithoutTempPrefix(RealName);
+        //            else if (IsInfoImage)
+        //            {
+        //                string dirName = FileName.UnMangle(fsi.Directory.Name);
+        //                string[] fields = dirName.Split(new char[] { synonymChar });
+        //                RealName = (fields.Length == 1 ? fields[0] : fields[0] + synonymChar) + ':' + RealName[1];
+        //            }
+        //            else if (header)
+        //                RealName = Path.GetFileName("dir_" + fsi.DirectoryName);
+        //        }
+        //    }
     }
     public class ImageDirInfo : ImageFileName
     {
@@ -248,7 +262,7 @@ namespace ImageProcessor
         static Image failedImage;
         static Image mediaImage;
         static Image dirImage;
-        static Image localImage;
+        static Image localFilesImage;
         static Image multiLayerImage;
         static Image notLoadedImage;
         const int infoImageWidth = 144;
@@ -258,7 +272,7 @@ namespace ImageProcessor
             failedImage = LoadSpecialImage("failedImage.png");
             mediaImage = LoadSpecialImage("mediaImage.png");
             dirImage = LoadSpecialImage("dirImage.png");
-            localImage = LoadSpecialImage("localImage.png");
+            localFilesImage = LoadSpecialImage("localImage.png");
             multiLayerImage = LoadSpecialImage("multiLayerImage.png");
             notLoadedImage = LoadSpecialImage("notLoadedImage.png");
         }
@@ -305,31 +319,40 @@ namespace ImageProcessor
         }
         static public IntSize ThumbnailSize() { return new IntSize(infoImageHeight, infoImageHeight); }
         static public IntSize PixelSize(InfoType it) { return it == ImageProcessor.InfoType.Detail || it == ImageProcessor.InfoType.Preview ? new IntSize(infoImageWidth, infoImageHeight) : new IntSize(infoImageWidth / 2, infoImageWidth / 2); }
-        static public FileInfo GetFirstImageName(FileInfo[] files)
+        static public FileInfo GetFirstKnownFile(FileInfo[] files)
         {
             foreach (var f in files)
-                if ((new ImageFileName(f.Name)).IsImage)
+            {
+                var ft = FileType((f.Name));
+                if (ft != DataType.Unknown && ft != DataType.Dir)
                     return f;
+            }
             return null;
         }
         public bool Modified { get; private set; } // true indicatates for client to get new image 
         bool cynchronized = false;          // false indicatates need to load image
         bool priority = false;              // true indicatates need for priority loading of visible image
-        bool dirHeader;                     // indicate file representing directory
         Image thumbnail;                    // image displayed in preview mode
         DateTime modifiedTime;              // update time of the image 
         public FileInfo FileInfo            { get; private set; }
         public string FSPath { get { return FileInfo == null ? "" : FileInfo.FullName; } } // complete path of image object
         public string RealPath { get { return FileInfo == null ? "" : Path.Combine(FileInfo.Directory.Parent.FullName, FileName.UnMangle(FileInfo.Directory.Name), RealName); } } // complete path of image object
-        public bool IsDirHeader             { get { return dirHeader; } }
+        public bool IsDirFile               { get; private set; } // indicate directory file
         public ImageFileInfo(FileInfo fi) : base(fi.Name) { FileInfo = fi; }
-        public ImageFileInfo(DataType dt, FileInfo fsi, bool temp, bool header) : base(dt, fsi, temp, header)
+        public ImageFileInfo() : base()
         {
-            FileInfo = fsi;
+            FileInfo = null;
             thumbnail = notLoadedImage;
-            dirHeader = header;
+            IsDirFile = false;
             modifiedTime = new DateTime();
         }
+        //public ImageFileInfo(DataType dt, FileInfo fsi, bool temp, bool header) : base(dt, fsi, temp, header)
+        //{
+        //    FileInfo = fsi;
+        //    thumbnail = notLoadedImage;
+        //    IsDirFile = header;
+        //    modifiedTime = new DateTime();
+        //}
         public string GetDirInfoName()
         {
             int imCount = -1;
@@ -414,8 +437,9 @@ namespace ImageProcessor
                     thumbnail = dirImage;
                     SetCynchronized(DateTime.Now);
                     break;
-                case DataType.LocalImages:
-                    thumbnail = localImage;
+                //case DataType.LocalFile:
+                default:
+                    thumbnail = localFilesImage;
                     SetCynchronized(DateTime.Now);
                     break;
             }
@@ -424,8 +448,11 @@ namespace ImageProcessor
         public bool ThumbnailCallback()     { return false; }
         public Image GetThumbnail()         // called by the clent if modified=true
         {
-            if(!cynchronized)
-                priority=true;
+            if (!cynchronized)
+            {
+                priority = true;
+                return null;
+            }
             Modified = false;
             return thumbnail;
         }
@@ -464,9 +491,9 @@ namespace ImageProcessor
                 return string.Compare(if1, if2, true);
             }
         }
-        public class Collection             
+        public class FileList             
         {
-            static ImageFileInfo emptyImage = new ImageFileInfo(DataType.Unknown, null, false, false);
+            static ImageFileInfo emptyImage = new ImageFileInfo();
             static int synchronizationDelay = 300; // synchronization delay between directory and image collection
             public class RealNameComparer : IComparer<ImageFileInfo>
             {
@@ -482,10 +509,10 @@ namespace ImageProcessor
             string[] extList = null;        // if specified contains list to display (alternative to directory)
             DateTime lastUpdated;           // last access time of underlying directory
             bool dirMode;                   // true - shows dir info images, false - shows images 
-            InfoType infoType;              // type of info if view mode is info 
+            InfoType viewInfoType;          // type of info if view mode is info 
             ImageFileInfo activeFile;       // current file name
             Dictionary<string, int> indexTable = new Dictionary<string, int>(); // FSPath to index table
-            List<ImageFileInfo> imageFileList = new List<ImageFileInfo>();// collection of ImageFile
+            List<ImageFileInfo> imageFileList = new List<ImageFileInfo>();// collection of ImageFileInfo's
             BackgroundWorker synchronization; // keeping synchronization between list and directory
             public event VoidNoArg notifyEmptyDir = null;
             public ImageFileInfo added = null;
@@ -513,18 +540,18 @@ namespace ImageProcessor
                     catch { return emptyImage; }
                 }
             }
-            public Collection(ImageDirInfo dir, InfoType it, bool temp) { Initialize(dir, true, it, null, temp); }
-            public Collection(ImageDirInfo dir, bool temp) { Initialize(dir, false, ImageProcessor.InfoType.Detail, null, temp); }
-            public Collection(ImageDirInfo dir, string[] extList) { Initialize(dir, true, ImageProcessor.InfoType.Detail, extList, false); }
-            void Initialize(ImageDirInfo dir, bool dirm, InfoType it, string[] list, bool tempStore_)
+            public FileList(ImageDirInfo dir, InfoType it) { Initialize(dir, true, it, null); }
+            public FileList(ImageDirInfo dir) { Initialize(dir, false, ImageProcessor.InfoType.Detail, null); }
+            public FileList(ImageDirInfo dir, string[] extList) { Initialize(dir, true, ImageProcessor.InfoType.Detail, extList); }
+            void Initialize(ImageDirInfo dir, bool dirm, InfoType it, string[] list)
             {
                 directory = dir.DirInfo;
                 if (!ValidDirectory)
                     throw new Exception("Directory '"+dir.FSPath+"' does not exists");
                 dirMode = dirm;
-                infoType = it;
+                viewInfoType = it;
                 extList = list;
-                isTemp = tempStore_;
+                isTemp = list == null && Navigator.IsSpecDir(dir.DirInfo, SpecName.NewArticles);
                 activeFile = null;
                 synchronization = new BackgroundWorker();
                 synchronization.DoWork += Synchronization_DoWork;
@@ -534,7 +561,7 @@ namespace ImageProcessor
                     Sort(new RealNameComparer());
                 SynchronizeDirectory();
             }
-            ~Collection()
+            ~FileList()
             {
                 Clear();
                 if (synchronization != null)
@@ -558,31 +585,23 @@ namespace ImageProcessor
                     RebuildIndexTable();
                 }
             }
-            public int ImageFileIndex(string fileName) { int ind; if(indexTable.TryGetValue(fileName, out ind)) return ind; return -1; }
+            public int ImageFileIndex(string fileName) { if(indexTable.TryGetValue(fileName, out int ind)) return ind; return -1; }
             public string MoveFiles(ImageFileInfo[] filesToMove, DirectoryInfo toDirectory)
             {
                 if (toDirectory != null && !Directory.Exists(toDirectory.FullName))
                     return "Destination directory '" + toDirectory + "' does not exist";
-                //while (isLocked)
-                //    Thread.Sleep(300);
                 lock (this)
                 {
-                    //isLocked = true;
                     string warnings = "";
-                    bool delete = toDirectory == null;
-                    bool navigate = true;
-                    if (filesToMove == null)
-                    {
-                        filesToMove = imageFileList.ToArray();
-                        navigate = false;
-                    }
+                    filesToMove = filesToMove == null ? imageFileList.ToArray() : filesToMove;
+                    bool delete = toDirectory == null;  // deleting files from filesToMove List
                     foreach (ImageFileInfo ifi in filesToMove)
                     {
-                        if (ifi == null || ifi.dirHeader)
+                        if (ifi == null || ifi.IsDirFile)
                             continue;
                         try
                         {
-                            if (activeFile != null && navigate && ifi.FSPath == activeFile.FSPath)
+                            if (activeFile != null && filesToMove != null && ifi.FSPath == activeFile.FSPath)
                                 NavigateTo(1);
                             if (delete)
                                 warnings += Delete(ifi.FSPath);
@@ -591,7 +610,7 @@ namespace ImageProcessor
                                 string dest = Path.Combine(toDirectory.FullName, FileName.MangleFile(Path.GetFileName(ifi.FSPath)));
                                 File.Move(ifi.FSPath, dest);
                             }
-                            else if (DataAccess.PrivateAccessAllowed && (ifi.IsUnencryptedImage || ifi.IsUnencryptedVideo))
+                            else if (DataAccess.PrivateAccessEnforced && (ifi.IsUnencryptedImage || ifi.IsUnencryptedVideo))
                             {   // when PrivateAccessAllowed move images with encription and name mangling
                                 string name = ifi.IsUnencryptedVideo ? ifi.FSName + ".vid" : ifi.IsExact ? ifi.FSName + ".exa" : ifi.FSName + ".jpe";
                                 byte[] src = File.ReadAllBytes(ifi.FSPath);
@@ -615,17 +634,13 @@ namespace ImageProcessor
                             warnings += ifi.FSPath + " was not moved: " + ex.Message + "  ";
                         }
                     }
-                    //isLocked = false;
                     return warnings;
                 }
             }
             public void Rename(ImageFileInfo ifi, string newName)
             {
-                //while (isLocked)
-                //    Thread.Sleep(300);
                 lock (this)
                 {
-                    //isLocked = true;
                     string oldName = ifi.FSPath;
                     if (newName == null || newName.Length == 0)
                         return;
@@ -636,7 +651,6 @@ namespace ImageProcessor
                         indexTable.Remove(oldName);
                         indexTable.Add(newFullName, ind);
                     }
-                    //isLocked = false;
                 }
             }
             public int NewInd(int delta = 0)
@@ -851,11 +865,11 @@ namespace ImageProcessor
             }
             FileInfo GetInfoFile(DirectoryInfo di, string p1, string p2)
             {
-                FileInfo fsf = GetFirstImageName(di.GetFiles(p1));
+                FileInfo fsf = GetFirstKnownFile(di.GetFiles(p1));
                 if (fsf == null)
-                    fsf = GetFirstImageName(di.GetFiles(p2));
+                    fsf = GetFirstKnownFile(di.GetFiles(p2));
                 if (fsf == null)
-                    fsf = GetFirstImageName(di.GetFiles());
+                    fsf = GetFirstKnownFile(di.GetFiles());
                 return fsf;
             }
             void AppendFiles()              
@@ -880,11 +894,11 @@ namespace ImageProcessor
                     }
                     else
                         directories = directory.GetDirectories();
-                    string p1 = InfoFileName(infoType) + '*';
-                    string p2 = FileName.MangleFile(InfoFileName(infoType)) + '*';
+                    string p1 = InfoFileName(viewInfoType) + '*';
+                    string p2 = FileName.MangleFile(InfoFileName(viewInfoType)) + '*';
                     FileInfo fsf = GetInfoFile(directory, p1, p2);
                     if (fsf != null)
-                        AppendImageFile(DataType.LocalImages, fsf, isTemp, true);
+                        AppendImageFile(fsf);
                     foreach (DirectoryInfo di in directories)
                     {
                         if (di == null)
@@ -893,9 +907,9 @@ namespace ImageProcessor
                         {
                             fsf = GetInfoFile(di, p1, p2);
                             if (fsf != null)
-                                AppendImageFile(FileType(fsf.Name), fsf, isTemp, true);
+                                AppendImageFile(fsf);
                             else if (Directory.GetDirectories(di.FullName).Length > 0)
-                                AppendImageFile(DataType.Dir, new FileInfo(di.FullName), isTemp, true);
+                                AppendImageFile(new FileInfo(di.FullName));
                         }
                         finally { }
                     }
@@ -904,32 +918,34 @@ namespace ImageProcessor
                 {
                     FileInfo[] files = directory.GetFiles();
                     var downloaded = Navigator.IsSpecDir(directory, SpecName.Downloaded);
-                    foreach (var fn in files)
-                        if(downloaded)
-                            AddImageFileToFront(FileType(fn.Name), fn, isTemp, false);
+                    foreach (var fi in files)
+                    {
+                        if (downloaded)
+                            AddImageFileToFront(fi);
                         else
-                            AppendImageFile(FileType(fn.Name), fn, isTemp, false);
+                            AppendImageFile(fi);
+                    }
                 }
                 lastUpdated = directory.LastAccessTime;
             }
-            void AddImageFileToFront(DataType dt, FileInfo fn, bool temp, bool header)
+            void AddImageFileToFront(FileInfo fn)
             {   // insert new item to the front of list and indexTable
-                if (indexTable.ContainsKey(fn.FullName) || dt == DataType.Unknown)
+                if (indexTable.ContainsKey(fn.FullName))
                     return;
                 lock (this)
                 {
-                    added = new ImageFileInfo(dt, fn, temp, header);
+                    added = new ImageFileInfo(fn);
                     imageFileList.Insert(0, added);
                     RebuildIndexTable();
                 }
             }
-            void AppendImageFile(DataType dt, FileInfo fn, bool temp, bool header)
+            void AppendImageFile(FileInfo fn)
             {   // append new item to the list and indexTable
-                if (indexTable.ContainsKey(fn.FullName) || dt == DataType.Unknown)
+                if (fn == null || indexTable.ContainsKey(fn.FullName))
                     return;
                 lock (this)
                 {
-                    added = new ImageFileInfo(dt, fn, temp, header);
+                    added = new ImageFileInfo(fn);
                     imageFileList.Add(added);
                     indexTable.Add(fn.FullName, imageFileList.Count - 1);
                 }

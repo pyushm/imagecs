@@ -228,7 +228,7 @@ namespace ImageProcessor
                     bool borderSet = false;
                     colorTransform = new ColorTransform(borderColor);
                     transparencyMask = new ByteMatrix(0, 0);
-                    image = new BitmapAccess(image.AdjustedPArgbImage(colorTransform, transparencyMask, ref borderSet));
+                    image = new BitmapAccess(image.CreateAdjustedPArgbBitmap(colorTransform, transparencyMask, ref borderSet));
                     if (borderSet)
                     {
                         ByteMatrix filter = ByteMatrix.CreateConeFilter(transparentEdge);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Media;
 
 namespace ImageProcessor
 {
@@ -9,10 +10,10 @@ namespace ImageProcessor
         int attempts = 3;
         public PasswordDialog()
         {
+            SystemSounds.Beep.Play();
             InitializeComponent();
             passBox.KeyDown += new KeyEventHandler(passBox_KeyDown);
             passBox.PasswordChar = '\u25CF';
-
         }
         void passBox_KeyDown(object sender, KeyEventArgs e)
         {

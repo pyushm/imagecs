@@ -71,8 +71,6 @@ namespace ImageProcessor
             return 300 * (2 * penalty + pLeft + sLeft) / (Pattern.Length + samplePattern.Length + 1);
         }
     }
-    public delegate void NewDirectoryNode(DirectoryInfo fi, string relativePath);
-    public delegate void NewImageSelection(string image);
     public enum Relation
     {
         Only1 = 0,

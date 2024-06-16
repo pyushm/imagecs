@@ -294,6 +294,9 @@ namespace ImageProcessor
             r = (byte)(r * acoef);
             g = (byte)(g * acoef);
             b = (byte)(b * acoef);
+            //r = (byte)Math.Min(r * acoef, 254);
+            //g = (byte)Math.Min(g * acoef, 254);
+            //b = (byte)Math.Min(b * acoef, 254);
         }
         public override string ToString()
         {

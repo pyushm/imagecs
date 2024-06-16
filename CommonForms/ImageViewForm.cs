@@ -22,7 +22,7 @@ namespace ImageProcessor
         ImageEditForm editForm = null;
         int viewingAreaOffset;				// viewing area offset from left of client rectangle
         ImageListForm parent;				// parent image list form
-        ImageFileInfo.Collection imageFiles;// full image file name shown as big image
+        ImageFileInfo.FileList imageFiles;// full image file name shown as big image
         ImageFileInfo imageInfo;            // curently displayed image file info 
         bool infoMode;				        // indicates if info or original has to be extracted
         InfoType infoType;                  // tipe of info image when infoMode==true
@@ -632,8 +632,8 @@ namespace ImageProcessor
             //Debug.WriteLine("View Modifier=" + Keyboard.Modifiers.ToString() + " key=" + e.KeyCode.ToString() + " " + Keyboard.IsKeyDown(Key.LeftCtrl));
             if (e.KeyCode == Keys.C && Keyboard.IsKeyDown(Key.LeftCtrl))
             {
-                canvas.SetClipboardFromSelection();
                 SystemSounds.Beep.Play();
+                canvas.SetClipboardFromSelection();
             }
         }
         void SetCutRectangle()
@@ -818,14 +818,14 @@ namespace ImageProcessor
         {
             SaveFileDialog saveAsDialog = new SaveFileDialog();
             saveAsDialog.FileName = imageInfo.RealName;
-            saveAsDialog.Filter = DataAccess.PrivateAccessAllowed ? "regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
+            saveAsDialog.Filter = DataAccess.PrivateAccessEnforced ? "regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
             saveAsDialog.FilterIndex = imageInfo.IsMultiLayer ? 3 : imageInfo.IsExact ? 2 : 1;
             saveAsDialog.RestoreDirectory = true;
             saveAsDialog.InitialDirectory = Path.GetDirectoryName(imageInfo.FSPath);
             saveAsDialog.OverwritePrompt = true;
             if (saveAsDialog.ShowDialog() == DialogResult.OK)
             {
-                string saveName = DataAccess.PrivateAccessAllowed ? FileName.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName;
+                string saveName = DataAccess.PrivateAccessEnforced ? FileName.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName;
                 SaveImage(saveName, resizeBox.Checked ? 2000 : 0);
             }
         }

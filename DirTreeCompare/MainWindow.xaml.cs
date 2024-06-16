@@ -354,7 +354,7 @@ namespace DirTreeCompare
                     System.Windows.MessageBox.Show("Directory " + path + " doew not exist");
                     return;
                 }
-                ImageListForm sif = new ImageListForm(new DirectoryInfo(path), path == Navigator.SpecDir(SpecName.NewArticles).FullName, navigator);
+                ImageListForm sif = new ImageListForm(new DirectoryInfo(path), navigator);
                 invoked.Add(sif);
                 try
                 {

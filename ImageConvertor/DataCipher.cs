@@ -151,8 +151,8 @@ namespace ImageProcessor
         static DataCipher cipher = null;
         public static string NullCipher = "Can't access private data: encryption not set";
         public static string Warning { get; private set; }
-        public static bool AllowPrivateAccess(string password) { cipher = DataCipher.Create(password); return PrivateAccessAllowed; }
-        public static bool PrivateAccessAllowed { get { return cipher != null; } set { if (!value) cipher = null; } }
+        public static bool AllowPrivateAccess(string password) { cipher = DataCipher.Create(password); return PrivateAccessEnforced; }
+        public static bool PrivateAccessEnforced { get { return cipher != null; } } // enforces conversion to private state for any file change 
         public static byte[] ReadBytes(byte[] src, bool encrypted)
         {
             Warning = "";

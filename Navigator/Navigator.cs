@@ -18,11 +18,11 @@ namespace ImageProcessor
     }
     public class Navigator : IAssociatedPath
 	{
-        #region Private Members
-        static public int MatchRange = 100;  // maximum match difference percentage included into search results
+        static int MatchRange = 100;  // maximum match difference percentage included into search results
         static ImageHash.Comparer imageInfoComparer = new ImageHash.Comparer(56);
-        string[] textPatterns;   // 1 item - search for pattern in string; >1 - serch exact string for each item (1 extra char at the end allowed)
         static DirectoryInfo[] specialDirectories;
+        public delegate void NewDirectoryNode(DirectoryInfo fi, string relativePath);
+        public delegate void NewImageSelection(string image);
         public static DirectoryInfo SpecDir(SpecName sd) { return specialDirectories[(int)sd]; }
         public static DirectoryInfo Root        { get { return specialDirectories[(int)SpecName.Root]; } }
         public static bool IsSpecDir(DirectoryInfo testdi)
@@ -33,12 +33,12 @@ namespace ImageProcessor
             return false;
         }
         public static bool IsSpecDir(DirectoryInfo testdi, SpecName sd) { return specialDirectories[(int)sd].FullName == testdi.FullName; }
+        string[] textPatterns;   // 1 item - search for pattern in string; >1 - serch exact string for each item (1 extra char at the end allowed)
         SoundLike soundPattern;
         int searchDaysOld = int.MaxValue;
         SearchResult searchResult;
         List<DirDifference> dirDifferences = new List<DirDifference>();
         bool stopSearch = false;
-        #endregion
         public enum SearchMode
         {
             Name,
@@ -56,7 +56,7 @@ namespace ImageProcessor
         }
         public NewDirectoryNode ProcessDirecory;
         public NewImageSelection onNewImageSelection;
-        NewDirectoryNode searchMatch = null;
+        NewDirectoryNode searchDirecory = null;
         string activeImageName = null;
         public string RootName          { get; private set; }
         public string PaintExe          { get; private set; }
@@ -65,7 +65,7 @@ namespace ImageProcessor
         public string MediaTmpLocation  { get { return "_._"; } }
         public string ActiveImageName   { get { return activeImageName; } set { activeImageName = value; onNewImageSelection?.Invoke(activeImageName); } }
         public bool StopSearch          { get { return stopSearch; } set { stopSearch = value; } }
-        public string[] GetMatchingDirNames()
+        public string[] GetMatchedDirNames()
         {
             List<string> ret = new List<string>();
             foreach (var dir in searchResult.GetMatchedDirs())
@@ -194,7 +194,7 @@ namespace ImageProcessor
             if (StopSearch)
                 return;
             relativePath = FileName.UnMangleFile(relativePath);
-            searchMatch?.Invoke(dirNode, relativePath);
+            searchDirecory?.Invoke(dirNode, relativePath);
             DirectoryInfo[] subdirs = dirNode.GetDirectories();
             foreach (DirectoryInfo subdir in subdirs)
             {
@@ -299,9 +299,9 @@ namespace ImageProcessor
         {
             StopSearch = false;
             searchResult.Clear();
-            searchMatch = callback;
+            searchDirecory = callback;
             try { SearchRecursively(start, ""); }
-            finally { searchMatch = null; }
+            finally { searchDirecory = null; }
             return searchResult;
         }
         void MatchDirectory(DirectoryInfo dirNode, string relativePath)

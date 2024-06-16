@@ -337,7 +337,7 @@ namespace ImageProcessor
             {
                 bool borderSet = false;
                 if (PixelFormat != PixelFormats.Pbgra32)
-                    Source = to = AdjustedPArgbImage(null, null, ref borderSet);
+                    Source = to = CreateAdjustedPArgbBitmap(null, null, ref borderSet);
             }
             from.Lock();
             to.Lock();
@@ -615,11 +615,12 @@ namespace ImageProcessor
                 newColors[3] = transparency;
             return CreateFromColorMatrixes(newColors);
         }
-        public WriteableBitmap AdjustedPArgbImage(ColorTransform transform, ByteMatrix mask, ref bool transparencySet)
+        public WriteableBitmap CreateAdjustedPArgbBitmap(ColorTransform transform, ByteMatrix mask, ref bool transparencySet)
         {
-            if ((transform == null || transform.IsIdentical) && (PixelFormat == PixelFormats.Pbgra32 || PixelFormat == PixelFormats.Bgra32))
+            bool sameInputFormat = PixelFormat == PixelFormats.Pbgra32 || PixelFormat == PixelFormats.Bgra32;
+            if ((transform == null || transform.IsIdentical) && sameInputFormat)
                 return Source.Clone();
-            bool alphaIgnored = (transform != null && transform.IsTransparentColorSet) || (PixelFormat != PixelFormats.Pbgra32 && PixelFormat != PixelFormats.Bgra32);
+            bool alphaIgnored = (transform != null && transform.IsTransparentColorSet) || !sameInputFormat;
             WriteableBitmap bmn = new WriteableBitmap(Width, Height, 96, 96, PixelFormats.Pbgra32, null);
             bmn.Lock();
             if (mask != null)
@@ -680,7 +681,7 @@ namespace ImageProcessor
             }
             bmn.Unlock();
             //TimeSpan t = DateTime.Now - to;
-            //Console.WriteLine("AdjustedPArgbImage=" + t.TotalMilliseconds);
+            //Console.WriteLine("CreateAdjustedPArgbBitmap: " + t.TotalMilliseconds);
             transparencySet = flag;
             return bmn;
         }

@@ -25,9 +25,10 @@ namespace ImageProcessor
         IAssociatedPath associatedPath;
         ImageDirInfo sourceDir;	                // direcory to build sourceCollection from
         bool subdirListMode;                    // if true shows info images of subdirectories
-        string[] extList;
-        bool tempStore;                         // underlying directory is new article temp store if true
-        public ImageFileInfo.Collection ImageCollection { get; private set; } = null; // currently displayed images
+        string[] extList;                       // list of items from search
+        bool srcNewArticles;                    // source is NewArticles
+        bool srcDownloaded;                     // source is Downloaded
+        public ImageFileInfo.FileList ImageCollection { get; private set; } = null; // currently displayed images
         ImageList thumbnails;                   // currently displayed thumbnailes
         ImageViewForm viewForm;                 // form displaying active image of ImageCollection
         Timer listUpdateTimer;
@@ -49,10 +50,6 @@ namespace ImageProcessor
 			base.Dispose( disposing );
 		}
 		#region Windows Form Designer generated code
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
 		void InitializeComponent()
 		{
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ImageListForm));
@@ -184,21 +181,18 @@ namespace ImageProcessor
             redrawRequest = true;
             return ret;
         }
-        public ImageListForm(DirectoryInfo di, string[] list, IAssociatedPath paths) { Initialize(di, list, false, paths); }
-        public ImageListForm(DirectoryInfo di, bool tempStore_, IAssociatedPath paths) { Initialize(di, null, tempStore_, paths);  }
-        public ImageListForm(DirectoryInfo di, IAssociatedPath paths) { Initialize(di, null, true, paths); }
-        void Initialize(DirectoryInfo di, string[] list, bool tempStore_, IAssociatedPath paths)
+        public ImageListForm(DirectoryInfo di, string[] list, IAssociatedPath paths) { Initialize(di, list, paths); } // call from found matches
+        public ImageListForm(DirectoryInfo di, IAssociatedPath paths) { Initialize(di, null, paths); } // call from News Reader
+        void Initialize(DirectoryInfo di, string[] list, IAssociatedPath paths)
 		{
             InitializeComponent();
-            tempStore = tempStore_;
+            srcNewArticles = list == null && Navigator.IsSpecDir(di, SpecName.NewArticles);
+            srcDownloaded = list == null && Navigator.IsSpecDir(di, SpecName.Downloaded);
             sourceDir = new ImageDirInfo(di);
             extList = list;
             associatedPath = paths;
-            if (tempStore)
-            {
-                nextSetButton.Visible=false;
-                previousSetButton.Visible = false;
-            }
+            nextSetButton.Visible = !srcNewArticles;
+            previousSetButton.Visible = !srcNewArticles;
             imageListView.VirtualMode = true;
             Text = sourceDir.RealPath;
             infoModeBox.Items.AddRange(Enum.GetNames(typeof(InfoType)));
@@ -222,7 +216,7 @@ namespace ImageProcessor
             listUpdateTimer.Interval = updateListFrequency;
             listUpdateTimer.Tick += new EventHandler(UpdateList);
             listUpdateTimer.Start();
-            try { subdirListMode = !tempStore_ && (list != null || sourceDir.DirInfo.GetDirectories().Length > 0); }
+            try { subdirListMode = !srcNewArticles && (list != null || sourceDir.DirInfo.GetDirectories().Length > 0); }
             catch { }
             infoModeBox.Visible = subdirListMode;
             ShowImages();
@@ -360,7 +354,7 @@ namespace ImageProcessor
                 return;
 			try
 			{
-                if (!d.IsDirHeader)
+                if (!d.IsDirFile)
 				{
                     if (d.IsImage || d.IsMultiLayer)
                     {
@@ -385,7 +379,7 @@ namespace ImageProcessor
                     DirectoryInfo di = d.IsDir ? new DirectoryInfo(d.FSPath) : new DirectoryInfo(Path.GetDirectoryName(d.FSPath));
                     if (di.Exists)
                     {
-                        ImageListForm sif = new ImageListForm(di, d.IsLocalImages, associatedPath);
+                        ImageListForm sif = new ImageListForm(di, associatedPath);
                         sif.Show();
                     }
 				}
@@ -479,7 +473,7 @@ namespace ImageProcessor
                 imageListView.SelectedIndices.Clear();
             }
             string msg = copy ? CopyFilesTo(fileList, toDirectory) : MoveFilesTo(fileList, toDirectory);
-            ImageListForm sif = new ImageListForm(toDirectory, false, associatedPath);
+            ImageListForm sif = new ImageListForm(toDirectory, associatedPath);
             sif.Show();
             if (msg != null && msg.Length > 0)
                 MessageBox.Show(msg);
@@ -495,9 +489,9 @@ namespace ImageProcessor
                 if (viewForm != null)
                 {
                     int newActive = ImageCollection.ImageFileIndex(ImageCollection.ActiveFileFSPath);
-                    if (newActive < 0)
+                    if (newActive < 0) // file not in index list 
                         return msg;
-                    if (tempStore && newActive == 0)
+                    if (srcNewArticles && newActive == 0)
                     {
                         newActive = ImageCollection.Count - 1;
                         ImageCollection.SetActiveFile(ImageCollection[newActive].FSPath);
@@ -533,7 +527,7 @@ namespace ImageProcessor
 		}
 		void SortByName(object s, System.EventArgs e)
 		{
-            ImageCollection.Sort(new ImageFileInfo.Collection.RealNameComparer());
+            ImageCollection.Sort(new ImageFileInfo.FileList.RealNameComparer());
             imageListView.VirtualListSize = 0;
 		}
 		void OpenPaint(object s, System.EventArgs e)
@@ -552,8 +546,8 @@ namespace ImageProcessor
                 if (si.Height * scale > 255)
                     scale = 255.0 / si.Height;
                 thumbnails.ImageSize = new Size((int)(si.Width * scale), (int)(si.Height * scale));
-                ImageCollection = extList != null ? new ImageFileInfo.Collection(sourceDir, extList) :
-                    subdirListMode ? new ImageFileInfo.Collection(sourceDir, infoType, tempStore) : new ImageFileInfo.Collection(sourceDir, tempStore);
+                ImageCollection = extList != null ? new ImageFileInfo.FileList(sourceDir, extList) :
+                    subdirListMode ? new ImageFileInfo.FileList(sourceDir, infoType) : new ImageFileInfo.FileList(sourceDir);
                 ImageCollection.notifyEmptyDir += EmptyDirHandler;
                 imageListView.VirtualListSize = 0;
                 imageListView.ArrangeIcons(ListViewAlignment.SnapToGrid);
@@ -589,11 +583,11 @@ namespace ImageProcessor
         {
             try
             {
-                if (!redrawRequest)
-                    return;
-                if (!IsItemVisible(e.ItemIndex))
+                if (!redrawRequest || !IsItemVisible(e.ItemIndex))
                     return;
                 Image im = ImageCollection[e.ItemIndex].GetThumbnail();
+                if(im==null) 
+                    return;
                 float rw = e.Bounds.Width;
                 float rh = e.Bounds.Height - 13 * dpiScaleY;
                 float scale = Math.Min(rw / im.Width, rh / im.Height);
