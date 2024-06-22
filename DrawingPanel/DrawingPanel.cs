@@ -457,7 +457,7 @@ namespace ImageProcessor
                         AddVisualLayer(vl);
                     }
                 }
-                else if (loadInfo.IsEncryptedVideo)
+                else if (loadInfo.Is(DataType.EncMOV))
                 {
                     BitmapAccess ba = BitmapAccess.LoadImage("mediaImage.png", false);
                     AddVisualLayer(new BitmapLayer("Video", ba));

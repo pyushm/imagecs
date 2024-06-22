@@ -377,9 +377,9 @@ namespace DirTreeCompare
                     invoked.Add(viewForm);
                     viewForm.ShowNewImage(path);
                 }
-                else if (dt.IsUnencryptedVideo)
+                else if (dt.Is(DataType.MOV))
                     Process.Start(navigator.MediaExe, '\"' + path + '\"');
-                else if (dt.IsEncryptedVideo)
+                else if (dt.Is(DataType.EncMOV))
                 {
                     try
                     {

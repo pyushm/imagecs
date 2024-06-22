@@ -92,6 +92,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\bin\ListComparer.dll</HintPath>
     </Reference>
+    <Reference Include="Navigator, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\bin\Navigator.dll</HintPath>
+    </Reference>
     <Reference Include="System">
       <Name>System</Name>
     </Reference>
@@ -125,16 +129,6 @@
     <Compile Include="NewArticleStorage.cs">
       <SubType>Code</SubType>
     </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ImageConvertor\ImageConvertor.csproj">
-      <Project>{453594B8-8D68-40E1-829B-C60B184C4723}</Project>
-      <Name>ImageConvertor</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Navigator\Navigator.csproj">
-      <Project>{69610B8C-8790-41F8-AC96-146677F5BF5F}</Project>
-      <Name>Navigator</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

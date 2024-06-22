@@ -604,7 +604,7 @@ namespace ImageProcessor
             actionBox.KeyPress += delegate (object sender, KeyPressEventArgs e) { if (ModifierKeys == Keys.Control) e.Handled = true; };
             parent = parentListForm;
             if (parent != null)             // launched from parent list form
-                imageFiles = parent.ImageCollection;
+                imageFiles = parent.Images;
             else
             {                               // for single image display
                 imageFiles = null;

@@ -109,10 +109,10 @@ namespace ImageProcessor
                         bool mangled = name != file.Name;
                         if (ifi.IsUnencryptedImage)
                             name = ifi.IsExact ? ifi.FSName + ".exa" : ifi.FSName + ".jpe";
-                        if (ifi.IsUnencryptedVideo)
+                        if (ifi.Is(DataType.MOV))
                             name = ifi.FSName + ".vid";
                         string newFilePath = Path.Combine(file.DirectoryName, name);
-                        bool needEncryption = ifi.IsUnencryptedImage || ifi.IsUnencryptedVideo;
+                        bool needEncryption = ifi.IsUnencryptedImage || ifi.Is(DataType.MOV);
                         try
                         {
                             if(needEncryption)

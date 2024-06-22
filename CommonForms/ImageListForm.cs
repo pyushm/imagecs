@@ -4,6 +4,7 @@ using System.Collections;
 using System.Windows.Forms;
 using System.IO;
 using System.Diagnostics;
+using System.Threading;
 
 namespace ImageProcessor
 {
@@ -27,11 +28,10 @@ namespace ImageProcessor
         bool subdirListMode;                    // if true shows info images of subdirectories
         string[] extList;                       // list of items from search
         bool srcNewArticles;                    // source is NewArticles
-        bool srcDownloaded;                     // source is Downloaded
-        public ImageFileInfo.FileList ImageCollection { get; private set; } = null; // currently displayed images
+        public ImageFileInfo.FileList Images    { get; private set; } = null; // images to be displayed 
         ImageList thumbnails;                   // currently displayed thumbnailes
         ImageViewForm viewForm;                 // form displaying active image of ImageCollection
-        Timer listUpdateTimer;
+        System.Windows.Forms.Timer listUpdateTimer;
         int updateListFrequency = 300;          // update frequency of list change, ms
         bool redrawRequest = true;
         private Button previousSetButton;
@@ -39,7 +39,7 @@ namespace ImageProcessor
         private ComboBox sizeBox;
         protected override void Dispose(bool disposing)
 		{
-            ImageCollection?.Clear();
+            Images?.Clear();
             if (disposing)
 			{
 				if(components != null)
@@ -187,12 +187,10 @@ namespace ImageProcessor
 		{
             InitializeComponent();
             srcNewArticles = list == null && Navigator.IsSpecDir(di, SpecName.NewArticles);
-            srcDownloaded = list == null && Navigator.IsSpecDir(di, SpecName.Downloaded);
             sourceDir = new ImageDirInfo(di);
             extList = list;
             associatedPath = paths;
-            nextSetButton.Visible = !srcNewArticles;
-            previousSetButton.Visible = !srcNewArticles;
+            nextSetButton.Visible = previousSetButton.Visible = !srcNewArticles;
             imageListView.VirtualMode = true;
             Text = sourceDir.RealPath;
             infoModeBox.Items.AddRange(Enum.GetNames(typeof(InfoType)));
@@ -212,7 +210,7 @@ namespace ImageProcessor
                 new MenuItem("Copy to ...", new EventHandler(CopySelected)),
                 new MenuItem("Delete", new EventHandler(DeleteSelected)) }); 
 			imageListView.ContextMenu = selectMenu;
-            listUpdateTimer = new Timer();
+            listUpdateTimer = new System.Windows.Forms.Timer();
             listUpdateTimer.Interval = updateListFrequency;
             listUpdateTimer.Tick += new EventHandler(UpdateList);
             listUpdateTimer.Start();
@@ -234,7 +232,7 @@ namespace ImageProcessor
         }
         void ImageListForm_FormClosing(object s, FormClosingEventArgs e)
         {
-            ImageCollection?.Clear();
+            Images?.Clear();
             if (viewForm != null && !viewForm.IsDisposed)
                 viewForm.Close();
             if (listUpdateTimer != null)
@@ -245,28 +243,28 @@ namespace ImageProcessor
         }
         void UpdateList(object s, EventArgs e) // updates list and images on timer
         {
-            if (ImageCollection == null)
+            if (Images == null)
                 return;
-            if (!ImageCollection.ValidDirectory)
-                ImageCollection.Clear();
+            if (!Images.ValidDirectory)
+                Images.Clear();
             if (viewForm != null)
             {
-                if (imageListView.VirtualListSize < ImageCollection.Count)
+                if (imageListView.VirtualListSize < Images.Count)
                 {
-                    if(ImageCollection.IsAdded)
-                        ViewImage(ImageCollection.Added.FSPath);
+                    if (Images.LastAdded != null)
+                        ViewImage(Images.LastAdded.FSPath);
                 }
-                else if (ImageCollection.ActiveFileFSPath != "")
-                {
-                    FileInfo fi = new FileInfo(ImageCollection.ActiveFileFSPath);
-                    if (!fi.Exists && ImageCollection.Last != null)
-                        ViewImage(ImageCollection.Last.FSPath);
-                }
+                //else if (Images.ActiveFileFSPath != "")
+                //{
+                //    FileInfo fi = new FileInfo(Images.ActiveFileFSPath);
+                //    if (!fi.Exists && Images.Last != null)
+                //        ViewImage(Images.Last.FSPath);
+                //}
             }
-            if (imageListView != null && imageListView.VirtualListSize != ImageCollection.Count)
+            if (imageListView != null && imageListView.VirtualListSize != Images.Count)
             {
-                imageListView.VirtualListSize = ImageCollection.Count;
-                Text = sourceDir.RealPath + ": " + ImageCollection.Count + (ImageCollection.DirMode ? " directories " : " images");
+                imageListView.VirtualListSize = Images.Count;
+                Text = sourceDir.RealPath + ": " + Images.Count + (Images.DirMode ? " directories " : " images");
             }
             UpdateImages();
         }
@@ -306,7 +304,7 @@ namespace ImageProcessor
                 redrawRequest = true;
                 for (int i = firstVisible; i <= lastVisible; i++)
                 {
-                    ImageFileInfo f = ImageCollection[i];
+                    ImageFileInfo f = Images[i];
                     f.CheckUpdate();
                     if (f.Modified)
                         imageListView.Invalidate(imageListView.GetItemRect(i));
@@ -323,7 +321,7 @@ namespace ImageProcessor
 			int nDeleted=imageListView.SelectedIndices.Count;
 			if(nDeleted==0)
 				return;
-            if (ImageCollection.DirMode)
+            if (Images.DirMode)
 			{
                 ListViewItem lvi = s as ListViewItem;
                 MessageBox.Show("Image " + lvi?.Text + " is a directory. Deleting directories not supported");
@@ -354,16 +352,16 @@ namespace ImageProcessor
                 return;
 			try
 			{
-                if (!d.IsDirFile)
+                if (!d.IsHeaderFile)
 				{
                     if (d.IsImage || d.IsMultiLayer)
                     {
                         ViewImage(d.FSPath);
                         associatedPath.ActiveImageName = d.FSPath;
                     }
-                    else if (d.IsUnencryptedVideo)
+                    else if (d.Is(DataType.MOV))
                         Process.Start(associatedPath.MediaExe, '\"' + d.FSPath + '\"');
-                    else if (d.IsEncryptedVideo)
+                    else if (d.Is(DataType.EncMOV))
                     {
                         try
                         {
@@ -376,7 +374,7 @@ namespace ImageProcessor
 				}
 				else
 				{
-                    DirectoryInfo di = d.IsDir ? new DirectoryInfo(d.FSPath) : new DirectoryInfo(Path.GetDirectoryName(d.FSPath));
+                    DirectoryInfo di = d.IsSubDir ? new DirectoryInfo(d.FSPath) : new DirectoryInfo(Path.GetDirectoryName(d.FSPath));
                     if (di.Exists)
                     {
                         ImageListForm sif = new ImageListForm(di, associatedPath);
@@ -397,7 +395,7 @@ namespace ImageProcessor
                 return;
 			if(viewForm==null || viewForm.IsDisposed)
                 viewForm = new ImageViewForm(this);
-            if (ImageCollection.SetActiveFile(filePath) != null)
+            if (Images.SetActiveFile(filePath) != null)
                 viewForm.ShowNewImage(filePath);
 		}
         ImageFileInfo SelectedImageFile()       
@@ -416,7 +414,7 @@ namespace ImageProcessor
         }
         public void DeleteActiveImage()			
 		{
-            MoveFilesTo(new ImageFileInfo[] { ImageCollection.ActiveFile }, null);
+            MoveFilesTo(new ImageFileInfo[] { Images.ActiveFile }, null);
 		}
         void EmptyDirHandler()
         {
@@ -484,23 +482,23 @@ namespace ImageProcessor
             string msg = "";
             try
             {
-                msg = ImageCollection.MoveFiles(fileList, to);
+                msg = Images.MoveFiles(fileList, to);
                 imageListView.ArrangeIcons(ListViewAlignment.SnapToGrid);
                 if (viewForm != null)
                 {
-                    int newActive = ImageCollection.ImageFileIndex(ImageCollection.ActiveFileFSPath);
+                    int newActive = Images.ImageFileIndex(Images.ActiveFileFSPath);
                     if (newActive < 0) // file not in index list 
                         return msg;
                     if (srcNewArticles && newActive == 0)
                     {
-                        newActive = ImageCollection.Count - 1;
-                        ImageCollection.SetActiveFile(ImageCollection[newActive].FSPath);
+                        newActive = Images.Count - 1;
+                        Images.SetActiveFile(Images[newActive].FSPath);
                     }
-                    viewForm.ShowNewImage(ImageCollection.ActiveFileFSPath);
+                    viewForm.ShowNewImage(Images.ActiveFileFSPath);
                     imageListView.EnsureVisible(newActive);
                 }
-                if (ImageCollection.Count > 0)
-                    Text = sourceDir.RealPath + ": " + ImageCollection.Count + " images";
+                if (Images.Count > 0)
+                    Text = sourceDir.RealPath + ": " + Images.Count + " images";
             }
             catch { }
             return msg;
@@ -519,15 +517,15 @@ namespace ImageProcessor
         void FindFiles(object s, System.EventArgs e)
 		{
 			string pattern=findPatternBox.Text;
-            if (ImageCollection != null)
+            if (Images != null)
             {
-                ImageCollection.FilterFiles(pattern);
+                Images.FilterFiles(pattern);
                 imageListView.VirtualListSize = 0;
             }
 		}
 		void SortByName(object s, System.EventArgs e)
 		{
-            ImageCollection.Sort(new ImageFileInfo.FileList.RealNameComparer());
+            Images.Sort(new ImageFileInfo.FileList.RealNameComparer());
             imageListView.VirtualListSize = 0;
 		}
 		void OpenPaint(object s, System.EventArgs e)
@@ -546,9 +544,9 @@ namespace ImageProcessor
                 if (si.Height * scale > 255)
                     scale = 255.0 / si.Height;
                 thumbnails.ImageSize = new Size((int)(si.Width * scale), (int)(si.Height * scale));
-                ImageCollection = extList != null ? new ImageFileInfo.FileList(sourceDir, extList) :
+                Images = extList != null ? new ImageFileInfo.FileList(sourceDir, extList) :
                     subdirListMode ? new ImageFileInfo.FileList(sourceDir, infoType) : new ImageFileInfo.FileList(sourceDir);
-                ImageCollection.notifyEmptyDir += EmptyDirHandler;
+                Images.notifyEmptyDir += EmptyDirHandler;
                 imageListView.VirtualListSize = 0;
                 imageListView.ArrangeIcons(ListViewAlignment.SnapToGrid);
             }
@@ -561,16 +559,19 @@ namespace ImageProcessor
 		void imageListView_AfterLabelEdit(object s, System.Windows.Forms.LabelEditEventArgs e)
 		{
             ImageFileInfo file = SelectedImageFile();
-            ImageCollection.Rename(file, e.Label);
+            Images.Rename(file, e.Label);
 		}
         void imageListView_RetrieveVirtualItem(object s, RetrieveVirtualItemEventArgs e)
         {
             try
             {
-                ImageFileInfo f = ImageCollection[e.ItemIndex];
-                e.Item = new ListViewItem(subdirListMode ? f.GetDirInfoName() : f.RealName);
-                FontStyle fs = f.IsMultiLayer ? FontStyle.Underline : f.IsExact ? FontStyle.Italic : FontStyle.Regular;
-                e.Item.Font = new Font("Arial", 10, fs);
+                ImageFileInfo f = Images[e.ItemIndex];
+                if (f != null)
+                {
+                    e.Item = new ListViewItem(subdirListMode ? f.GetDirInfoName() : f.RealName);
+                    FontStyle fs = f.IsMultiLayer ? FontStyle.Underline : f.IsExact ? FontStyle.Italic : FontStyle.Regular;
+                    e.Item.Font = new Font("Arial", 10, fs);
+                }
                 e.Item.Tag = f;
             }
             catch (Exception)
@@ -585,7 +586,7 @@ namespace ImageProcessor
             {
                 if (!redrawRequest || !IsItemVisible(e.ItemIndex))
                     return;
-                Image im = ImageCollection[e.ItemIndex].GetThumbnail();
+                Image im = Images[e.ItemIndex].GetThumbnail();
                 if(im==null) 
                     return;
                 float rw = e.Bounds.Width;

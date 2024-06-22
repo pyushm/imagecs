@@ -59,6 +59,10 @@
     <Reference Include="PresentationFramework">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
     </Reference>
+    <Reference Include="ShaderEffectLib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\bin\ShaderEffectLib.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -93,10 +97,6 @@
     <ProjectReference Include="..\Navigator\Navigator.csproj">
       <Project>{69610b8c-8790-41f8-ac96-146677f5bf5f}</Project>
       <Name>Navigator</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\ShaderEffectLib\ShaderEffects.csproj">
-      <Project>{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}</Project>
-      <Name>ShaderEffects</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

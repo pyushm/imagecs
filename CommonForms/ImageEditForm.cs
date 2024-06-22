@@ -683,7 +683,7 @@ namespace ImageProcessor
             }
             SaveFileDialog saveAsDialog = new SaveFileDialog();
             saveAsDialog.FileName = imageInfo.RealName;
-            saveAsDialog.Filter = DataAccess.PrivateAccessEnforced ? "regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
+            saveAsDialog.Filter = DataAccess.PrivateAccessEnforced ? "Regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "Regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
             saveAsDialog.FilterIndex = imageInfo.IsMultiLayer ? 3 : imageInfo.IsExact ? 2 : 1;
             saveAsDialog.RestoreDirectory = true;
             saveAsDialog.OverwritePrompt = true;

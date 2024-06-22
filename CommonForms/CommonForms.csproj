@@ -90,6 +90,10 @@
     <Reference Include="PresentationFramework">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
     </Reference>
+    <Reference Include="ShaderEffectLib, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\bin\ShaderEffectLib.dll</HintPath>
+    </Reference>
     <Reference Include="System">
       <Name>System</Name>
     </Reference>
@@ -225,10 +229,6 @@
     <ProjectReference Include="..\Navigator\Navigator.csproj">
       <Project>{69610B8C-8790-41F8-AC96-146677F5BF5F}</Project>
       <Name>Navigator</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\ShaderEffectLib\ShaderEffects.csproj">
-      <Project>{461246bc-5a5c-4a0f-bf5f-af98c82f1b4d}</Project>
-      <Name>ShaderEffects</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

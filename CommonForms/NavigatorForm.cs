@@ -916,9 +916,9 @@ namespace ImageProcessor
                         invoked.Add(editForm);
                         editForm.ShowNewImage(dt.FSPath);
                     }
-                    else if (dt.IsUnencryptedVideo)
+                    else if (dt.Is(DataType.MOV))
                         Process.Start(navigator.MediaExe, '\"' + dt.FSPath + '\"');
-                    else if (dt.IsEncryptedVideo)
+                    else if (dt.Is(DataType.EncMOV))
                     {
                         try
                         {

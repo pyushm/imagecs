@@ -84,6 +84,10 @@
       <Project>{f64dba7d-d1a3-460b-a11e-575f2c1e3bde}</Project>
       <Name>NNTPNewsReader</Name>
     </ProjectReference>
+    <Reference Include="CommonForms, Version=1.0.8934.19947, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\bin\CommonForms.dll</HintPath>
+    </Reference>
     <Reference Include="Customization, Version=1.0.3650.14994, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Projects\bin\Customization.dll</HintPath>
@@ -91,6 +95,10 @@
     <Reference Include="FileLogWriter, Version=1.0.3095.17240, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\Projects\bin\FileLogWriter.dll</HintPath>
+    </Reference>
+    <Reference Include="Navigator, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\bin\Navigator.dll</HintPath>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="System">
@@ -102,14 +110,6 @@
     <Reference Include="System.Windows.Forms">
       <Name>System.Windows.Forms</Name>
     </Reference>
-    <ProjectReference Include="..\CommonForms\CommonForms.csproj">
-      <Project>{49F88DFE-78F5-4C7F-A736-5AC553C86E54}</Project>
-      <Name>CommonForms</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Navigator\Navigator.csproj">
-      <Project>{69610B8C-8790-41F8-AC96-146677F5BF5F}</Project>
-      <Name>Navigator</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs">

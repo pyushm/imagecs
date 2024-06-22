@@ -38,6 +38,10 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ImageMatrixes, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\bin\ImageMatrixes.dll</HintPath>
+    </Reference>
     <Reference Include="PresentationCore">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
     </Reference>
@@ -74,17 +78,21 @@
     </Resource>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ImageMatrixes\ImageMatrixes.csproj">
-      <Project>{a24ddb50-08af-4d2d-9f3a-dcaddc97770f}</Project>
-      <Name>ImageMatrixes</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Navigator\Navigator.csproj">
-      <Project>{69610b8c-8790-41f8-ac96-146677f5bf5f}</Project>
-      <Name>Navigator</Name>
-    </ProjectReference>
+    <None Include="Shaders\Edge.ps" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\Edge.ps" />
+    <ProjectReference Include="..\CodeBox\CodeBox.csproj">
+      <Project>{fafc1291-82f4-4a3a-b70f-111dbf2ec194}</Project>
+      <Name>CodeBox</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CodeEditor\CodeEditor.csproj">
+      <Project>{379c5c68-1bb2-4f42-adc9-87e5b3c8ad7b}</Project>
+      <Name>CodeEditor</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CodeParser\CodeParser.csproj">
+      <Project>{b4fe5238-1908-4edf-99ef-206bf29ec1e4}</Project>
+      <Name>CodeParser</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
