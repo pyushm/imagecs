@@ -36,7 +36,7 @@ namespace ImageProcessor
             foreach (var file in files)
             {
                 ImageFileInfo fInfo = new ImageFileInfo(file);
-                if (!fInfo.IsRegularImage)
+                if (!fInfo.IsImage || fInfo.IsInfoImage)
                     continue;
                 ImageHash info;
                 try

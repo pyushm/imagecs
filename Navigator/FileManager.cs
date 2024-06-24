@@ -15,7 +15,7 @@ namespace ImageProcessor
 		FileName,   // part of file name in the directory 
         AddPrefix,  // beginning of file name in the directory 
     }
-    public enum SaveType
+    public enum Conversion
     {
         None,
         LimitSize,  // resize large images to max size 
@@ -26,7 +26,7 @@ namespace ImageProcessor
 		int maxImageSize;
 		bool stopFlag;
 		Navigator navigator;
-        SaveType adjustmentType = SaveType.None;
+        Conversion covertion = Conversion.None;
         bool sync;
         public event NotifyMessage notifyStatus;
         public event NotifyMessage notifyResults;
@@ -50,11 +50,11 @@ namespace ImageProcessor
             ReportResults(message);
             return false;
 		}
-        public void ApplyAdjustmentRecursively(DirectoryInfo start, SaveType operation_, bool sync_)
+        public void ApplyAdjustmentRecursively(DirectoryInfo start, Conversion operation_, bool sync_)
         {
             sync = sync_;
-            adjustmentType = operation_;
-            navigator.ProcessDirecory = AdjustFiles;
+            covertion = operation_;
+            navigator.ProcessDirecory = ConvertFiles;
             try { navigator.ApplyRecursively(start, ""); }
             catch (Exception ex) { ReportResults(ex.Message+Environment.NewLine+ex.StackTrace); }
             finally
@@ -73,13 +73,13 @@ namespace ImageProcessor
             var bs = new BitmapAccess(ba.Source, new ScaleTransform(scale, scale));
             return bs.SaveToFile(fullPath, exact, encrypted);
         }
-        public void AdjustFiles(DirectoryInfo directory, string relativePath)
+        public void ConvertFiles(DirectoryInfo directory, string relativePath)
         {   // called from recursive dierectory processing in Navigator
-            if (stopFlag || adjustmentType == SaveType.None)
+            if (stopFlag || covertion == Conversion.None)
                 return;
             if (sync)
-                ReportStatus(adjustmentType.ToString() + " in " + directory.FullName);
-            if (adjustmentType == SaveType.Private && relativePath.Length > 0 && !FileName.IsMangled(directory.Name))
+                ReportStatus(covertion.ToString() + " in " + directory.FullName);
+            if (covertion == Conversion.Private && relativePath.Length > 0 && !FileName.IsMangled(directory.Name))
             {   // mangle dir name
                 string newDirName = FileName.Mangle(directory.Name);
                 if(newDirName != directory.Name)
@@ -92,7 +92,7 @@ namespace ImageProcessor
                 {
                     if (stopFlag)
                         break;
-                    if (adjustmentType == SaveType.LimitSize)
+                    if (covertion == Conversion.LimitSize)
                     {
                         ImageFileInfo ifi = new ImageFileInfo(file);
                         string ret = ResizeImage(file.FullName, ifi.IsExact, 2000, ifi.IsEncrypted);
@@ -101,22 +101,20 @@ namespace ImageProcessor
                         continue;
                     }
                     string name = file.Name;   // name with extension
-                    if (adjustmentType == SaveType.Private)
+                    if (covertion == Conversion.Private)
                     {
                         ImageFileName ifi = new ImageFileName(name);
                         if (!ifi.IsInfoImage)
                             name = FileName.MangleFile(name);
                         bool mangled = name != file.Name;
-                        if (ifi.IsUnencryptedImage)
-                            name = ifi.IsExact ? ifi.FSName + ".exa" : ifi.FSName + ".jpe";
-                        if (ifi.Is(DataType.MOV))
-                            name = ifi.FSName + ".vid";
+                        bool needEncryption = !ifi.IsEncrypted;
                         string newFilePath = Path.Combine(file.DirectoryName, name);
-                        bool needEncryption = ifi.IsUnencryptedImage || ifi.Is(DataType.MOV);
                         try
                         {
                             if(needEncryption)
                             {
+                                string suffix = ifi.IsMovie ? ".vid" : !ifi.IsImage ? ".drw" : ifi.IsExact ? ".exa" : ".jpe";
+                                name = ifi.FSName + suffix;
                                 byte[] src = File.ReadAllBytes(file.FullName);
                                 if (!DataAccess.WriteFile(newFilePath, src, true))
                                     ReportResults(name + ": " + DataAccess.Warning);
@@ -127,7 +125,7 @@ namespace ImageProcessor
                                         ReportResults(warnings);
                                 }
                             }
-                            else if (adjustmentType == SaveType.Private)
+                            else if (covertion == Conversion.Private)
                                 file.MoveTo(newFilePath);
                         }
                         catch (Exception ex)

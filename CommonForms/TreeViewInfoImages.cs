@@ -7,12 +7,10 @@ namespace ImageProcessor
     public class DirectoryInfoImages
     {   // visual reprentation of selected item
         Image[] infoImages;
-        string domain;                      // parent of parent directory name
         TreeView tree;
         Control displayArea;
-        public DirectoryInfoImages(TreeView tree_, Control displayArea_, string domain_)
+        public DirectoryInfoImages(TreeView tree_, Control displayArea_)
         {
-            domain = domain_;
             tree = tree_;
             displayArea = displayArea_;
             displayArea.Paint += new PaintEventHandler(DrawInfoImages);

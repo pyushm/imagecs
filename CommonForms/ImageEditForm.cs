@@ -464,7 +464,7 @@ namespace ImageProcessor
             foreach (Control c in modeGroupBox.Controls)
                 c.Dispose();
             modeGroupBox.Controls.Clear();
-            if (vl.IsImage)
+            if (vl.IsImageLayer)
                 CreateControls(imageModes, null);
             else
                 CreateControls(drawingModes, new string[] { "Thickness" });

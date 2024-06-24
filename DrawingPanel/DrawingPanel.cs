@@ -302,7 +302,7 @@ namespace ImageProcessor
         }
         public void DeleteSelection()
         {
-            if (Selection != null && ActiveLayer.IsImage)
+            if (Selection != null && ActiveLayer.IsImageLayer)
             {
                 Polygon lp = Selection.Contour();
                 BitmapLayer bl = ActiveLayer as BitmapLayer;
@@ -411,7 +411,7 @@ namespace ImageProcessor
                 animation.Completed += completedEventHandler;
             element.BeginAnimation(OpacityProperty, animation);
         }
-        public string LoadFile(ImageFileInfo loadInfo, double replaceDuration)
+        public string LoadFile(ImageFileInfo info, double replaceDuration)
         {
             CropRectangle = null;
             if (replaceDuration > 0 && LayerCount > 0)
@@ -419,23 +419,18 @@ namespace ImageProcessor
             VisualLayer vl;
             try
             {
-                if (loadInfo.IsImage)
+                if (info.IsImage)
                 {
-                    BitmapAccess ba = BitmapAccess.LoadImage(loadInfo.FSPath, loadInfo.IsEncrypted);
+                    BitmapAccess ba = BitmapAccess.LoadImage(info.FSPath, info.IsEncrypted);
                     if (DataAccess.Warning.Length > 0)
-                    //{
-                    //    loadedFilePath = "";
                         return DataAccess.Warning;
-                    //}
-                    //else
-                    //    loadedFilePath = loadInfo.FSPath;
-                    vl = new BitmapLayer(loadInfo.RealName, ba);
+                    vl = new BitmapLayer(info.RealName, ba);
                     //Debug.WriteLine("LoadFile: RT=" + vl.RenderTransform.Value.ToString());
                     AddVisualLayer(vl);
                 }
-                else if (loadInfo.IsMultiLayer)
+                else if (info.IsMultiLayer)
                 {
-                    VisualLayerData[] vlda = VisualLayerData.LayersFromFile(loadInfo.FSPath, loadInfo.IsEncrypted);
+                    VisualLayerData[] vlda = VisualLayerData.LayersFromFile(info.FSPath, info.IsEncrypted);
                     for (int ind = 0; ind < vlda.Length; ind++)
                     {
                         if (vlda[ind].IsThumbnail || vlda[ind].Data == null)
@@ -457,9 +452,9 @@ namespace ImageProcessor
                         AddVisualLayer(vl);
                     }
                 }
-                else if (loadInfo.Is(DataType.EncMOV))
+                else if (info.IsMovie)
                 {
-                    BitmapAccess ba = BitmapAccess.LoadImage("mediaImage.png", false);
+                    BitmapAccess ba = BitmapAccess.LoadImage("mediaImage.png", info.IsEncrypted);
                     AddVisualLayer(new BitmapLayer("Video", ba));
                 }
             }

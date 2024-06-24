@@ -18,7 +18,7 @@ namespace ImageProcessor
             TreeNode node = locationTreeView.Nodes.Add(Navigator.Root.Name);
             node.Tag = Navigator.Root;
             node.Nodes.Add("fake");
-            itemInfoImages = new DirectoryInfoImages(locationTreeView, infoImagePanel, Enum.GetName(typeof(SpecName), SpecName.AllDevicy));
+            itemInfoImages = new DirectoryInfoImages(locationTreeView, infoImagePanel);
         }
         public static DirectoryInfo GetDirectory()
         {

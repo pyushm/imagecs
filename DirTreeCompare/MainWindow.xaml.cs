@@ -377,17 +377,20 @@ namespace DirTreeCompare
                     invoked.Add(viewForm);
                     viewForm.ShowNewImage(path);
                 }
-                else if (dt.Is(DataType.MOV))
-                    Process.Start(navigator.MediaExe, '\"' + path + '\"');
-                else if (dt.Is(DataType.EncMOV))
+                else if (dt.IsMovie)
                 {
-                    try
+                    if (dt.IsEncrypted)
                     {
-                        Cursor = System.Windows.Input.Cursors.Wait;
-                        DataAccess.DecryptToFile(navigator.MediaTmpLocation, fi.FullName);
-                        Process.Start(navigator.MediaExe, navigator.MediaTmpLocation);
+                        try
+                        {
+                            Cursor = System.Windows.Input.Cursors.Wait;
+                            DataAccess.DecryptToFile(navigator.MediaTmpLocation, fi.FullName);
+                            Process.Start(navigator.MediaExe, navigator.MediaTmpLocation);
+                        }
+                        finally { Cursor = System.Windows.Input.Cursors.Arrow; }
                     }
-                    finally { Cursor = System.Windows.Input.Cursors.Arrow; }
+                    else
+                        Process.Start(navigator.MediaExe, '\"' + path + '\"');
                 }
                 else
                     System.Windows.MessageBox.Show(path + Environment.NewLine + "Length=" + fi.Length + Environment.NewLine + fi.LastWriteTime.ToLongDateString());

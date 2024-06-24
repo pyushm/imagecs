@@ -31,7 +31,7 @@ namespace ImageProcessor
         public virtual EffectType DerivativeType { get { return EffectType.None; } }
         public bool FromSelection { get; set; } = false;
         public string Name { get; set; }
-        public bool IsImage         { get { return this as BitmapLayer != null; } }
+        public bool IsImageLayer    { get { return this as BitmapLayer != null; } }
         public IntSize LayoutSize   { get; protected set; } // image size used by layout system 
         public VisualLayerType Type { get; protected set; }
         public bool Deleted         { get; set; }   // marked for delayed deletion (do not display in layer list)

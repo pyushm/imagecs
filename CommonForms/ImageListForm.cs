@@ -25,7 +25,6 @@ namespace ImageProcessor
 		private System.ComponentModel.Container components = null;
         IAssociatedPath associatedPath;
         ImageDirInfo sourceDir;	                // direcory to build sourceCollection from
-        bool subdirListMode;                    // if true shows info images of subdirectories
         string[] extList;                       // list of items from search
         bool srcNewArticles;                    // source is NewArticles
         public ImageFileInfo.FileList Images    { get; private set; } = null; // images to be displayed 
@@ -193,7 +192,7 @@ namespace ImageProcessor
             nextSetButton.Visible = previousSetButton.Visible = !srcNewArticles;
             imageListView.VirtualMode = true;
             Text = sourceDir.RealPath;
-            infoModeBox.Items.AddRange(Enum.GetNames(typeof(InfoType)));
+            infoModeBox.Items.AddRange(Enum.GetNames(typeof(DirShowMode)));
             infoModeBox.SelectedIndex = 1;  // calls ModeChanged
             sizeBox.Items.AddRange(Enum.GetNames(typeof(InfoSize)));
             sizeBox.SelectedIndex = 1;  // calls ModeChanged
@@ -214,9 +213,7 @@ namespace ImageProcessor
             listUpdateTimer.Interval = updateListFrequency;
             listUpdateTimer.Tick += new EventHandler(UpdateList);
             listUpdateTimer.Start();
-            try { subdirListMode = !srcNewArticles && (list != null || sourceDir.DirInfo.GetDirectories().Length > 0); }
-            catch { }
-            infoModeBox.Visible = subdirListMode;
+            infoModeBox.Visible = sourceDir.DirInfo.GetDirectories().Length > 7;
             ShowImages();
             Load += ImageViewForm_Load;
         }
@@ -254,17 +251,12 @@ namespace ImageProcessor
                     if (Images.LastAdded != null)
                         ViewImage(Images.LastAdded.FSPath);
                 }
-                //else if (Images.ActiveFileFSPath != "")
-                //{
-                //    FileInfo fi = new FileInfo(Images.ActiveFileFSPath);
-                //    if (!fi.Exists && Images.Last != null)
-                //        ViewImage(Images.Last.FSPath);
-                //}
             }
             if (imageListView != null && imageListView.VirtualListSize != Images.Count)
             {
                 imageListView.VirtualListSize = Images.Count;
-                Text = sourceDir.RealPath + ": " + Images.Count + (Images.DirMode ? " directories " : " images");
+                int dc = sourceDir.DirCount();
+                Text = sourceDir.RealPath + ": " + sourceDir.ImageCount() + " images" + (dc == 0 ? "" : ", " + dc + " directories ");
             }
             UpdateImages();
         }
@@ -321,12 +313,6 @@ namespace ImageProcessor
 			int nDeleted=imageListView.SelectedIndices.Count;
 			if(nDeleted==0)
 				return;
-            if (Images.DirMode)
-			{
-                ListViewItem lvi = s as ListViewItem;
-                MessageBox.Show("Image " + lvi?.Text + " is a directory. Deleting directories not supported");
-				return;
-			}
 			DialogResult res;
 			if(nDeleted>1)
 				res=MessageBox.Show(this, "Are you sure you want to delete "+nDeleted+" image?", 
@@ -338,9 +324,18 @@ namespace ImageProcessor
 			{
 				ArrayList deleteFileList=new ArrayList();
 				Cursor=Cursors.WaitCursor;
-				for(int i=0; i<imageListView.SelectedIndices.Count; i++)
-                    deleteFileList.Add((ImageFileInfo)imageListView.Items[imageListView.SelectedIndices[i]].Tag);
+                bool hasDirs = false;
+                for (int i = 0; i < imageListView.SelectedIndices.Count; i++)
+                {
+                    var ifi = (ImageFileInfo)imageListView.Items[imageListView.SelectedIndices[i]].Tag;
+                    if( ifi != null && !ifi.IsHeader)
+                        deleteFileList.Add(ifi);
+                    else if(ifi != null )
+                        hasDirs = true;
+                }
                 MoveFilesTo((ImageFileInfo[])deleteFileList.ToArray(typeof(ImageFileInfo)), null);
+                if(hasDirs)
+                    MessageBox.Show("Deleting directories not supported; "+ deleteFileList.Count + " files deleted");
                 imageListView.SelectedIndices.Clear();
                 Cursor = Cursors.Default;
 			}
@@ -352,29 +347,32 @@ namespace ImageProcessor
                 return;
 			try
 			{
-                if (!d.IsHeaderFile)
+                if (!d.IsHeader)
 				{
                     if (d.IsImage || d.IsMultiLayer)
                     {
                         ViewImage(d.FSPath);
                         associatedPath.ActiveImageName = d.FSPath;
                     }
-                    else if (d.Is(DataType.MOV))
-                        Process.Start(associatedPath.MediaExe, '\"' + d.FSPath + '\"');
-                    else if (d.Is(DataType.EncMOV))
+                    else if (d.IsMovie)
                     {
-                        try
+                        if(d.IsEncrypted)
                         {
-                            Cursor = Cursors.WaitCursor;
-                            DataAccess.DecryptToFile(associatedPath.MediaTmpLocation, d.FSPath);
-                            Process.Start(associatedPath.MediaExe, associatedPath.MediaTmpLocation);
+                            try
+                            {
+                                Cursor = Cursors.WaitCursor;
+                                DataAccess.DecryptToFile(associatedPath.MediaTmpLocation, d.FSPath);
+                                Process.Start(associatedPath.MediaExe, associatedPath.MediaTmpLocation);
+                            }
+                            finally { Cursor = Cursors.Default; }
                         }
-                        finally { Cursor = Cursors.Default; }
+                        else
+                            Process.Start(associatedPath.MediaExe, '\"' + d.FSPath + '\"');
                     }
-				}
+                }
 				else
 				{
-                    DirectoryInfo di = d.IsSubDir ? new DirectoryInfo(d.FSPath) : new DirectoryInfo(Path.GetDirectoryName(d.FSPath));
+                    DirectoryInfo di = new DirectoryInfo(Path.GetDirectoryName(d.FSPath));
                     if (di.Exists)
                     {
                         ImageListForm sif = new ImageListForm(di, associatedPath);
@@ -423,7 +421,7 @@ namespace ImageProcessor
                 return;
             FileInfo[] files = directory.GetFiles();
             foreach(FileInfo fi in files)
-                if ((new ImageFileInfo(fi)).IsImage)
+                if ((new ImageFileInfo(fi)).IsKnown)
                     return;
             int items = files.Length;
             if (items > 0)
@@ -538,14 +536,13 @@ namespace ImageProcessor
         {
             try
             {
-                InfoType infoType = (InfoType)Enum.Parse(typeof(InfoType), (string)infoModeBox.SelectedItem);
+                DirShowMode infoType = infoModeBox.Visible ? (DirShowMode)Enum.Parse(typeof(DirShowMode), (string)infoModeBox.SelectedItem) : DirShowMode.Detail;
                 double scale = (int)Enum.Parse(typeof(InfoSize), (string)sizeBox.SelectedItem) / 10.0;
                 IntSize si = ImageFileInfo.PixelSize(infoType);
                 if (si.Height * scale > 255)
                     scale = 255.0 / si.Height;
                 thumbnails.ImageSize = new Size((int)(si.Width * scale), (int)(si.Height * scale));
-                Images = extList != null ? new ImageFileInfo.FileList(sourceDir, extList) :
-                    subdirListMode ? new ImageFileInfo.FileList(sourceDir, infoType) : new ImageFileInfo.FileList(sourceDir);
+                Images = extList != null ? new ImageFileInfo.FileList(sourceDir, extList) : new ImageFileInfo.FileList(sourceDir, infoType);
                 Images.notifyEmptyDir += EmptyDirHandler;
                 imageListView.VirtualListSize = 0;
                 imageListView.ArrangeIcons(ListViewAlignment.SnapToGrid);
@@ -568,9 +565,11 @@ namespace ImageProcessor
                 ImageFileInfo f = Images[e.ItemIndex];
                 if (f != null)
                 {
-                    e.Item = new ListViewItem(subdirListMode ? f.GetDirInfoName() : f.RealName);
+                    e.Item = new ListViewItem(f.IsHeader ? f.GetDirInfo() : f.RealName);
                     FontStyle fs = f.IsMultiLayer ? FontStyle.Underline : f.IsExact ? FontStyle.Italic : FontStyle.Regular;
                     e.Item.Font = new Font("Arial", 10, fs);
+                    if (f.IsHeader)
+                        e.Item.ForeColor = Color.BlueViolet;
                 }
                 e.Item.Tag = f;
             }
@@ -588,7 +587,7 @@ namespace ImageProcessor
                     return;
                 Image im = Images[e.ItemIndex].GetThumbnail();
                 if(im==null) 
-                    return;
+                    im = ImageFileInfo.notLoadedImage;
                 float rw = e.Bounds.Width;
                 float rh = e.Bounds.Height - 13 * dpiScaleY;
                 float scale = Math.Min(rw / im.Width, rh / im.Height);

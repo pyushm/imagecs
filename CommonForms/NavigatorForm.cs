@@ -56,7 +56,7 @@ namespace ImageProcessor
         private Button findFileBtn;
         private Button displayResultsBtn;
         string searchImagePath="";
-        SaveType adjustmentType = SaveType.None;
+        Conversion conversion = Conversion.None;
         delegate void OnSearchClick();
         OnSearchClick onSearchClick;
         bool userAction = true;
@@ -567,8 +567,8 @@ namespace ImageProcessor
                 if (accessRequested)
                     RequestPassword();
                 imageAdjustmentWorker = new BackgroundWorker();
-                imageAdjustmentWorker.DoWork += new DoWorkEventHandler(ImageAdjustment);
-                imageAdjustmentWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(ImageAdjustmentCompleted);
+                imageAdjustmentWorker.DoWork += new DoWorkEventHandler(ApplyConversion);
+                imageAdjustmentWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(ConversionCompleted);
                 infoWorker = new BackgroundWorker();
                 infoWorker.DoWork += new DoWorkEventHandler(StartInfoUpdate);
                 infoWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(InfoUpdateCompleted);
@@ -593,7 +593,7 @@ namespace ImageProcessor
                 TreeNode nodeRoot = locationTreeView.Nodes.Add(Navigator.Root.Name);
                 nodeRoot.Tag = Navigator.Root;
                 nodeRoot.Nodes.Add("fake");
-                itemInfoImages = new DirectoryInfoImages(locationTreeView, infoImagePanel, Enum.GetName(typeof(SpecName), SpecName.AllDevicy));
+                itemInfoImages = new DirectoryInfoImages(locationTreeView, infoImagePanel);
                 findImagePanel.Paint += new PaintEventHandler(DrawSearchImage);
                 findLookBtn.Enabled = false;
                 fileManager = new FileManager(navigator);
@@ -732,18 +732,18 @@ namespace ImageProcessor
         {
             if (selectedNode == null || !fileManager.SetResizeModifyers(imageSizeBox.Text, 1000))
                 return;
-            adjustmentType = SaveType.LimitSize;
+            conversion = Conversion.LimitSize;
             imageSizeBox.Text = "";
             OperationButtonsEnabled(false);
-            imageAdjustmentWorker.RunWorkerAsync(); // calls ImageAdjustment
+            imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
         }
         void ConvertToPrivate()                  
         {
             if (selectedNode == null )
                 return;
-            adjustmentType = SaveType.Private;
+            conversion = Conversion.Private;
             OperationButtonsEnabled(false);
-            imageAdjustmentWorker.RunWorkerAsync(); // calls ImageAdjustment
+            imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
         }
         void Rename(RenameType operation)   
         {
@@ -780,17 +780,17 @@ namespace ImageProcessor
             fileManager.Rename(selectedNode, operation);
             OperationButtonsEnabled(true);
         }
-        void ImageAdjustment(object sender, DoWorkEventArgs e)
+        void ApplyConversion(object sender, DoWorkEventArgs e)
         {
             processNodeName = selectedNode.Name;
-            fileManager.ApplyAdjustmentRecursively(selectedNode, adjustmentType, false);
+            fileManager.ApplyAdjustmentRecursively(selectedNode, conversion, false);
         }
-        void ImageAdjustmentCompleted(object sender, RunWorkerCompletedEventArgs e)
+        void ConversionCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             OperationButtonsEnabled(true);
             outputList.Items.Add("Rename Completed: " + processNodeName);
             processNodeName = "";
-            adjustmentType = SaveType.None;
+            conversion = Conversion.None;
         }
         void OnListBoxMouseMove(object sender, MouseEventArgs e)
         {
@@ -916,17 +916,20 @@ namespace ImageProcessor
                         invoked.Add(editForm);
                         editForm.ShowNewImage(dt.FSPath);
                     }
-                    else if (dt.Is(DataType.MOV))
-                        Process.Start(navigator.MediaExe, '\"' + dt.FSPath + '\"');
-                    else if (dt.Is(DataType.EncMOV))
+                    else if (dt.IsMovie)
                     {
-                        try
+                        if (dt.IsEncrypted)
                         {
-                            Cursor = Cursors.WaitCursor;
-                            DataAccess.DecryptToFile(navigator.MediaTmpLocation, dt.FSPath);
-                            Process.Start(navigator.MediaExe, navigator.MediaTmpLocation);
+                            try
+                            {
+                                Cursor = Cursors.WaitCursor;
+                                DataAccess.DecryptToFile(navigator.MediaTmpLocation, dt.FSPath);
+                                Process.Start(navigator.MediaExe, navigator.MediaTmpLocation);
+                            }
+                            finally { Cursor = Cursors.Default; }
                         }
-                        finally { Cursor = Cursors.Default; }
+                        else
+                            Process.Start(navigator.MediaExe, '\"' + dt.FSPath + '\"');
                     }
                 }
             }

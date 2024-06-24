@@ -25,7 +25,7 @@ namespace ImageProcessor
         ImageFileInfo.FileList imageFiles;// full image file name shown as big image
         ImageFileInfo imageInfo;            // curently displayed image file info 
         bool infoMode;				        // indicates if info or original has to be extracted
-        InfoType infoType;                  // tipe of info image when infoMode==true
+        DirShowMode infoType;                  // tipe of info image when infoMode==true
         bool imageModified = false;
         ColorTransform colorTransform = new ColorTransform();
         ColorTransform previousColorTransform = new ColorTransform(); // previous non-identical transform
@@ -598,7 +598,7 @@ namespace ImageProcessor
             sensitivityBox.SelectedIndex = 2;
             KeyUp += CaptureCtrlC;
             actionBox.Items.Add("Crop");
-            actionBox.Items.AddRange(Enum.GetNames(typeof(InfoType)));
+            actionBox.Items.AddRange(Enum.GetNames(typeof(DirShowMode)));
             actionBox.Items.Add("Selection");
             actionBox.Items.Add("RectSelection");
             actionBox.KeyPress += delegate (object sender, KeyPressEventArgs e) { if (ModifierKeys == Keys.Control) e.Handled = true; };
@@ -862,12 +862,12 @@ namespace ImageProcessor
             }
             else
             {
-                object o = Enum.Parse(typeof(InfoType), str);
-                infoMode = o is InfoType;
+                object o = Enum.Parse(typeof(DirShowMode), str);
+                infoMode = o is DirShowMode;
                 ToolMode = infoMode ? ToolMode.InfoImage : ToolMode.Basic;
                 if (infoMode)
                 {
-                    infoType = (InfoType)o;
+                    infoType = (DirShowMode)o;
                     saveButton.Enabled = true;
                     deleteButton.Enabled = false;
                     SetCutRectangle();
