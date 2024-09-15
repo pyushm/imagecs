@@ -71,7 +71,7 @@ namespace ImageProcessor
     {   // ImageFileName has file type and name conversion data
         protected enum DataType
         {
-            JPG,        // compressed heic or jpg image
+            JPG,        // compressed heic, webp, jpg image
             GIF,
             PNG,        // exact image
             MLI,        // unencrypted drawing
@@ -111,6 +111,7 @@ namespace ImageProcessor
         static ImageFileName()
         {
             InfoTypes = (DirShowMode[])Enum.GetValues(typeof(DirShowMode));
+            knownExtensions.Add(".webp", DataType.JPG);
             knownExtensions.Add(".heic", DataType.JPG);
             knownExtensions.Add(".jpg", DataType.JPG);
             knownExtensions.Add(".jpeg", DataType.JPG);
@@ -159,7 +160,7 @@ namespace ImageProcessor
         static public string InfoFileName(DirShowMode m) { return infoImagePrefix + m; }
         static public string InfoFileWithExtension(DirShowMode m) { return InfoFileName(m) + infoImageSuffix; }
         static public Image[] InfoImages(DirectoryInfo di)
-        {
+        {   // to show image ingo files for directory selection or extended info view
             List<Image> all = new List<Image>();
             FileInfo[] fia = di.GetFiles("*@*");
             if (fia.Length == 0)
@@ -204,17 +205,14 @@ namespace ImageProcessor
         {
             data = FileType(fileName);
             FSName = Path.GetFileNameWithoutExtension(fileName);
-            var di = new DirectoryInfo(fileName);
+            var fi = new FileInfo(fileName);
+            var di = fi.Directory;
             RealName = FileName.UnMangle(FSName);
             if (Navigator.IsSpecDir(di, SpecName.NewArticles))
                 RealName = NameWithoutTempPrefix(RealName);
             IsInfoImage = InfoType(RealName) != null;
             if (IsInfoImage)
-            {
-                string dirName = FileName.UnMangle(di.Name);
-                string[] fields = dirName.Split(new char[] { synonymChar });
-                RealName = (fields.Length == 1 ? fields[0] : fields[0] + synonymChar) + ':' + RealName[1];
-            }
+                RealName = RealName.Substring(1);
         }
     }
     public class ImageDirInfo : ImageFileName
@@ -291,7 +289,7 @@ namespace ImageProcessor
             return message;
         }
         static public IntSize ThumbnailSize() { return new IntSize(infoImageHeight, infoImageHeight); }
-        static public IntSize PixelSize(DirShowMode it) { return it == ImageProcessor.DirShowMode.Detail || it == ImageProcessor.DirShowMode.Preview ? new IntSize(infoImageWidth, infoImageHeight) : new IntSize(infoImageWidth / 2, infoImageWidth / 2); }
+        static public IntSize PixelSize(DirShowMode it) { return it == DirShowMode.Detail || it == DirShowMode.Preview ? new IntSize(infoImageWidth, infoImageHeight) : new IntSize(infoImageWidth / 2, infoImageWidth / 2); }
         public bool Modified { get; private set; } // true indicatates for client to get new image 
         bool cynchronized = false;          // false indicatates need to load image
         bool priority = false;              // true indicatates need for priority loading of visible image
@@ -301,12 +299,16 @@ namespace ImageProcessor
         public string FSPath { get { return FileInfo == null ? "" : FileInfo.FullName; } } // complete path of image object
         public string RealPath { get { return FileInfo == null ? "" : Path.Combine(FileInfo.Directory.Parent.FullName, FileName.UnMangle(FileInfo.Directory.Name), RealName); } } // complete path of image object
         public bool IsHeader            { get; private set; } // image representing directory in image list 
-        public ImageFileInfo(FileInfo fi, bool header = false) : base(fi.Name) { FileInfo = fi; IsHeader = header; }
-        public string GetDirInfo()
-        {   // real dir name with number of images
-            int dirCount = FileInfo.Directory.GetDirectories().Length;
-            var idi = new ImageDirInfo(FileInfo.Directory);
-            return FileName.UnMangle(FileInfo.Directory.Name + '#' + idi.ImageCount() + (dirCount == 0 ? "" : "D" + dirCount));
+        public ImageFileInfo(FileInfo fi, bool header = false) : base(fi.Name) 
+        { 
+            FileInfo = fi; 
+            IsHeader = header;
+            if (IsHeader)
+            {
+                int dirCount = FileInfo.Directory.GetDirectories().Length;
+                var idi = new ImageDirInfo(FileInfo.Directory);
+                RealName = FileName.UnMangle(FileInfo.Directory.Name) + '\u25CF' + idi.ImageCount() + (dirCount == 0 ? "" : "-" + dirCount);
+            }
         }
         public bool CheckUpdate()
         {
@@ -420,18 +422,25 @@ namespace ImageProcessor
                 return string.Compare(if1, if2, true);
             }
         }
+        public class RealNameComparer : IComparer<ImageFileInfo>
+        {
+            IComparer ifhc = new NameComparer();
+            int IComparer<ImageFileInfo>.Compare(ImageFileInfo l1, ImageFileInfo l2)
+            {
+                if (l1.IsHeader && !l2.IsHeader)
+                    return -1;
+                if (!l1.IsHeader && l2.IsHeader)
+                    return 1;
+                if (l1.IsInfoImage && !l2.IsInfoImage)
+                    return -1;
+                if (!l1.IsInfoImage && l2.IsInfoImage)
+                    return 1;
+                return ifhc.Compare(l1.RealName, l2.RealName);
+            }
+        }
         public class FileList             
         {
             static int synchronizationDelay = 300; // synchronization delay between directory and image collection
-            public class RealNameComparer : IComparer<ImageFileInfo>
-            {
-                IComparer ifhc = new NameComparer();
-                int IComparer<ImageFileInfo>.Compare(ImageFileInfo l1, ImageFileInfo l2)
-                {
-                    return ifhc.Compare(l1.RealName, l2.RealName);
-                    //return ifhc.Compare(UnMangleText(l1.RealName), UnMangleText(l2.RealName));
-                }
-            }
             bool isTemp;                    // true if directory is a temp store of new articles
             DirectoryInfo directory = null; // underlying directory; set up at construction and not changed
             string[] extList = null;        // if specified contains list to display (alternative to directory)

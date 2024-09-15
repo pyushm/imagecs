@@ -309,13 +309,14 @@ namespace ImageProcessor
                 bl.SetImage(bl.Image.DeleteSelection(lp.IntRect(0), lp.Poly), 0);
             }
         }
-        public void SetClipboardFromSelection()
+        public BitmapAccess SetClipboardFromSelection()
         {
             BitmapAccess clip = GetSelected(0);
             //clip.DebugSave("test.png");
             //Debug.WriteLine(clip.ToColorString());
             if (clip != null)
                 Clipboard.SetData(DataFormats.Bitmap, clip.Source);
+            return clip;
         }
         public BitmapAccess GetSelected(int offset)
         {

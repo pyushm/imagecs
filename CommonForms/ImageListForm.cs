@@ -384,8 +384,7 @@ namespace ImageProcessor
             {
                 string mes = ex.Message;
             }
-            if (imageListView.SelectedIndices.Count == 1)
-                imageListView.SelectedIndices.Clear();
+            imageListView.SelectedIndices.Clear();
         }
         public void ViewImage(string filePath)	
 		{
@@ -523,7 +522,7 @@ namespace ImageProcessor
 		}
 		void SortByName(object s, System.EventArgs e)
 		{
-            Images.Sort(new ImageFileInfo.FileList.RealNameComparer());
+            Images.Sort(new ImageFileInfo.RealNameComparer());
             imageListView.VirtualListSize = 0;
 		}
 		void OpenPaint(object s, System.EventArgs e)
@@ -557,7 +556,8 @@ namespace ImageProcessor
 		{
             ImageFileInfo file = SelectedImageFile();
             Images.Rename(file, e.Label);
-		}
+            imageListView.SelectedIndices.Clear();
+        }
         void imageListView_RetrieveVirtualItem(object s, RetrieveVirtualItemEventArgs e)
         {
             try
@@ -565,13 +565,20 @@ namespace ImageProcessor
                 ImageFileInfo f = Images[e.ItemIndex];
                 if (f != null)
                 {
-                    e.Item = new ListViewItem(f.IsHeader ? f.GetDirInfo() : f.RealName);
+                    //e.Item = new ListViewItem(f.IsHeader ? f.GetDirInfo() : f.RealName);
+                    e.Item = new ListViewItem(f.RealName);
                     FontStyle fs = f.IsMultiLayer ? FontStyle.Underline : f.IsExact ? FontStyle.Italic : FontStyle.Regular;
                     e.Item.Font = new Font("Arial", 10, fs);
-                    if (f.IsHeader)
-                        e.Item.ForeColor = Color.BlueViolet;
+                    //if (f.IsHeader)
+                    //    e.Item.ForeColor = Color.BlueViolet;
                 }
-                e.Item.Tag = f;
+                if (e.Item == null)
+                {
+                    e.Item = new ListViewItem("......");
+                    e.Item.Tag = null;
+                }
+                else
+                    e.Item.Tag = f;
             }
             catch (Exception)
             {
@@ -583,7 +590,7 @@ namespace ImageProcessor
         {
             try
             {
-                if (!redrawRequest || !IsItemVisible(e.ItemIndex))
+                if (!redrawRequest || Images[e.ItemIndex] == null || !IsItemVisible(e.ItemIndex))
                     return;
                 Image im = Images[e.ItemIndex].GetThumbnail();
                 if(im==null) 

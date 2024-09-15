@@ -34,6 +34,7 @@ namespace ImageProcessor
         string deletedImageName = null;
         string deletedImageFile = "deletedImage";
         int direction = 0;
+        Image capturedImage;
         private Label label2;
         private NumericUpDown angleCtrl;
         private Label label1;
@@ -62,7 +63,7 @@ namespace ImageProcessor
         private CheckBox resizeBox;
         private ComboBox sensitivityBox;
         private Panel nextImagePanel;
-        private TextBox warningBox;
+        Panel capturePanel;
         private Label label3;
         private NumericUpDown delayBox;
         private Label mouseSensitivityLabel;
@@ -110,9 +111,9 @@ namespace ImageProcessor
             this.resizeBox = new System.Windows.Forms.CheckBox();
             this.panel = new System.Windows.Forms.Panel();
             this.nextImagePanel = new System.Windows.Forms.Panel();
-            this.warningBox = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
             this.delayBox = new System.Windows.Forms.NumericUpDown();
+            capturePanel = new System.Windows.Forms.Panel();
             ((System.ComponentModel.ISupportInitialize)(this.angleCtrl)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.scaleCtrl)).BeginInit();
             this.groupBox5.SuspendLayout();
@@ -471,15 +472,6 @@ namespace ImageProcessor
             this.nextImagePanel.Size = new System.Drawing.Size(266, 266);
             this.nextImagePanel.TabIndex = 85;
             // 
-            // warningBox
-            // 
-            this.warningBox.Location = new System.Drawing.Point(7, 1285);
-            this.warningBox.Margin = new System.Windows.Forms.Padding(1);
-            this.warningBox.Multiline = true;
-            this.warningBox.Name = "warningBox";
-            this.warningBox.Size = new System.Drawing.Size(266, 289);
-            this.warningBox.TabIndex = 86;
-            // 
             // label3
             // 
             this.label3.AutoSize = true;
@@ -509,14 +501,24 @@ namespace ImageProcessor
             this.delayBox.Size = new System.Drawing.Size(124, 31);
             this.delayBox.TabIndex = 88;
             // 
+            // capturePanel
+            // 
+            capturePanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            capturePanel.Location = new System.Drawing.Point(9, 1293);
+            capturePanel.Margin = new System.Windows.Forms.Padding(0);
+            capturePanel.Name = "capturePanel";
+            capturePanel.Size = new System.Drawing.Size(266, 266);
+            capturePanel.TabIndex = 86;
+            capturePanel.Paint += new System.Windows.Forms.PaintEventHandler(this.capturePanel_Paint);
+            // 
             // ImageViewForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(2764, 2379);
+            this.ClientSize = new System.Drawing.Size(2219, 1904);
+            this.Controls.Add(capturePanel);
             this.Controls.Add(this.delayBox);
             this.Controls.Add(this.label3);
-            this.Controls.Add(this.warningBox);
             this.Controls.Add(this.nextImagePanel);
             this.Controls.Add(this.panel);
             this.Controls.Add(this.label2);
@@ -594,6 +596,7 @@ namespace ImageProcessor
             applyEffectsButton.Click += effectsButton_Click;
             sharpenButton.Click += sharpenButton_Click;
             nextImagePanel.Paint += new PaintEventHandler(DrawNextImage);
+            capturePanel.Paint += new PaintEventHandler(capturePanel_Paint);
             sensitivityBox.Items.AddRange(NumEnum.Values(typeof(MouseSensitivity), 0.1));
             sensitivityBox.SelectedIndex = 2;
             KeyUp += CaptureCtrlC;
@@ -632,8 +635,8 @@ namespace ImageProcessor
             //Debug.WriteLine("View Modifier=" + Keyboard.Modifiers.ToString() + " key=" + e.KeyCode.ToString() + " " + Keyboard.IsKeyDown(Key.LeftCtrl));
             if (e.KeyCode == Keys.C && Keyboard.IsKeyDown(Key.LeftCtrl))
             {
-                SystemSounds.Beep.Play();
-                canvas.SetClipboardFromSelection();
+                capturedImage = canvas.SetClipboardFromSelection().ConverToBitmap();
+                capturePanel.Invalidate();
             }
         }
         void SetCutRectangle()
@@ -663,7 +666,7 @@ namespace ImageProcessor
                         PasswordDialog pd = new PasswordDialog();
                         pd.Show();
                     }
-                    ShowWarning(warn);
+                    //ShowWarning(warn);
                 }
                 backgroundLayer = canvas.BackgroundLayer;
                 sameTransformButton.Checked = false;
@@ -702,19 +705,24 @@ namespace ImageProcessor
                 int ind = imageFiles.NewInd(direction);
                 var file = ind >= 0 ? imageFiles[ind] : null;
                 ImageFileInfo ifi = new ImageFileInfo(new FileInfo(file.FSPath));
-                Image im = ifi.SynchronizeThumbnail();
-                float areaSize = 138 * e.Graphics.DpiX / 96;
-                float scale = Math.Min(areaSize / im.Width, areaSize / im.Height);
-                float iw = im.Width * scale;
-                float ih = im.Height * scale;
-                float d = (iw - ih) / 2;
-                PointF del = d < 0 ? new PointF(-d, 0) : new PointF(0, d);
-                e.Graphics.DrawImage(im, del.X, del.Y, iw, ih);
+                DrawSmallImage(ifi.SynchronizeThumbnail(), e.Graphics);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.Message);
             }
+        }
+        void DrawSmallImage(Image im, Graphics g)
+        {
+            if (im == null)
+                return;
+            float areaSize = 138 * g.DpiX / 96;
+            float scale = Math.Min(areaSize / im.Width, areaSize / im.Height);
+            float iw = im.Width * scale;
+            float ih = im.Height * scale;
+            float d = (iw - ih) / 2;
+            PointF del = d < 0 ? new PointF(-d, 0) : new PointF(0, d);
+            g.DrawImage(im, del.X, del.Y, iw, ih);
         }
         void SetWindowTitle()
         {
@@ -842,6 +850,8 @@ namespace ImageProcessor
         }
         void SaveTypeChanged(object sender, EventArgs e)
         {
+            capturedImage = null;
+            capturePanel.Invalidate();
             string str = (string)actionBox.SelectedItem;
             if (str.StartsWith("Selection"))
             {
@@ -873,11 +883,6 @@ namespace ImageProcessor
                     SetCutRectangle();
                 }
             }
-        }
-        void ShowWarning(string warning, bool error = false)
-        {
-            warningBox.Text = warning;
-            warningBox.ForeColor = error ? Color.Red : Color.Black;
         }
         #endregion
         #region Image transforms
@@ -971,5 +976,17 @@ namespace ImageProcessor
                 imageModified = true;
         }
         #endregion
+
+        private void capturePanel_Paint(object sender, PaintEventArgs e)
+        {
+            try
+            {
+                DrawSmallImage(capturedImage, e.Graphics);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
+        }
     }
 }
