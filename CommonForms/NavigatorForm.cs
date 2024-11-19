@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using System.IO;
 using System.Diagnostics;
 using System.Drawing;
+using System.Windows.Media.Imaging;
 
 namespace ImageProcessor
 {
@@ -17,7 +18,8 @@ namespace ImageProcessor
         }
         private Container components = null;
         List<Form> invoked = new List<Form>();
-		Button addPrefixButton;
+        List<string> warnings = new List<string>();
+        Button addPrefixButton;
         Button changeNameButton;
         ListBox outputList;
 		TextBox outputBox;
@@ -69,11 +71,10 @@ namespace ImageProcessor
         private Button findSimilarImagesBtn;
         private Button imageInfoBtn;
         private TextBox newTextBox;
-        private Label label3;
-        private TextBox imageSizeBox;
         private Button reduceButton;
         private TextBox renameResultBox;
         private Label label5;
+        private Button compressBtn;
         Dictionary<string, string[]> matchingImages = new Dictionary<string, string[]>();
         protected override void Dispose( bool disposing )
 		{
@@ -123,8 +124,7 @@ namespace ImageProcessor
             this.directoryNameBox = new System.Windows.Forms.TextBox();
             this.renameDirBtn = new System.Windows.Forms.Button();
             this.tabPage3 = new System.Windows.Forms.TabPage();
-            this.label3 = new System.Windows.Forms.Label();
-            this.imageSizeBox = new System.Windows.Forms.TextBox();
+            this.compressBtn = new System.Windows.Forms.Button();
             this.reduceButton = new System.Windows.Forms.Button();
             this.makePrivateBtn = new System.Windows.Forms.Button();
             this.runningSimilarIcon = new System.Windows.Forms.PictureBox();
@@ -143,8 +143,8 @@ namespace ImageProcessor
             // infoImagePanel
             // 
             this.infoImagePanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.infoImagePanel.Location = new System.Drawing.Point(484, 464);
-            this.infoImagePanel.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.infoImagePanel.Location = new System.Drawing.Point(484, 463);
+            this.infoImagePanel.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.infoImagePanel.Name = "infoImagePanel";
             this.infoImagePanel.Size = new System.Drawing.Size(282, 931);
             this.infoImagePanel.TabIndex = 7;
@@ -153,8 +153,8 @@ namespace ImageProcessor
             // outputList
             // 
             this.outputList.ItemHeight = 25;
-            this.outputList.Location = new System.Drawing.Point(788, 464);
-            this.outputList.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.outputList.Location = new System.Drawing.Point(788, 463);
+            this.outputList.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.outputList.Name = "outputList";
             this.outputList.Size = new System.Drawing.Size(476, 929);
             this.outputList.TabIndex = 8;
@@ -165,10 +165,10 @@ namespace ImageProcessor
             // locationTreeView
             // 
             this.locationTreeView.Location = new System.Drawing.Point(16, 63);
-            this.locationTreeView.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.locationTreeView.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.locationTreeView.Name = "locationTreeView";
             this.locationTreeView.ShowNodeToolTips = true;
-            this.locationTreeView.Size = new System.Drawing.Size(444, 1332);
+            this.locationTreeView.Size = new System.Drawing.Size(444, 1333);
             this.locationTreeView.TabIndex = 10;
             this.locationTreeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.RetrievNodes);
             this.locationTreeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.DisplaySelectedNode);
@@ -176,8 +176,8 @@ namespace ImageProcessor
             // 
             // addPrefixButton
             // 
-            this.addPrefixButton.Location = new System.Drawing.Point(483, 89);
-            this.addPrefixButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.addPrefixButton.Location = new System.Drawing.Point(484, 88);
+            this.addPrefixButton.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.addPrefixButton.Name = "addPrefixButton";
             this.addPrefixButton.Size = new System.Drawing.Size(228, 40);
             this.addPrefixButton.TabIndex = 15;
@@ -185,16 +185,16 @@ namespace ImageProcessor
             // 
             // oldTextBox
             // 
-            this.oldTextBox.Location = new System.Drawing.Point(7, 152);
-            this.oldTextBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.oldTextBox.Location = new System.Drawing.Point(8, 152);
+            this.oldTextBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.oldTextBox.Name = "oldTextBox";
-            this.oldTextBox.Size = new System.Drawing.Size(355, 31);
+            this.oldTextBox.Size = new System.Drawing.Size(356, 31);
             this.oldTextBox.TabIndex = 5;
             // 
             // changeNameButton
             // 
-            this.changeNameButton.Location = new System.Drawing.Point(95, 89);
-            this.changeNameButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.changeNameButton.Location = new System.Drawing.Point(96, 88);
+            this.changeNameButton.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.changeNameButton.Name = "changeNameButton";
             this.changeNameButton.Size = new System.Drawing.Size(244, 40);
             this.changeNameButton.TabIndex = 22;
@@ -204,7 +204,7 @@ namespace ImageProcessor
             // outputBox
             // 
             this.outputBox.Location = new System.Drawing.Point(16, 15);
-            this.outputBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.outputBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.outputBox.Name = "outputBox";
             this.outputBox.Size = new System.Drawing.Size(1246, 31);
             this.outputBox.TabIndex = 19;
@@ -218,10 +218,10 @@ namespace ImageProcessor
             // 
             // findNameButton
             // 
-            this.findNameButton.Location = new System.Drawing.Point(68, 11);
-            this.findNameButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.findNameButton.Location = new System.Drawing.Point(68, 12);
+            this.findNameButton.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.findNameButton.Name = "findNameButton";
-            this.findNameButton.Size = new System.Drawing.Size(171, 40);
+            this.findNameButton.Size = new System.Drawing.Size(172, 40);
             this.findNameButton.TabIndex = 0;
             this.findNameButton.Text = "Name";
             // 
@@ -229,7 +229,7 @@ namespace ImageProcessor
             // 
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(12, 121);
-            this.label2.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
+            this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(68, 25);
             this.label2.TabIndex = 28;
@@ -238,7 +238,7 @@ namespace ImageProcessor
             // patternBox
             // 
             this.patternBox.Location = new System.Drawing.Point(88, 115);
-            this.patternBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.patternBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.patternBox.Name = "patternBox";
             this.patternBox.Size = new System.Drawing.Size(328, 31);
             this.patternBox.TabIndex = 20;
@@ -247,8 +247,8 @@ namespace ImageProcessor
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(12, 172);
-            this.label4.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
+            this.label4.Location = new System.Drawing.Point(12, 171);
+            this.label4.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(96, 25);
             this.label4.TabIndex = 29;
@@ -257,7 +257,7 @@ namespace ImageProcessor
             // daysBox
             // 
             this.daysBox.Location = new System.Drawing.Point(120, 165);
-            this.daysBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.daysBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.daysBox.Name = "daysBox";
             this.daysBox.Size = new System.Drawing.Size(68, 31);
             this.daysBox.TabIndex = 27;
@@ -266,8 +266,8 @@ namespace ImageProcessor
             // runningImage
             // 
             this.runningImage.Image = global::ImageProcessor.Properties.Resources.wspinner_1_;
-            this.runningImage.Location = new System.Drawing.Point(19, 21);
-            this.runningImage.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.runningImage.Location = new System.Drawing.Point(20, 21);
+            this.runningImage.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.runningImage.Name = "runningImage";
             this.runningImage.Size = new System.Drawing.Size(32, 31);
             this.runningImage.TabIndex = 31;
@@ -277,7 +277,7 @@ namespace ImageProcessor
             // searchResultBox
             // 
             this.searchResultBox.Location = new System.Drawing.Point(12, 225);
-            this.searchResultBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.searchResultBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.searchResultBox.Multiline = true;
             this.searchResultBox.Name = "searchResultBox";
             this.searchResultBox.ReadOnly = true;
@@ -290,7 +290,7 @@ namespace ImageProcessor
             this.tabControl1.Controls.Add(this.tabPage2);
             this.tabControl1.Controls.Add(this.tabPage3);
             this.tabControl1.Location = new System.Drawing.Point(476, 65);
-            this.tabControl1.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.tabControl1.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
             this.tabControl1.Size = new System.Drawing.Size(792, 394);
@@ -311,9 +311,9 @@ namespace ImageProcessor
             this.tabPage1.Controls.Add(this.label2);
             this.tabPage1.Controls.Add(this.patternBox);
             this.tabPage1.Location = new System.Drawing.Point(8, 39);
-            this.tabPage1.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.tabPage1.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.tabPage1.Name = "tabPage1";
-            this.tabPage1.Padding = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.tabPage1.Padding = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.tabPage1.Size = new System.Drawing.Size(776, 347);
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "Search";
@@ -321,8 +321,8 @@ namespace ImageProcessor
             // 
             // displayResultsBtn
             // 
-            this.displayResultsBtn.Location = new System.Drawing.Point(212, 164);
-            this.displayResultsBtn.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.displayResultsBtn.Location = new System.Drawing.Point(212, 163);
+            this.displayResultsBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.displayResultsBtn.Name = "displayResultsBtn";
             this.displayResultsBtn.Size = new System.Drawing.Size(208, 40);
             this.displayResultsBtn.TabIndex = 39;
@@ -330,28 +330,28 @@ namespace ImageProcessor
             // 
             // findLookBtn
             // 
-            this.findLookBtn.Location = new System.Drawing.Point(251, 64);
-            this.findLookBtn.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.findLookBtn.Location = new System.Drawing.Point(252, 63);
+            this.findLookBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.findLookBtn.Name = "findLookBtn";
-            this.findLookBtn.Size = new System.Drawing.Size(171, 40);
+            this.findLookBtn.Size = new System.Drawing.Size(172, 40);
             this.findLookBtn.TabIndex = 38;
             this.findLookBtn.Text = "Looks like";
             // 
             // findSoundBtn
             // 
-            this.findSoundBtn.Location = new System.Drawing.Point(68, 64);
-            this.findSoundBtn.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.findSoundBtn.Location = new System.Drawing.Point(68, 63);
+            this.findSoundBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.findSoundBtn.Name = "findSoundBtn";
-            this.findSoundBtn.Size = new System.Drawing.Size(171, 40);
+            this.findSoundBtn.Size = new System.Drawing.Size(172, 40);
             this.findSoundBtn.TabIndex = 37;
             this.findSoundBtn.Text = "Sound like";
             // 
             // findFileBtn
             // 
-            this.findFileBtn.Location = new System.Drawing.Point(251, 11);
-            this.findFileBtn.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.findFileBtn.Location = new System.Drawing.Point(252, 12);
+            this.findFileBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.findFileBtn.Name = "findFileBtn";
-            this.findFileBtn.Size = new System.Drawing.Size(171, 40);
+            this.findFileBtn.Size = new System.Drawing.Size(172, 40);
             this.findFileBtn.TabIndex = 36;
             this.findFileBtn.Text = "File";
             // 
@@ -359,9 +359,9 @@ namespace ImageProcessor
             // 
             this.findImagePanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.findImagePanel.Location = new System.Drawing.Point(432, 6);
-            this.findImagePanel.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.findImagePanel.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.findImagePanel.Name = "findImagePanel";
-            this.findImagePanel.Size = new System.Drawing.Size(343, 331);
+            this.findImagePanel.Size = new System.Drawing.Size(342, 331);
             this.findImagePanel.TabIndex = 35;
             // 
             // tabPage2
@@ -375,9 +375,9 @@ namespace ImageProcessor
             this.tabPage2.Controls.Add(this.addPrefixButton);
             this.tabPage2.Controls.Add(this.changeNameButton);
             this.tabPage2.Location = new System.Drawing.Point(8, 39);
-            this.tabPage2.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.tabPage2.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.tabPage2.Name = "tabPage2";
-            this.tabPage2.Padding = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.tabPage2.Padding = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.tabPage2.Size = new System.Drawing.Size(776, 347);
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "Rename";
@@ -386,7 +386,7 @@ namespace ImageProcessor
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(368, 159);
+            this.label5.Location = new System.Drawing.Point(368, 160);
             this.label5.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(48, 25);
@@ -395,34 +395,34 @@ namespace ImageProcessor
             // 
             // renameResultBox
             // 
-            this.renameResultBox.Location = new System.Drawing.Point(5, 198);
-            this.renameResultBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.renameResultBox.Location = new System.Drawing.Point(4, 198);
+            this.renameResultBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.renameResultBox.Multiline = true;
             this.renameResultBox.Name = "renameResultBox";
             this.renameResultBox.ReadOnly = true;
-            this.renameResultBox.Size = new System.Drawing.Size(771, 125);
+            this.renameResultBox.Size = new System.Drawing.Size(772, 125);
             this.renameResultBox.TabIndex = 40;
             // 
             // newTextBox
             // 
             this.newTextBox.Location = new System.Drawing.Point(420, 152);
-            this.newTextBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.newTextBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.newTextBox.Name = "newTextBox";
-            this.newTextBox.Size = new System.Drawing.Size(355, 31);
+            this.newTextBox.Size = new System.Drawing.Size(356, 31);
             this.newTextBox.TabIndex = 37;
             // 
             // directoryNameBox
             // 
-            this.directoryNameBox.Location = new System.Drawing.Point(235, 31);
-            this.directoryNameBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.directoryNameBox.Location = new System.Drawing.Point(236, 31);
+            this.directoryNameBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.directoryNameBox.Name = "directoryNameBox";
             this.directoryNameBox.Size = new System.Drawing.Size(540, 31);
             this.directoryNameBox.TabIndex = 36;
             // 
             // renameDirBtn
             // 
-            this.renameDirBtn.Location = new System.Drawing.Point(3, 29);
-            this.renameDirBtn.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.renameDirBtn.Location = new System.Drawing.Point(4, 29);
+            this.renameDirBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.renameDirBtn.Name = "renameDirBtn";
             this.renameDirBtn.Size = new System.Drawing.Size(232, 40);
             this.renameDirBtn.TabIndex = 35;
@@ -430,8 +430,7 @@ namespace ImageProcessor
             // 
             // tabPage3
             // 
-            this.tabPage3.Controls.Add(this.label3);
-            this.tabPage3.Controls.Add(this.imageSizeBox);
+            this.tabPage3.Controls.Add(this.compressBtn);
             this.tabPage3.Controls.Add(this.reduceButton);
             this.tabPage3.Controls.Add(this.makePrivateBtn);
             this.tabPage3.Controls.Add(this.runningSimilarIcon);
@@ -439,57 +438,46 @@ namespace ImageProcessor
             this.tabPage3.Controls.Add(this.findSimilarImagesBtn);
             this.tabPage3.Controls.Add(this.imageInfoBtn);
             this.tabPage3.Location = new System.Drawing.Point(8, 39);
-            this.tabPage3.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.tabPage3.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.tabPage3.Name = "tabPage3";
             this.tabPage3.Size = new System.Drawing.Size(776, 347);
             this.tabPage3.TabIndex = 2;
             this.tabPage3.Text = "Processes";
             this.tabPage3.UseVisualStyleBackColor = true;
             // 
-            // label3
+            // compressBtn
             // 
-            this.label3.Location = new System.Drawing.Point(524, 206);
-            this.label3.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(44, 36);
-            this.label3.TabIndex = 41;
-            this.label3.Text = "pix";
-            this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // imageSizeBox
-            // 
-            this.imageSizeBox.Location = new System.Drawing.Point(392, 206);
-            this.imageSizeBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
-            this.imageSizeBox.Name = "imageSizeBox";
-            this.imageSizeBox.Size = new System.Drawing.Size(116, 31);
-            this.imageSizeBox.TabIndex = 40;
-            this.imageSizeBox.Text = "2000";
-            this.imageSizeBox.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.compressBtn.Location = new System.Drawing.Point(68, 192);
+            this.compressBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
+            this.compressBtn.Name = "compressBtn";
+            this.compressBtn.Size = new System.Drawing.Size(260, 40);
+            this.compressBtn.TabIndex = 43;
+            this.compressBtn.Text = "Compress PNG images";
             // 
             // reduceButton
             // 
-            this.reduceButton.Location = new System.Drawing.Point(69, 204);
-            this.reduceButton.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.reduceButton.Location = new System.Drawing.Point(68, 262);
+            this.reduceButton.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.reduceButton.Name = "reduceButton";
-            this.reduceButton.Size = new System.Drawing.Size(261, 39);
+            this.reduceButton.Size = new System.Drawing.Size(260, 38);
             this.reduceButton.TabIndex = 42;
             this.reduceButton.Text = "Resize to";
             this.reduceButton.TextAlign = System.Drawing.ContentAlignment.TopCenter;
             // 
             // makePrivateBtn
             // 
-            this.makePrivateBtn.Location = new System.Drawing.Point(69, 135);
-            this.makePrivateBtn.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.makePrivateBtn.Location = new System.Drawing.Point(68, 135);
+            this.makePrivateBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.makePrivateBtn.Name = "makePrivateBtn";
-            this.makePrivateBtn.Size = new System.Drawing.Size(261, 40);
+            this.makePrivateBtn.Size = new System.Drawing.Size(260, 40);
             this.makePrivateBtn.TabIndex = 39;
             this.makePrivateBtn.Text = "Convert to private";
             // 
             // runningSimilarIcon
             // 
             this.runningSimilarIcon.Image = global::ImageProcessor.Properties.Resources.wspinner_1_;
-            this.runningSimilarIcon.Location = new System.Drawing.Point(27, 86);
-            this.runningSimilarIcon.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.runningSimilarIcon.Location = new System.Drawing.Point(28, 87);
+            this.runningSimilarIcon.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.runningSimilarIcon.Name = "runningSimilarIcon";
             this.runningSimilarIcon.Size = new System.Drawing.Size(32, 31);
             this.runningSimilarIcon.TabIndex = 38;
@@ -499,8 +487,8 @@ namespace ImageProcessor
             // runningInfoIcon
             // 
             this.runningInfoIcon.Image = global::ImageProcessor.Properties.Resources.wspinner_1_;
-            this.runningInfoIcon.Location = new System.Drawing.Point(27, 35);
-            this.runningInfoIcon.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.runningInfoIcon.Location = new System.Drawing.Point(28, 35);
+            this.runningInfoIcon.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.runningInfoIcon.Name = "runningInfoIcon";
             this.runningInfoIcon.Size = new System.Drawing.Size(32, 31);
             this.runningInfoIcon.TabIndex = 37;
@@ -509,19 +497,19 @@ namespace ImageProcessor
             // 
             // findSimilarImagesBtn
             // 
-            this.findSimilarImagesBtn.Location = new System.Drawing.Point(69, 82);
-            this.findSimilarImagesBtn.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.findSimilarImagesBtn.Location = new System.Drawing.Point(68, 83);
+            this.findSimilarImagesBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.findSimilarImagesBtn.Name = "findSimilarImagesBtn";
-            this.findSimilarImagesBtn.Size = new System.Drawing.Size(261, 40);
+            this.findSimilarImagesBtn.Size = new System.Drawing.Size(260, 40);
             this.findSimilarImagesBtn.TabIndex = 36;
             this.findSimilarImagesBtn.Text = "Find similar images";
             // 
             // imageInfoBtn
             // 
-            this.imageInfoBtn.Location = new System.Drawing.Point(69, 31);
-            this.imageInfoBtn.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
+            this.imageInfoBtn.Location = new System.Drawing.Point(68, 31);
+            this.imageInfoBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.imageInfoBtn.Name = "imageInfoBtn";
-            this.imageInfoBtn.Size = new System.Drawing.Size(261, 40);
+            this.imageInfoBtn.Size = new System.Drawing.Size(260, 40);
             this.imageInfoBtn.TabIndex = 35;
             this.imageInfoBtn.Text = "Update ImageInfo";
             // 
@@ -529,15 +517,15 @@ namespace ImageProcessor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1261, 1411);
+            this.ClientSize = new System.Drawing.Size(1252, 1412);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.outputBox);
             this.Controls.Add(this.locationTreeView);
             this.Controls.Add(this.outputList);
             this.Controls.Add(this.infoImagePanel);
-            this.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
-            this.MaximumSize = new System.Drawing.Size(1287, 1627);
-            this.MinimumSize = new System.Drawing.Size(1287, 1300);
+            this.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
+            this.MaximumSize = new System.Drawing.Size(1278, 1598);
+            this.MinimumSize = new System.Drawing.Size(1278, 881);
             this.Name = "NavigatorForm";
             this.Text = "Image Selector";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.NavigatorForm_FormClosing);
@@ -548,7 +536,6 @@ namespace ImageProcessor
             this.tabPage2.ResumeLayout(false);
             this.tabPage2.PerformLayout();
             this.tabPage3.ResumeLayout(false);
-            this.tabPage3.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.runningSimilarIcon)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.runningInfoIcon)).EndInit();
             this.ResumeLayout(false);
@@ -580,12 +567,14 @@ namespace ImageProcessor
                 findFileBtn.Click += (object s, EventArgs e) => FindItems(Navigator.SearchMode.File);
                 findSoundBtn.Click += (object s, EventArgs e) => FindItems(Navigator.SearchMode.Sound);
                 findLookBtn.Click += (object s, EventArgs e) => FindItems(Navigator.SearchMode.Image);
+                makePrivateBtn.Click += (object s, EventArgs e) => ConvertToPrivate();
+                compressBtn.Click += (object s, EventArgs e) => ConvertTojpg();
                 reduceButton.Click += (object s, EventArgs e) => ResizeImages();
+                reduceButton.Text = "Reduce to " + (int)Conversion.ReduceSize + " pix";
                 changeNameButton.Click += (object s, EventArgs e) => Rename(RenameType.FileName);
                 addPrefixButton.Click += (object s, EventArgs e) => Rename(RenameType.AddPrefix);
                 renameDirBtn.Click += (object s, EventArgs e) => Rename(RenameType.Directory);
                 imageInfoBtn.Click += (object s, EventArgs e) => { runningInfoIcon.Visible = true; infoWorker.RunWorkerAsync(); imageInfoBtn.Enabled = false; };
-                makePrivateBtn.Click += (object s, EventArgs e) => ConvertToPrivate();
                 findSimilarImagesBtn.Click += (object s, EventArgs e) => { runningSimilarIcon.Visible = true; similarImagesWorker.RunWorkerAsync(); findSimilarImagesBtn.Enabled = false; }; ;
                 locationTreeView.DoubleClick += (object s, EventArgs e) => { if (selectedNode != null) ShowImageListForm(selectedNode); };
                 displayResultsBtn.Click += (object o, EventArgs e) => { onSearchClick?.Invoke(); };
@@ -730,18 +719,25 @@ namespace ImageProcessor
         }
         void ResizeImages()                 
         {
-            if (selectedNode == null || !fileManager.SetResizeModifyers(imageSizeBox.Text, 1000))
+            if (selectedNode == null)
                 return;
-            conversion = Conversion.LimitSize;
-            imageSizeBox.Text = "";
+            conversion = Conversion.ReduceSize;
             OperationButtonsEnabled(false);
             imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
         }
-        void ConvertToPrivate()                  
+        void ConvertToPrivate()
         {
-            if (selectedNode == null )
+            if (selectedNode == null)
                 return;
-            conversion = Conversion.Private;
+            conversion = Conversion.Encode;
+            OperationButtonsEnabled(false);
+            imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
+        }
+        void ConvertTojpg()
+        {
+            if (selectedNode == null)
+                return;
+            conversion = Conversion.ToJPG;
             OperationButtonsEnabled(false);
             imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
         }
@@ -1069,5 +1065,35 @@ namespace ImageProcessor
             outputBox.ForeColor = Color.Red;
             outputBox.PasswordChar = '\0';
         }
+        //private void CompressPNGtoJPG(object sender, EventArgs e)
+        //{
+        //    DirectoryInfo dii = new DirectoryInfo(outputBox.Text);
+        //    if (!dii.Exists)
+        //        dii = new DirectoryInfo(FileName.MangleFile(outputBox.Text));
+        //    if (!dii.Exists)
+        //    {
+        //        MessageBox.Show("Directory " + outputBox.Text + " does not exist");
+        //        return;
+        //    }
+        //    if (!Navigator.IsSpecDir(dii) && !Navigator.IsSpecDir(dii.Parent) && !Navigator.IsSpecDir(dii.Parent.Parent))
+        //        return;
+        //    warnings.Clear();
+        //    FileInfo[] fia = dii.GetFiles();
+        //    foreach (var fi in fia)
+        //    {
+        //        ImageFileInfo ifi = new ImageFileInfo(fi);
+        //        if (ifi.IsExact)
+        //        {
+        //            var ba = BitmapAccess.LoadImage(ifi.FSPath, ifi.IsEncrypted);
+        //            string filePath = Path.GetFileNameWithoutExtension(ifi.FSPath) + (ifi.IsEncrypted ? ".jpe" : ".jpg");
+        //            filePath = Path.Combine(Path.GetDirectoryName(ifi.FSPath), filePath);
+        //            ba.SaveToFile(filePath, false, ifi.IsEncrypted);
+        //        }
+        //    }
+        //    if (warnings.Count > 0)
+        //        MessageBox.Show(warnings[0]);
+        //    Debug.WriteIf(warnings.Count > 0, warnings[0]);
+        //    return;
+        //}
     }
 }

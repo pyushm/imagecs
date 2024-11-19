@@ -17,13 +17,13 @@ namespace ImageProcessor
     }
     public enum Conversion
     {
-        None,
-        LimitSize,  // resize large images to max size 
-        Private     // mangle name and encrypt file if not applied yet
+        None = 0,
+        Encode = 1,         // mangle name and encrypt file
+        ToJPG = 3,          // compress to JPG format
+        ReduceSize = 2000,  // resize large images to max size 
     }
     public class FileManager
 	{
-		int maxImageSize;
 		bool stopFlag;
 		Navigator navigator;
         Conversion covertion = Conversion.None;
@@ -37,19 +37,6 @@ namespace ImageProcessor
         public string NewDirName            { get; set; }
         public FileManager(Navigator n)     { navigator=n; }
 		public void Stop()					{ stopFlag=true; }
-        public bool SetResizeModifyers(string maxImageSizeString, int limitImageSize)
-		{
-            string message = "Image Size Below Limit";
-            if(int.TryParse(maxImageSizeString, out maxImageSize))
-            {
-                if (maxImageSize > limitImageSize)
-                    return true;
-            }
-            else
-                message = "Image Size is NAN";
-            ReportResults(message);
-            return false;
-		}
         public void ApplyAdjustmentRecursively(DirectoryInfo start, Conversion operation_, bool sync_)
         {
             sync = sync_;
@@ -64,22 +51,22 @@ namespace ImageProcessor
                     notifyFinal?.Invoke(messages);
             }
         }
-        public string ResizeImage(string fullPath, bool exact, double maxSize, bool encrypted)
+        public string ResizeImage(string fullPath, bool exact, int maxSize, bool encrypted)
         {
             var ba = BitmapAccess.LoadImage(fullPath, encrypted);
-            double scale = ba.ReducedImageScale(maxSize);
+            double scale = ba.ScaleReducingImageTo(maxSize);
             if (scale >= 1)
                 return ""; // image already smaller than maxSize
             var bs = new BitmapAccess(ba.Source, new ScaleTransform(scale, scale));
             return bs.SaveToFile(fullPath, exact, encrypted);
         }
-        public void ConvertFiles(DirectoryInfo directory, string relativePath)
+        void ConvertFiles(DirectoryInfo directory, string relativePath)
         {   // called from recursive dierectory processing in Navigator
             if (stopFlag || covertion == Conversion.None)
                 return;
             if (sync)
                 ReportStatus(covertion.ToString() + " in " + directory.FullName);
-            if (covertion == Conversion.Private && relativePath.Length > 0 && !FileName.IsMangled(directory.Name))
+            if (covertion == Conversion.Encode && relativePath.Length > 0 && !FileName.IsMangled(directory.Name))
             {   // mangle dir name
                 string newDirName = FileName.Mangle(directory.Name);
                 if(newDirName != directory.Name)
@@ -92,16 +79,16 @@ namespace ImageProcessor
                 {
                     if (stopFlag)
                         break;
-                    if (covertion == Conversion.LimitSize)
+                    if (covertion == Conversion.ReduceSize)
                     {
                         ImageFileInfo ifi = new ImageFileInfo(file);
-                        string ret = ResizeImage(file.FullName, ifi.IsExact, 2000, ifi.IsEncrypted);
+                        string ret = ResizeImage(file.FullName, ifi.IsExact, (int)Conversion.ReduceSize, ifi.IsEncrypted);
                         if (ret.Length > 0)
                             ReportResults(ret);
                         continue;
                     }
                     string name = file.Name;   // name with extension
-                    if (covertion == Conversion.Private)
+                    if (covertion == Conversion.Encode)
                     {
                         ImageFileName ifi = new ImageFileName(name);
                         if (!ifi.IsInfoImage)
@@ -111,7 +98,7 @@ namespace ImageProcessor
                         string newFilePath = Path.Combine(file.DirectoryName, name);
                         try
                         {
-                            if(needEncryption)
+                            if (needEncryption)
                             {
                                 string suffix = ifi.IsMovie ? ".vid" : !ifi.IsImage ? ".drw" : ifi.IsExact ? ".exa" : ".jpe";
                                 name = ifi.FSName + suffix;
@@ -125,8 +112,37 @@ namespace ImageProcessor
                                         ReportResults(warnings);
                                 }
                             }
-                            else if (covertion == Conversion.Private)
+                            else if (covertion == Conversion.Encode)
                                 file.MoveTo(newFilePath);
+                        }
+                        catch (Exception ex)
+                        {
+#if DEBUG
+                            Console.WriteLine(ex.Message);
+                            Console.WriteLine(ex.StackTrace);
+#endif
+                            ReportResults(name + ": " + ex.Message);
+                        }
+                    }
+                    if (covertion == Conversion.ToJPG)
+                    {
+                        ImageFileName ifi = new ImageFileName(name);
+                        if (ifi.IsInfoImage || !ifi.IsExact)
+                            continue;
+                        try
+                        {
+                            var ba = BitmapAccess.LoadImage(file.FullName, ifi.IsEncrypted);
+                            string newFilePath = Path.GetFileNameWithoutExtension(name) + (ifi.IsEncrypted ? ".jpe" : ".jpg");
+                            newFilePath = Path.Combine(file.DirectoryName, newFilePath);
+                            var ret = ba.SaveToFile(newFilePath, false, ifi.IsEncrypted);
+                            if (ret.Length > 0)
+                                ReportResults(name + ": " + DataAccess.Warning);
+                            else
+                            {
+                                string warnings = ImageFileInfo.Delete(file.FullName);
+                                if (warnings.Length > 0)
+                                    ReportResults(warnings);
+                            }
                         }
                         catch (Exception ex)
                         {

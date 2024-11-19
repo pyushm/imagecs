@@ -23,7 +23,17 @@ namespace ImageProcessor
     {   // base class for accessing Bitmap in WPF. BitmapAccess is used to avoid collision with System.Drawing.Bitmap
         [DllImport("gdi32.dll")]
         public static extern bool DeleteObject(IntPtr hObject);
-
+        static public byte[] SerializeFrame(BitmapFrame bf, bool exact)
+        {
+            BitmapEncoder bitmapEncoder = exact ? (BitmapEncoder)new PngBitmapEncoder() : new JpegBitmapEncoder();
+            var jenc = bitmapEncoder as JpegBitmapEncoder;
+            if (jenc != null) // ~87 for 3 Mpixels, ~93 fpr 1 Mpixel, 99 for 0
+                jenc.QualityLevel = Math.Min((int)(77 + 55 / (bf.Width * bf.Height / 1.0e6 + 2.5)), 100);
+            bitmapEncoder.Frames.Add(bf);
+            MemoryStream ms = new MemoryStream();
+            bitmapEncoder.Save(ms);
+            return ms.ToArray();
+        }
         static PixelFormat[] supportedFormats = { PixelFormats.Bgr24, PixelFormats.Bgr32, PixelFormats.Bgra32,
             PixelFormats.Gray8, PixelFormats.Pbgra32, PixelFormats.Rgb24, PixelFormats.Indexed8};
         static public bool Supported(PixelFormat pf)
@@ -134,15 +144,10 @@ namespace ImageProcessor
             }
             return new BitmapAccess(bm);
         }
-        public static BitmapAccess LoadImage(string fullPath, bool encrypted)
+        public static BitmapAccess LoadImage(string fullPath, bool encrypted, int maxWidth=0)
         {
             byte[] imageBytes = DataAccess.ReadFile(fullPath, encrypted);
-            return imageBytes.Length > 0 ? new BitmapAccess(new MemoryStream(imageBytes), 0, fullPath) : null;
-        }
-        public static BitmapAccess LoadThumbnail(string fullPath, bool encrypted)
-        {
-            byte[] imageBytes = DataAccess.ReadFile(fullPath, encrypted);
-            return new BitmapAccess(new MemoryStream(imageBytes), 200, fullPath);
+            return imageBytes.Length > 0 ? new BitmapAccess(new MemoryStream(imageBytes), maxWidth, fullPath) : null;
         }
         public static BitmapImage CreateHashImage(string fullPath, bool encrypted, IntSize size)
         {
@@ -161,9 +166,9 @@ namespace ImageProcessor
             BitmapImage bi = new BitmapImage();
             bi.BeginInit();
             bi.StreamSource = dataStream;
-            if (maxWidth > 0)
-                bi.DecodePixelWidth = maxWidth;
-            bi.CreateOptions = BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreColorProfile;
+            bi.DecodePixelWidth = maxWidth;
+            //bi.CreateOptions = BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreColorProfile;
+            bi.CreateOptions = BitmapCreateOptions.IgnoreColorProfile; // removed to process Bgra32
             bi.EndInit();
             Initialize(new WriteableBitmap(bi), null);
         }
@@ -172,6 +177,7 @@ namespace ImageProcessor
         //    BitmapSource bs;
         //    IntPtr hBitmap = src.GetHbitmap();
         //    try { bs = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(hBitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions()); }
+        //    catch { bs = null; }
         //    finally { DeleteObject(hBitmap); }
         //    Initialize(new WriteableBitmap(bs), null);
         //}
@@ -189,7 +195,7 @@ namespace ImageProcessor
                 throw new ArgumentNullException("bitmap dimetsion <=0");
            Initialize(new WriteableBitmap(w, h, 96, 96, PixelFormats.Pbgra32, null), null);
         }
-        public double ReducedImageScale(double maxSize)
+        public double ScaleReducingImageTo(double maxSize)
         {
             double scalex = maxSize / Width;
             double scaley = maxSize / Height;
@@ -201,11 +207,8 @@ namespace ImageProcessor
         {
             try
             {
-                BitmapEncoder baseEncoder = exact ? (BitmapEncoder)new PngBitmapEncoder() : new JpegBitmapEncoder();
-                baseEncoder.Frames.Add(BitmapFrame.Create(Source));
-                MemoryStream ms = new MemoryStream();
-                baseEncoder.Save(ms);
-                DataAccess.WriteFile(fullPath, ms.ToArray(), encrypt);
+                byte[] ba = SerializeFrame(BitmapFrame.Create(Source), exact);
+                DataAccess.WriteFile(fullPath, ba, encrypt);
                 return "";
             }
             catch (Exception ex) { return fullPath + Environment.NewLine + ex.Message; }
@@ -685,12 +688,12 @@ namespace ImageProcessor
             transparencySet = flag;
             return bmn;
         }
-        public System.Drawing.Bitmap ConverToBitmap()
+        public System.Drawing.Bitmap CreateBitmapImage()
         {
             using (MemoryStream outStream = new MemoryStream())
             {
                 BitmapEncoder enc = new BmpBitmapEncoder();
-                enc.Frames.Add(BitmapFrame.Create(Source)); 
+                enc.Frames.Add(BitmapFrame.Create(Source));
                 enc.Save(outStream);
                 System.Drawing.Bitmap bitmap = new System.Drawing.Bitmap(outStream);
                 return new System.Drawing.Bitmap(bitmap);

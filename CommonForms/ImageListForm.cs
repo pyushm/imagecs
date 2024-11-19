@@ -474,7 +474,7 @@ namespace ImageProcessor
                 MessageBox.Show(msg);
             Cursor = Cursors.Default;
         }
-        string MoveFilesTo(ImageFileInfo[] fileList, DirectoryInfo to)  // fileList == null means all
+        string MoveFilesTo(ImageFileInfo[] fileList, DirectoryInfo to)  // fileList == null means all content of Images
         {
             string msg = "";
             try

@@ -12,7 +12,7 @@ namespace ImageProcessor
 {
     public enum ToolMode
     {   // user set mouse controll modes; Basic is default and does not have associated graphic tool
-        Basic,          // basic transform (shift, scale, rotate)
+        Default,        // basic transforms (shift, scale, rotate)
         Distortion3D,   // handles scale, rotate, aspect, shear, ViewDistortion with parallelogram 
         FreeSelection,  // creates FlexiblePolygon from free selection
         RectSelection,  // creates FlexiblePolygon  from rectangle
@@ -64,9 +64,8 @@ namespace ImageProcessor
         protected override Size MeasureCore(Size s) { return LayoutSize.Size; }
         internal void SetStoredMatrixContro(MatrixControl stored) { MatrixControl = stored; }
         public VisualLayerData CreateVisualLayerData(byte[] data) { return new VisualLayerData(Type, Name, LayoutSize, MatrixControl, data); }
-        public byte[] SerializeImage(BitmapEncoder bitmapEncoder)
+        public byte[] SerializeImage(bool exact)
         {
-            byte[] data;
             using (MemoryStream dataStream = new MemoryStream())
             {
                 if (Type == VisualLayerType.Bitmap || Type == VisualLayerType.Derivative)
@@ -74,8 +73,7 @@ namespace ImageProcessor
                     BitmapLayer bl = this as BitmapLayer;
                     RenderTargetBitmap rtb = new RenderTargetBitmap(LayoutSize.Width, LayoutSize.Height, 96, 96, PixelFormats.Default);
                     RenderToBitmap(rtb);
-                    bitmapEncoder.Frames.Add(BitmapFrame.Create(rtb));
-                    bitmapEncoder.Save(dataStream);
+                    return BitmapAccess.SerializeFrame(BitmapFrame.Create(rtb), exact);
                 }
                 if (Type == VisualLayerType.Drawing)
                 {
@@ -88,11 +86,11 @@ namespace ImageProcessor
                             sda[i] = new StorePointCollection(polygons[i]);
                         BinaryFormatter f = new BinaryFormatter();
                         f.Serialize(dataStream, sda);
+                        return dataStream.ToArray();
                     }
                 }
-                data = dataStream.ToArray();
             }
-            return data;
+            return null;
         }
         public void RenderToBitmap(RenderTargetBitmap rtb)
         {

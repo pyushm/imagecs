@@ -318,7 +318,7 @@ namespace ImageProcessor
                 Clipboard.SetData(DataFormats.Bitmap, clip.Source);
             return clip;
         }
-        public BitmapAccess GetSelected(int offset)
+        public BitmapAccess GetSelected(int margin)
         {
             BitmapLayer bl = ActiveLayer as BitmapLayer;
             if (bl == null)
@@ -326,11 +326,11 @@ namespace ImageProcessor
             if (Selection == null)
                 return bl.Image;
             Polygon lp = Selection.Contour();
-            Int32Rect rect = lp.IntRect(offset);
+            Int32Rect rect = lp.IntRect(margin);
             SavedPosition = new Point(rect.X, rect.Y);
             // border ==0 set image outside selection to white (compatible with MSPaint selection)
             // border !=0 leaves image outside selection for processing with average or contrastiong (only A set to 0)
-            return bl.Image.SetSelectionBitmap(rect, lp.Poly, offset == 0);
+            return bl.Image.SetSelectionBitmap(rect, lp.Poly, margin == 0);
         }
         public void InitializeToolDrawing() { InitializeToolDrawing(backgroundLayoutSize); } // scalable selection rectangle
         public void InitializeToolDrawing(IntSize size)
@@ -455,7 +455,7 @@ namespace ImageProcessor
                 }
                 else if (info.IsMovie)
                 {
-                    BitmapAccess ba = BitmapAccess.LoadImage("mediaImage.png", info.IsEncrypted);
+                    BitmapAccess ba = BitmapAccess.LoadImage("mediaImage.png", info.IsEncrypted, 200);
                     AddVisualLayer(new BitmapLayer("Video", ba));
                 }
             }
@@ -481,7 +481,48 @@ namespace ImageProcessor
             }
             return BackgroundLayer == null ? "BackgroundLayer failure" : "";
         }
-        public string SaveLayers(string fileName, BitmapEncoder bitmapEncoder)
+        public bool SaveRendering(string path, int maxSize)
+        {
+            ImageFileName info = new ImageFileName(path);
+            var ret = info.IsImage ? SaveSingleImage(path, maxSize, info.IsExact, info.IsEncrypted) : SaveLayers(path, info.IsExact);
+            if (ret.Length != 0) 
+                System.Windows.Forms.MessageBox.Show(ret, "Saving " + path + " failed");
+            return ret.Length == 0;
+        }
+        public string SaveSingleImage(string fileName, int maxSize, bool exact, bool encrypt)
+        {
+            byte[] data = SerializeRendering(maxSize, exact);
+            FileInfo fi = new FileInfo(fileName);
+            if (fi.Exists)
+            {
+                try
+                {
+                    if (File.Exists(lastImageFile))
+                    {
+                        File.SetAttributes(lastImageFile, FileAttributes.Normal);
+                        File.Delete(lastImageFile);
+                    }
+                    fi.MoveTo(lastImageFile);
+                    File.SetAttributes(lastImageFile, FileAttributes.Normal);
+                }
+                catch
+                {
+                    return "Original not saved to lastImageFile: '" + fileName + "' not saved";
+                }
+            }
+            if (!DataAccess.WriteFile(fileName, data, encrypt))
+            {
+                fi = new FileInfo(lastImageFile);
+                if (!fi.Exists || fileName == null)
+                    return "";
+                fi.MoveTo(fileName);
+                return DataAccess.Warning;
+            }
+            RenderTransform = Transform.Identity;
+            UpdateLayout();
+            return "";
+        }
+        public string SaveLayers(string fileName, bool exact)
         {
             try
             {
@@ -495,11 +536,11 @@ namespace ImageProcessor
                 for (int i = 0; i < vla.Length; i++)
                 {
                     VisualLayer vl = vla[i] as VisualLayer;
-                    byte[] ba = vl.SerializeImage(bitmapEncoder);
+                    byte[] ba = vl.SerializeImage(exact);
                     ba = DataAccess.WriteBytes(ba, true);
                     vlda[i] = vl.CreateVisualLayerData(ba);
                 }
-                vlda[vla.Length] = CreateThumbnailData(bitmapEncoder);
+                vlda[vla.Length] = CreateThumbnailData(exact);
                 BinaryFormatter f = new BinaryFormatter();
                 using (FileStream fs = fi.Open(FileMode.OpenOrCreate, FileAccess.Write)) { f.Serialize(fs, vlda); }
                 RenderTransform = Transform.Identity;
@@ -513,14 +554,15 @@ namespace ImageProcessor
                 return ex.Message;
             }
         }
-        VisualLayerData CreateThumbnailData(BitmapEncoder bitmapEncoder)
+        VisualLayerData CreateThumbnailData(bool exact)
         {
             int ms = 200;
-            byte[] ba = SerializeRendering(ms, bitmapEncoder);
+            byte[] ba = SerializeRendering(ms, exact);
             ba = DataAccess.WriteBytes(ba, true);
             return new VisualLayerData(VisualLayerType.Tool, "", new IntSize(ms, ms), new MatrixControl(), ba);
         }
-        public byte[] SerializeRendering(int maxSize, BitmapEncoder bitmapEncoder)
+        //public byte[] SerializeRendering(int maxSize, BitmapEncoder bitmapEncoder)
+        public byte[] SerializeRendering(int maxSize, bool exact)
         {
             if (CropRectangle == null)
             {
@@ -546,8 +588,8 @@ namespace ImageProcessor
                 t = new Matrix(scale, 0, 0, scale, -CropRectangle.Rect.Left, -CropRectangle.Rect.Top);
                 //Debug.WriteLine("SerializeImage NOT Scaled: " + t.ToString());
             }
-            Point c0 = ToCanvas.Transform(new Point(0, 0));
-            Point cx = ToCanvas.Transform(new Point(backgroundLayoutSize.Width, backgroundLayoutSize.Height));
+            //Point c0 = ToCanvas.Transform(new Point(0, 0));
+            //Point cx = ToCanvas.Transform(new Point(backgroundLayoutSize.Width, backgroundLayoutSize.Height));
             //Debug.WriteLine("Image=" + backgroundLayoutSize.ToString() + " c0=" + c0.ToString() + " cm=" + cx.ToString() + " 0->" + FromCanvas.Transform(c0).ToString() + " x->" + FromCanvas.Transform(cx).ToString());
             //Debug.WriteLine("save=" + saveSize.ToString() + " c0=" + c0.ToString() + " cm=" + cx.ToString() + " 0->" + t.Transform(c0).ToString() + " x->" + t.Transform(cx).ToString());
             RenderTransform = new MatrixTransform(t);
@@ -561,48 +603,7 @@ namespace ImageProcessor
             UpdateLayout();
             RenderTargetBitmap rtb = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
             rtb.Render(this);
-            var enc = bitmapEncoder as JpegBitmapEncoder;
-            if (enc != null) // ~87 for 3 Mpixels, ~93 fpr 1 Mpixel, 99 for 0
-                enc.QualityLevel = Math.Min((int)(77 + 55 / (w * h / 1.0e6 + 2.5)), 100);
-            bitmapEncoder.Frames.Add(BitmapFrame.Create(rtb));
-            MemoryStream ms = new MemoryStream();
-            bitmapEncoder.Save(ms);
-            return ms.ToArray();
-        }
-        public string SaveSingleImage(string fileName, int maxSize, BitmapEncoder bitmapEncoder, bool encrypt)
-        {
-            byte[] data = SerializeRendering(maxSize, bitmapEncoder);
-            FileInfo fi = new FileInfo(fileName);
-            bool originalSaved = true;
-            if (fi.Exists)
-            {
-                try
-                {
-                    if (File.Exists(lastImageFile))
-                    {
-                        File.SetAttributes(lastImageFile, FileAttributes.Normal);
-                        File.Delete(lastImageFile);
-                    }
-                    fi.MoveTo(lastImageFile);
-                    File.SetAttributes(lastImageFile, FileAttributes.Normal);
-                }
-                catch
-                {
-                    originalSaved = false;
-                    return "Original not saved to lastImageFile: '" + fileName + "' not saved";
-                }
-            }
-            if (originalSaved && !DataAccess.WriteFile(fileName, data, encrypt))
-            {
-                fi = new FileInfo(lastImageFile);
-                if (!fi.Exists || fileName == null)
-                    return "";
-                fi.MoveTo(fileName);
-                return DataAccess.Warning;
-            }
-            RenderTransform = Transform.Identity;
-            UpdateLayout();
-            return "";
+            return BitmapAccess.SerializeFrame(BitmapFrame.Create(rtb), exact);
         }
         IntSize ScaleToSize(CropRect rect, int maxSize)
         {
@@ -702,7 +703,7 @@ namespace ImageProcessor
                     {
                         mouseAction = panelHolder.ToolMode == ToolMode.Distortion3D ? ActiveLayer.MatrixControl.OperationFromPoint(position) :
                             panelHolder.ToolMode == ToolMode.Morph ? morphControl.OperationFromPoint(position) :
-                            panelHolder.ToolMode == ToolMode.Basic ? MouseAction.OperationFromMouse :
+                            panelHolder.ToolMode == ToolMode.Default ? MouseAction.OperationFromMouse :
                             MouseOperation.None;
                     }
                     if (mouseAction == MouseOperation.Move || mouseAction == MouseOperation.None) // if higher than active layer clicked, set clicked layer as active

@@ -12,33 +12,50 @@ using System.Windows.Media.Imaging;
 
 namespace ImageProcessor
 {
+    public static class NumEnum
+    {
+        public static object[] Values(Type t, double coef = 1)
+        {
+            object[] ret = new object[Enum.GetNames(t).Length];
+            for (int i = 0; i < ret.Length; i++)
+                ret[i] = coef * (int)Enum.GetValues(t).GetValue(i);
+            return ret;
+        }
+    }
+    enum MouseSensitivity
+    {
+        m2 = 2,
+        m5 = 5,
+        m10 = 10,
+        m20 = 20,
+    }
+    enum ImageScale                     // fixed image scales
+    {
+        Fit = 0,
+        Half = 5,
+        AsIs = 10,
+        Double = 20,
+        Quadruple = 40,
+    }
+    enum EdgeGap
+    {
+        Gap0 = 0,
+        Gap1 = 1,
+        Gap2 = 2,
+        Gap3 = 3,
+        Gap5 = 5,
+        Gap8 = 8,
+        Gap13 = 13,
+        Gap20 = 20,
+        Gap30 = 30,
+        Gap45 = 45,
+        Gap66 = 66,
+        Gap99 = 99,
+    }
     public class ImageEditForm : Form, IPanelHolder
     {
-        enum ImageScale                     // fixed image scales
-        {
-            Fit = 0,
-            Half = 5,
-            AsIs = 10,
-            Double = 20,
-            Quadruple = 40,
-        }
-        enum EdgeGap
-        {
-            Gap0 = 0,
-            Gap1 = 1,
-            Gap2 = 2,
-            Gap3 = 3,
-            Gap5 = 5,
-            Gap8 = 8,
-            Gap13 = 13,
-            Gap20 = 20,
-            Gap30 = 30,
-            Gap45 = 45,
-            Gap66 = 66,
-            Gap99 = 99,
-        }
-        string[] imageModes = new string[] { ToolMode.Basic.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.Morph.ToString() };
-        string[] drawingModes = new string[] { ToolMode.Basic.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.ContourEdit.ToString() };
+        string[] imageModes = new string[] { ToolMode.Default.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.Morph.ToString() };
+        string[] drawingModes = new string[] { ToolMode.Default.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.ContourEdit.ToString() };
         private System.ComponentModel.Container components = null;
         private ValueControl saturationControl;
         private RangeControl brightnessControl;
@@ -57,7 +74,7 @@ namespace ImageProcessor
         float dpiScaleY = 1;
         int viewingAreaOffset;				// viewing area offset from left of client rectangle
         ImageFileInfo imageInfo;            // image file info
-        string savePath = null;
+        string prevFSdir = null;            // path to previous saving FS directory
         // image processing members
         public ToolMode ToolMode { get; set; } // mouse mode
         int layerIndex;                     // index of selected layer in layerListView
@@ -618,7 +635,7 @@ namespace ImageProcessor
             BitmapLayer bl = canvas.ActiveLayer as BitmapLayer;
             if (bl == null)
                 return;
-            int resolution = 2; // 2 is cleaner then 1
+            int resolution = 2; // 2 is cleaner than 1
             string name = "-Odds" + resolution;
             int level = 5;
             name += "." + level;
@@ -661,7 +678,7 @@ namespace ImageProcessor
                 UpdateLayerList(canvas.AddVisualLayer(vl, canvas.BackgroundLayer.MatrixControl.RenderScale));
                 canvas.Cursor = System.Windows.Input.Cursors.Arrow;
                 Cursor = System.Windows.Forms.Cursors.Default;
-                SetMode(ToolMode.Basic);
+                SetMode(ToolMode.Default);
             }
             catch (Exception ex)
             {
@@ -673,7 +690,7 @@ namespace ImageProcessor
             return System.Windows.Media.Color.FromArgb(nc.A, nc.R, nc.G, nc.B);
         }
         void RescaleCanvas(bool initial) { canvas.ResizeImage(initial, DisplayScale, panel.Width / dpiScaleX, panel.Height / dpiScaleY); }
-        void saveSameLocation_Click(object s, EventArgs e) { save(savePath == null ? Path.GetDirectoryName(imageInfo.FSPath) : savePath); }
+        void saveSameLocation_Click(object s, EventArgs e) { save(prevFSdir == null ? Path.GetDirectoryName(imageInfo.FSPath) : prevFSdir); }
         void saveButton_Click(object s, EventArgs e) { save(Path.GetDirectoryName(imageInfo.FSPath)); }
         void save(string dir)
         {
@@ -692,15 +709,11 @@ namespace ImageProcessor
             {
                 try
                 {
-                    savePath = Path.GetDirectoryName(saveAsDialog.FileName);
-                    ImageFileInfo info = new ImageFileInfo(new FileInfo(FileName.MangleFile(saveAsDialog.FileName)));
-                    BitmapEncoder bitmapEncoder = info.IsExact ? (BitmapEncoder)new PngBitmapEncoder() : new JpegBitmapEncoder();
-                    string ret = info.IsImage ? canvas.SaveSingleImage(info.FSPath, 0, bitmapEncoder, info.IsEncrypted) : canvas.SaveLayers(info.FSPath, bitmapEncoder);
-                    if (ret.Length == 0)
-                        ShowNewImage(info);
-                    else
-                        System.Windows.Forms.MessageBox.Show(ret, "Saving " + info.FSPath + " failed");
-                    SetMode(ToolMode.Basic);
+                    string path = DataAccess.PrivateAccessEnforced ? FileName.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName;
+                    prevFSdir = Path.GetDirectoryName(path);
+                    if (canvas.SaveRendering(path, 0))
+                        ShowNewImage(new ImageFileInfo(new FileInfo(path)));
+                    SetMode(ToolMode.Default);
                 }
                 catch (Exception ex)
                 {
@@ -826,22 +839,5 @@ namespace ImageProcessor
             //}
         }
         #endregion
-    }
-    public class NumEnum
-    {
-        public static object[] Values(Type t, double coef = 1)
-        {
-            object[] ret = new object[Enum.GetNames(t).Length];
-            for (int i = 0; i < ret.Length; i++)
-                ret[i] = coef * (int)Enum.GetValues(t).GetValue(i);
-            return ret;
-        }
-    }
-    enum MouseSensitivity
-    {
-        m2 = 2,
-        m5 = 5,
-        m10 = 10,
-        m20 = 20,
     }
 }

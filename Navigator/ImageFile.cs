@@ -71,7 +71,7 @@ namespace ImageProcessor
     {   // ImageFileName has file type and name conversion data
         protected enum DataType
         {
-            JPG,        // compressed heic, webp, jpg image
+            JPG,        // compressed heic, webp, jpg, avif image
             GIF,
             PNG,        // exact image
             MLI,        // unencrypted drawing
@@ -111,6 +111,7 @@ namespace ImageProcessor
         static ImageFileName()
         {
             InfoTypes = (DirShowMode[])Enum.GetValues(typeof(DirShowMode));
+            knownExtensions.Add(".avif", DataType.JPG);
             knownExtensions.Add(".webp", DataType.JPG);
             knownExtensions.Add(".heic", DataType.JPG);
             knownExtensions.Add(".jpg", DataType.JPG);
@@ -345,10 +346,10 @@ namespace ImageProcessor
                 case DataType.EncJPG:
                     try
                     {
-                        //byte[] ba = DataAccess.ReadFile(FSPath, IsEncrypted);
-                        //Bitmap bm = new Bitmap(new MemoryStream(ta)); // failes heic files
-                        BitmapAccess ba = BitmapAccess.LoadThumbnail(FSPath, IsEncrypted);
-                        Bitmap bm = ba.ConverToBitmap();
+                        BitmapAccess ba = BitmapAccess.LoadImage(FSPath, IsEncrypted, 200);
+                        if (ba == null)
+                            return null;
+                        Bitmap bm = ba.CreateBitmapImage();
                         thumbnail = CreateThumbnail(bm);
                         thumbnail.Tag = FSPath;
                         FileInfo fi = new FileInfo(FSPath);   // FileInfo recreated to get new LastWriteTime
@@ -612,7 +613,7 @@ namespace ImageProcessor
                     return "";
                 string nn = this[ind].RealName;
                 int len = n.Length;
-                if (len < 3 && len == nn.Length)
+                if (len > 3 && len == nn.Length)
                 {
                     string common = n.Substring(0, len - 3);
                     if (up)

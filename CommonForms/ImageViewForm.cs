@@ -22,10 +22,10 @@ namespace ImageProcessor
         ImageEditForm editForm = null;
         int viewingAreaOffset;				// viewing area offset from left of client rectangle
         ImageListForm parent;				// parent image list form
-        ImageFileInfo.FileList imageFiles;// full image file name shown as big image
+        ImageFileInfo.FileList imageFiles;  // full image file name shown as big image
         ImageFileInfo imageInfo;            // curently displayed image file info 
         bool infoMode;				        // indicates if info or original has to be extracted
-        DirShowMode infoType;                  // tipe of info image when infoMode==true
+        DirShowMode infoType;               // type of info image when infoMode==true
         bool imageModified = false;
         ColorTransform colorTransform = new ColorTransform();
         ColorTransform previousColorTransform = new ColorTransform(); // previous non-identical transform
@@ -451,7 +451,7 @@ namespace ImageProcessor
             this.resizeBox.Name = "resizeBox";
             this.resizeBox.Size = new System.Drawing.Size(184, 29);
             this.resizeBox.TabIndex = 65;
-            this.resizeBox.Text = "Max size 2000";
+            this.resizeBox.Text = "Max size ";
             this.resizeBox.UseVisualStyleBackColor = true;
             this.resizeBox.CheckedChanged += new System.EventHandler(this.resizeBox_CheckedChanged);
             // 
@@ -599,6 +599,7 @@ namespace ImageProcessor
             capturePanel.Paint += new PaintEventHandler(capturePanel_Paint);
             sensitivityBox.Items.AddRange(NumEnum.Values(typeof(MouseSensitivity), 0.1));
             sensitivityBox.SelectedIndex = 2;
+            resizeBox.Text = "Max size " + (int)Conversion.ReduceSize;
             KeyUp += CaptureCtrlC;
             actionBox.Items.Add("Crop");
             actionBox.Items.AddRange(Enum.GetNames(typeof(DirShowMode)));
@@ -635,7 +636,7 @@ namespace ImageProcessor
             //Debug.WriteLine("View Modifier=" + Keyboard.Modifiers.ToString() + " key=" + e.KeyCode.ToString() + " " + Keyboard.IsKeyDown(Key.LeftCtrl));
             if (e.KeyCode == Keys.C && Keyboard.IsKeyDown(Key.LeftCtrl))
             {
-                capturedImage = canvas.SetClipboardFromSelection().ConverToBitmap();
+                capturedImage = canvas.SetClipboardFromSelection().CreateBitmapImage();
                 capturePanel.Invalidate();
             }
         }
@@ -815,7 +816,7 @@ namespace ImageProcessor
                 if (infoMode)
                     SaveImage(Path.Combine(Path.GetDirectoryName(imageInfo.FSPath), ImageFileName.InfoFileWithExtension(infoType)), -1);
                 else
-                    SaveImage(imageInfo.FSPath, resizeBox.Checked ? 2000 : 0);
+                    SaveImage(imageInfo.FSPath, resizeBox.Checked ? (int)Conversion.ReduceSize : 0);
             }
             catch (Exception ex)
             {
@@ -834,19 +835,14 @@ namespace ImageProcessor
             if (saveAsDialog.ShowDialog() == DialogResult.OK)
             {
                 string saveName = DataAccess.PrivateAccessEnforced ? FileName.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName;
-                SaveImage(saveName, resizeBox.Checked ? 2000 : 0);
+                SaveImage(saveName, resizeBox.Checked ? (int)Conversion.ReduceSize : 0);
             }
         }
         void SaveImage(string path, int maxSize)
         {
-            ImageFileName info = new ImageFileName(path);
-            BitmapEncoder bitmapEncoder = info.IsExact ? (BitmapEncoder)new PngBitmapEncoder() : new JpegBitmapEncoder();
-            string ret = info.IsImage ? canvas.SaveSingleImage(path, maxSize, bitmapEncoder, info.IsEncrypted) : canvas.SaveLayers(path, bitmapEncoder);
-            ToolMode = ToolMode.Crop;
-            if (ret.Length != 0)
-                System.Windows.Forms.MessageBox.Show(ret, "Saving " + path + " failed");
-            else
+            if (canvas.SaveRendering(path, maxSize))
                 ShowNewImage(path);
+            ToolMode = ToolMode.Crop;
         }
         void SaveTypeChanged(object sender, EventArgs e)
         {
@@ -874,7 +870,7 @@ namespace ImageProcessor
             {
                 object o = Enum.Parse(typeof(DirShowMode), str);
                 infoMode = o is DirShowMode;
-                ToolMode = infoMode ? ToolMode.InfoImage : ToolMode.Basic;
+                ToolMode = infoMode ? ToolMode.InfoImage : ToolMode.Default;
                 if (infoMode)
                 {
                     infoType = (DirShowMode)o;

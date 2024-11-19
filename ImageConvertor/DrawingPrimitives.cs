@@ -331,7 +331,7 @@ namespace ImageProcessor
         }
         public void Close(Point p) { Add(p); Add(First); }
         public void Clear()     { Poly.Clear(); }
-        public Int32Rect IntRect(int border)
+        public Int32Rect IntRect(int margin)
         {
             if (IsEmpty)
                 return new Int32Rect();
@@ -350,10 +350,10 @@ namespace ImageProcessor
                 if (maxY < p.Y)
                     maxY = (int)p.Y;
             }
-            minX -= 1 + border;
-            minY -= 1 + border;
-            maxX += 2 + border;
-            maxY += 2 + border;
+            minX -= 1 + margin;
+            minY -= 1 + margin;
+            maxX += 2 + margin;
+            maxY += 2 + margin;
             if (minX < 0) minX = 0;
             if (minY < 0) minY = 0;
             if (maxX > Target.Width) maxX = Target.Width;
