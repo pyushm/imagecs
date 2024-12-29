@@ -20,19 +20,20 @@ namespace ImageProcessor
 	{
         static int MatchRange = 100;  // maximum match difference percentage included into search results
         static ImageHash.Comparer imageInfoComparer = new ImageHash.Comparer(56);
-        static DirectoryInfo[] specialDirectories;
+        static DirectoryInfo[] specialDirectories = null;
         public delegate void NewDirectoryNode(DirectoryInfo fi, string relativePath);
         public delegate void NewImageSelection(string image);
-        public static DirectoryInfo SpecDir(SpecName sd) { return specialDirectories[(int)sd]; }
-        public static DirectoryInfo Root        { get { return specialDirectories[(int)SpecName.Root]; } }
+        public static DirectoryInfo SpecDir(SpecName sd) { return specialDirectories == null ? null : specialDirectories[(int)sd]; }
+        public static DirectoryInfo Root        { get { return specialDirectories == null ? null : specialDirectories[(int)SpecName.Root]; } }
         public static bool IsSpecDir(DirectoryInfo testdi)
         {
-            foreach (DirectoryInfo di in specialDirectories)
-                if (di.FullName == testdi.FullName)
-                    return true;
+            if (specialDirectories != null)
+                foreach (DirectoryInfo di in specialDirectories)
+                    if (di.FullName == testdi.FullName)
+                        return true;
             return false;
         }
-        public static bool IsSpecDir(DirectoryInfo testdi, SpecName sd) { return specialDirectories[(int)sd].FullName == testdi.FullName; }
+        public static bool IsSpecDir(DirectoryInfo testdi, SpecName sd) { return specialDirectories == null ? false : specialDirectories[(int)sd].FullName == testdi.FullName; }
         string[] textPatterns;   // 1 item - search for pattern in string; >1 - serch exact string for each item (1 extra char at the end allowed)
         SoundLike soundPattern;
         int searchDaysOld = int.MaxValue;

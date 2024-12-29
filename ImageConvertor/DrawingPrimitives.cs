@@ -493,6 +493,7 @@ namespace ImageProcessor
         double top =0;
         double bottom;
         public Rect Rect { get { return new Rect(left, top, Math.Max(right - left, 1), Math.Max(bottom - top, 1)); } }
+        public double Ratio { get { var r = Rect.Height / Rect.Width; return r > 1 ? r : 1 / r; } }
         public CropRect(IntSize size, double x, double y)
         {
             size = new IntSize((size.Width + 1) / 2 * 2, (size.Height + 1) / 2 * 2); // both dimentions multiple of 2 to avoid saving qulity deterioration
@@ -543,7 +544,7 @@ namespace ImageProcessor
             //Geometry geom = new RectangleGeometry(Rect);
             g.DrawGeometry(null, pen, geom);
         }
-        public override string ToString() { return ((int)(Rect.Width + 0.5)).ToString() + 'x' + (int)(Rect.Height + 0.5); }
+        public override string ToString() { return ((int)(Rect.Width + 0.5)).ToString() + 'x' + (int)(Rect.Height + 0.5)+'('+ Ratio.ToString("f2")+')'; }
         public string ToRectString() { return Rect.ToString(); }
     }
     public class MatrixControl : MouseAction

@@ -51,13 +51,13 @@ namespace ShaderEffects
             double w = cdc[1].ActualWidth;
             double h = grid.ActualHeight;
             if (img != null && img.Source!=null)
-                img.RenderTransform = InitialTransform(w, h, (BitmapImage)img.Source, 1);
+                img.RenderTransform = InitialTransform(w, h, bitmapData.Source, 1);
         }
         public static readonly DependencyProperty MixProperty = DependencyProperty.Register("Mix", typeof(double), typeof(ShaderEditor));
         private void SelectImage(object sender, RoutedEventArgs e)
         {   // 
             OpenFileDialog ofd = new OpenFileDialog();
-            ofd.Filter = "Images|*.jpg;*.png;*.bmp;*.gif|All Files|*.*";
+            ofd.Filter = "All Files|*.*";
             if (ofd.ShowDialog(this) == true)
             {
                 //ImageSource oldSource = img.Source;
@@ -66,13 +66,13 @@ namespace ShaderEffects
                 img.HorizontalAlignment = HorizontalAlignment.Left;
                 img.VerticalAlignment = VerticalAlignment.Top;
                 fileName = ofd.FileName;
-                BitmapImage bitmap = new BitmapImage(new Uri(fileName));
+                var info = new ImageFileInfo(new FileInfo(fileName));
+                if (info.IsEncrypted) DataAccess.AllowPrivateAccess("str8shn0");
+                bitmapData = BitmapAccess.LoadImage(info.FSPath, info.IsEncrypted);
+                var bitmap = bitmapData.Source;
                 imagePixelSize = new IntSize(bitmap.PixelWidth, bitmap.PixelHeight);
                 img.Source = bitmap;
                 bitmapData = new BitmapAccess(bitmap);
-                //host.lo
-                //var imageInfo = new ImageFileInfo(new FileInfo(ofd.FileName));
-                //BitmapAccess ba = BitmapAccess.LoadImage(imageInfo.FSPath, imageInfo.IsEncrypted);
                 ColumnDefinitionCollection cdc = grid.ColumnDefinitions;
                 double w = cdc[1].ActualWidth;
                 double h = grid.ActualHeight;
@@ -126,11 +126,11 @@ namespace ShaderEffects
                 }
             }
         }
-        public Transform InitialTransform(double areaW, double areaH, BitmapImage bi, double maxScale)
+        public Transform InitialTransform(double areaW, double areaH, WriteableBitmap bi, double maxScale)
 		{
             double scale = Math.Min(Math.Min(areaW / bi.PixelWidth, areaH / bi.PixelHeight), maxScale);
             double scaleX = scale * bi.DpiX / 96;
-            double scaleY = scale * bi.DpiY / 96;
+            //double scaleY = scale * bi.DpiY / 96;
             double offsetX=areaW / 2 - bi.PixelWidth * scale / 2;
             double offsetY=areaH / 2 - bi.PixelHeight * scale / 2;
             return new MatrixTransform(scaleX, 0, 0, scaleX, offsetX, offsetY);

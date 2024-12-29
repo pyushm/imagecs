@@ -12,7 +12,7 @@ float4 Average4(float2 c, float dx, float dy)
   float4 v3=tex2D(Input, c+d2);
   float4 v4=tex2D(Input, c-d2);
   float4 av=v1+v2+v3+v4;
-  av.a=v1.a*v2.a*v3.a*v4.a;
+  /*av.a=v1.a*v2.a*v3.a*v4.a;*/
   return av;
 }
 float4 Average8(float2 c, float r)
@@ -22,7 +22,7 @@ float4 Average8(float2 c, float r)
   float4 v1=Average4(c, d, 0);
   float4 v2=Average4(c, d2, d2);
   float4 av=v1+v2;
-  av.a=v1.a*v2.a;
+  /*av.a=v1.a*v2.a;*/
   return av/8;
 }
 float4 main(float2 uv : TEXCOORD) : COLOR

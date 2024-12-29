@@ -7,6 +7,16 @@ namespace ImageProcessor
 {
     public class Convolution
     {
+        public ByteMatrix original;
+        public ByteMatrix filter;
+        int offset;
+        int total;
+        int origWidth;
+        int origHeight;
+        int fltWidth;
+        int fltHeight;
+        int xOff;
+        int yOff;
         public Convolution(ByteMatrix original_, ByteMatrix filter_)
         {
             original = original_;
@@ -56,16 +66,6 @@ namespace ImageProcessor
             }
             return offset==0 ? v / total - original[j, i] : v / total + offset * s / fltHeight / fltWidth;
         }
-        public ByteMatrix original;
-        public ByteMatrix filter;
-        int offset;
-        int total;
-        int origWidth;
-        int origHeight;
-        int fltWidth;
-        int fltHeight;
-        int xOff;
-        int yOff;
     }
     public struct ByteMatrixPair
     {
@@ -177,8 +177,34 @@ namespace ImageProcessor
             }
             return fi;
         }
+        public void FillVoids(byte val)
+        {   // fills internal zero bytes with 'val'
+            for(int ri=0; ri< Height; ri++)
+            {
+                int left = Width;
+                for(int j=0; j< Width; j++)
+                    if(bval[ri,j]>0)
+                    {
+                        left=j+1;
+                        break;
+                    }
+                if (left == Width)
+                    continue;
+                int right = left;
+                for(int j= Width-1; j> left; j--)
+                    if(bval[ri, j] > 0)
+                    {
+                        right = j;
+                        break;
+                    }
+                for (int j = left; j < right; j--)
+                    if (bval[ri, j] == 0)
+                        bval[ri, j] = val;
+            }
+        }
         public ByteMatrix SmoothingWithMidlevelCut(ByteMatrix filter, int sizePerChank)
         {
+            FillVoids(byte.MaxValue);
             ByteMatrix ret = ConeSmoothing(filter, sizePerChank);
             unsafe
             {

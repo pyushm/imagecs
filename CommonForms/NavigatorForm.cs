@@ -741,6 +741,18 @@ namespace ImageProcessor
             OperationButtonsEnabled(false);
             imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
         }
+        void ApplyConversion(object sender, DoWorkEventArgs e)
+        {
+            processNodeName = selectedNode.Name;
+            fileManager.ApplyAdjustmentRecursively(selectedNode, conversion, false);
+        }
+        void ConversionCompleted(object sender, RunWorkerCompletedEventArgs e)
+        {
+            OperationButtonsEnabled(true);
+            outputList.Items.Add(conversion.ToString() + " completed: " + processNodeName);
+            processNodeName = "";
+            conversion = Conversion.None;
+        }
         void Rename(RenameType operation)   
         {
             if (selectedNode == null)
@@ -773,20 +785,8 @@ namespace ImageProcessor
             }
             directoryNameBox.Text = "";
             OperationButtonsEnabled(false);
-            fileManager.Rename(selectedNode, operation);
+            fileManager.DirectoryOrFilesRename(selectedNode, operation);
             OperationButtonsEnabled(true);
-        }
-        void ApplyConversion(object sender, DoWorkEventArgs e)
-        {
-            processNodeName = selectedNode.Name;
-            fileManager.ApplyAdjustmentRecursively(selectedNode, conversion, false);
-        }
-        void ConversionCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            OperationButtonsEnabled(true);
-            outputList.Items.Add("Rename Completed: " + processNodeName);
-            processNodeName = "";
-            conversion = Conversion.None;
         }
         void OnListBoxMouseMove(object sender, MouseEventArgs e)
         {
@@ -819,11 +819,12 @@ namespace ImageProcessor
 		{
 			if(e.Node==null || e.Node.Tag==null)
 				return;
-			selectedNode=(DirectoryInfo)e.Node.Tag;
-            ImageDirInfo idf = new ImageDirInfo(selectedNode);
-            outputBox.Text = idf.RealPath;
+            selectedNode = (DirectoryInfo)e.Node.Tag;
             if (selectedNode.Exists)
+            {
+                outputBox.Text = (new ImageDirInfo(selectedNode)).RealPath;
                 itemInfoImages.ShowInfoImages(selectedNode);
+            }
             else
                 outputBox.Text += " does NOT EXIST";
         }
@@ -901,7 +902,12 @@ namespace ImageProcessor
             try
             {
                 if ((fsi.Attributes & FileAttributes.Directory) == FileAttributes.Directory)
-                    ShowImageListForm((DirectoryInfo)fsi);
+                {
+                    selectedNode = (DirectoryInfo)fsi;
+                    ShowImageListForm(selectedNode);
+                    outputBox.Text = (new ImageDirInfo(selectedNode)).RealPath;
+                    itemInfoImages.ShowInfoImages(selectedNode);
+                }
                 else
                 {
                     FileInfo fi = (FileInfo)fsi;

@@ -509,7 +509,7 @@ namespace ImageProcessor
             capturePanel.Name = "capturePanel";
             capturePanel.Size = new System.Drawing.Size(266, 266);
             capturePanel.TabIndex = 86;
-            capturePanel.Paint += new System.Windows.Forms.PaintEventHandler(this.capturePanel_Paint);
+            capturePanel.Paint += new System.Windows.Forms.PaintEventHandler(this.ShowSelection);
             // 
             // ImageViewForm
             // 
@@ -596,7 +596,7 @@ namespace ImageProcessor
             applyEffectsButton.Click += effectsButton_Click;
             sharpenButton.Click += sharpenButton_Click;
             nextImagePanel.Paint += new PaintEventHandler(DrawNextImage);
-            capturePanel.Paint += new PaintEventHandler(capturePanel_Paint);
+            //capturePanel.Paint += new PaintEventHandler(ShowSelection);
             sensitivityBox.Items.AddRange(NumEnum.Values(typeof(MouseSensitivity), 0.1));
             sensitivityBox.SelectedIndex = 2;
             resizeBox.Text = "Max size " + (int)Conversion.ReduceSize;
@@ -799,7 +799,7 @@ namespace ImageProcessor
             var bl = backgroundLayer as BitmapLayer;
             if (bl == null)
                 return;
-            var vl = new BitmapDerivativeLayer("", bl.Image, new GradientContrastEffect(), 0);
+            var vl = new BitmapDerivativeLayer("", bl.Image, new GradientContrastEffect(), -1);
             if (vl == null) 
                 return;
             vl.SetEffectParameters(0.5, 1, 2);
@@ -972,17 +972,10 @@ namespace ImageProcessor
                 imageModified = true;
         }
         #endregion
-
-        private void capturePanel_Paint(object sender, PaintEventArgs e)
+        private void ShowSelection(object sender, PaintEventArgs e)
         {
-            try
-            {
-                DrawSmallImage(capturedImage, e.Graphics);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-            }
+            try { DrawSmallImage(capturedImage, e.Graphics); }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
     }
 }

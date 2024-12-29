@@ -25,7 +25,7 @@ namespace ImageProcessor
 		private System.ComponentModel.Container components = null;
         IAssociatedPath associatedPath;
         ImageDirInfo sourceDir;	                // direcory to build sourceCollection from
-        string[] extList;                       // list of items from search
+        string[] searchList;                    // list of items from search
         bool srcNewArticles;                    // source is NewArticles
         public ImageFileInfo.FileList Images    { get; private set; } = null; // images to be displayed 
         ImageList thumbnails;                   // currently displayed thumbnailes
@@ -187,7 +187,7 @@ namespace ImageProcessor
             InitializeComponent();
             srcNewArticles = list == null && Navigator.IsSpecDir(di, SpecName.NewArticles);
             sourceDir = new ImageDirInfo(di);
-            extList = list;
+            searchList = list;
             associatedPath = paths;
             nextSetButton.Visible = previousSetButton.Visible = !srcNewArticles;
             imageListView.VirtualMode = true;
@@ -541,7 +541,7 @@ namespace ImageProcessor
                 if (si.Height * scale > 255)
                     scale = 255.0 / si.Height;
                 thumbnails.ImageSize = new Size((int)(si.Width * scale), (int)(si.Height * scale));
-                Images = extList != null ? new ImageFileInfo.FileList(sourceDir, extList) : new ImageFileInfo.FileList(sourceDir, infoType);
+                Images = searchList != null ? new ImageFileInfo.FileList(sourceDir, searchList) : new ImageFileInfo.FileList(sourceDir, infoType);
                 Images.notifyEmptyDir += EmptyDirHandler;
                 imageListView.VirtualListSize = 0;
                 imageListView.ArrangeIcons(ListViewAlignment.SnapToGrid);

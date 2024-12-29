@@ -79,10 +79,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CommonForms, Version=1.0.4672.20941, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\bin\CommonForms.dll</HintPath>
-    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System">
@@ -113,6 +109,10 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\CommonForms\CommonForms.csproj">
+      <Project>{49f88dfe-78f5-4c7f-a736-5ac553c86e54}</Project>
+      <Name>CommonForms</Name>
+    </ProjectReference>
     <ProjectReference Include="..\DrawingPanel\DrawingPanel.csproj">
       <Project>{17a0103f-005b-4b56-8594-051b3b646970}</Project>
       <Name>DrawingPanel</Name>

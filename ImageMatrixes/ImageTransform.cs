@@ -259,11 +259,10 @@ namespace ImageProcessor
         }
         public double Opacity { get { return 1 - TransparencyValues[1]; } }
         public double OpacitySlope { get { return (TransparencyValues[3] - TransparencyValues[1]) / (TransparencyValues[2] - TransparencyValues[0] + 0.0001); } }
-        public byte Apply(byte p) { return (byte)(BrightnessAdjustment.Apply((float)p / byte.MaxValue) * byte.MaxValue); }
+        //public byte Apply(byte p) { return (byte)(BrightnessAdjustment.Apply((float)p / byte.MaxValue) * byte.MaxValue); }
         public void Apply(ref byte a, ref byte r, ref byte g, ref byte b)
         {
             if (a == 0 || (transparentColor.R == r && transparentColor.G == g && transparentColor.B == b))
-            //    if (a == 0 || (IsTransparentColorSet && transparentColor.R == r && transparentColor.G == g && transparentColor.B == b))
             {
                 a = r = g = b = 0;
                 return;
@@ -276,7 +275,7 @@ namespace ImageProcessor
             }
             int lbr = Math.Max(Math.Max(r, g), b);
             int l = lbr;
-            if (matchPattern.A>0)
+            if (matchPattern.A > 0)
             {
                 r -= matchPattern.R;
                 g -= matchPattern.G;
@@ -284,7 +283,7 @@ namespace ImageProcessor
                 l = Math.Max(Math.Max(r, g), b);
             }
             float br = lbr / (float)byte.MaxValue + 0.0001f;
-            float brcoef = BrightnessAdjustment.Apply(br)/br;
+            float brcoef = BrightnessAdjustment.Apply(br) / br;
             r = (byte)Math.Min(byte.MaxValue, Math.Max(0, (matchPattern.R + (l - (l - r) * Sat) * brcoef) * RCoef));
             g = (byte)Math.Min(byte.MaxValue, Math.Max(0, (matchPattern.G + (l - (l - g) * Sat) * brcoef) * GCoef));
             b = (byte)Math.Min(byte.MaxValue, Math.Max(0, (matchPattern.B + (l - (l - b) * Sat) * brcoef) * BCoef));
@@ -294,9 +293,6 @@ namespace ImageProcessor
             r = (byte)(r * acoef);
             g = (byte)(g * acoef);
             b = (byte)(b * acoef);
-            //r = (byte)Math.Min(r * acoef, 254);
-            //g = (byte)Math.Min(g * acoef, 254);
-            //b = (byte)Math.Min(b * acoef, 254);
         }
         public override string ToString()
         {

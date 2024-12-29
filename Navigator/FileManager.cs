@@ -160,7 +160,7 @@ namespace ImageProcessor
                 }
             }
         }
-        public void Rename(DirectoryInfo directory, RenameType renameType)
+        public void DirectoryOrFilesRename(DirectoryInfo directory, RenameType renameType)
         {
             if (renameType == RenameType.Directory)
             {
