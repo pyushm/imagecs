@@ -188,12 +188,4 @@ namespace ImageProcessor
         internal MatchingDir AddDir(string n) { currentDir = new MatchingDir(n); matchingDirs.Add(currentDir); return currentDir; }
         internal void AddDir(string n, double d) { matchingDirs.Add(new MatchingDir(n, d)); }
     }
-    public enum SpecName
-	{
-        Downloaded,
-		NewArticles,
-		AllDevicy,
-		Work,
-		Root       // parent - has to be last
-	}
 }

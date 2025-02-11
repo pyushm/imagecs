@@ -22,18 +22,18 @@ namespace ImageProcessor
         ImageEditForm editForm = null;
         int viewingAreaOffset;				// viewing area offset from left of client rectangle
         ImageListForm parent;				// parent image list form
-        ImageFileInfo.FileList imageFiles;  // full image file name shown as big image
-        ImageFileInfo imageInfo;            // curently displayed image file info 
+        ImageFileInfo.ImageList hostImages; // full image file name shown as big image
+        ImageFileInfo currentImageInfo;     // curently displayed image file info 
+        Direction dir;                      // direction predicting next image to show
         bool infoMode;				        // indicates if info or original has to be extracted
         DirShowMode infoType;               // type of info image when infoMode==true
         bool imageModified = false;
         ColorTransform colorTransform = new ColorTransform();
-        ColorTransform previousColorTransform = new ColorTransform(); // previous non-identical transform
+        ColorTransform previousColorTransform = new ColorTransform(); // previous non-identical saved image transform
         VisualLayer backgroundLayer;
         bool userInput = false;
-        string deletedImageName = null;
+        ImageFileInfo deletedImageInfo = null;
         string deletedImageFile = "deletedImage";
-        int direction = 0;
         Image capturedImage;
         private Label label2;
         private NumericUpDown angleCtrl;
@@ -579,10 +579,10 @@ namespace ImageProcessor
             brightnessControl.ControlPoints = new float[] { 50, 0, 50, 50, 50, 100 };
             viewingAreaOffset = panel.Location.X;
             panel.Size = new System.Drawing.Size(ClientSize.Width - viewingAreaOffset, ClientSize.Height);
-            nextImageButton.Click += delegate (object sender, EventArgs e) { direction = 1; ShowNewImage(imageFiles?.NavigateTo(direction)); };
-            previousImageButton.Click += delegate (object sender, EventArgs e) { direction = -1; ShowNewImage(imageFiles?.NavigateTo(direction)); };
-            nextSetButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles?.NavigateToGroup(true)); };
-            previousSetButton.Click += delegate (object sender, EventArgs e) { ShowNewImage(imageFiles?.NavigateToGroup(false)); };
+            nextImageButton.Click += delegate (object sender, EventArgs e) { dir = Direction.Next; ShowNewImage(hostImages?.SetActiveFile(dir)); };
+            previousImageButton.Click += delegate (object sender, EventArgs e) { dir = Direction.Prev; ShowNewImage(hostImages?.SetActiveFile(dir)); };
+            nextSetButton.Click += delegate (object sender, EventArgs e) { dir = Direction.NextGroup; dir = Direction.Next; ShowNewImage(hostImages?.SetActiveFile(dir)); };
+            previousSetButton.Click += delegate (object sender, EventArgs e) { dir = Direction.PrevGroup; ShowNewImage(hostImages?.SetActiveFile(dir)); };
             scaleCtrl.ValueChanged += delegate (object sender, EventArgs e) { GeometryTransformChanged(); };
             angleCtrl.ValueChanged += delegate (object sender, EventArgs e) { GeometryTransformChanged(); };
             saturationControl.ValueChanged += delegate (object sender, EventArgs e) { ColorTransformChanged(); };
@@ -608,10 +608,10 @@ namespace ImageProcessor
             actionBox.KeyPress += delegate (object sender, KeyPressEventArgs e) { if (ModifierKeys == Keys.Control) e.Handled = true; };
             parent = parentListForm;
             if (parent != null)             // launched from parent list form
-                imageFiles = parent.Images;
+                hostImages = parent.Images;
             else
             {                               // for single image display
-                imageFiles = null;
+                hostImages = null;
                 nextImageButton.Enabled = false;
                 previousImageButton.Enabled = false;
                 nextSetButton.Enabled = false;
@@ -647,9 +647,9 @@ namespace ImageProcessor
             else
                 canvas.InitializeToolDrawing();
         }
-        public void ShowNewImage(string fsPath)
+        public void ShowNewImage(ImageFileInfo ifi)
         {
-            if (fsPath == null || fsPath.Length == 0)
+            if (ifi == null || string.IsNullOrEmpty(ifi.FSPath))
                 return;
             try
             {
@@ -658,11 +658,12 @@ namespace ImageProcessor
                 saveButton.Enabled = resizeBox.Checked;
                 imageModified = false;
                 deleteButton.Enabled = true;
-                imageInfo = new ImageFileInfo(new FileInfo(fsPath));
-                string warn = canvas.LoadFile(imageInfo, (double)delayBox.Value+0.3);
+                currentImageInfo = ifi;// new ImageFileInfo(new FileInfo(fsPath));
+                string warn = canvas.LoadFile(currentImageInfo, (double)delayBox.Value+0.3);
+                Debug.WriteLine("loading: " + currentImageInfo.RealName + " active: " + hostImages.ActiveFile.RealName);
                 if (warn.Length > 0)
                 {
-                    if (imageInfo.IsEncrypted && warn == DataAccess.NullCipher)
+                    if (currentImageInfo.IsEncrypted && warn == DataAccess.NullCipher)
                     {
                         PasswordDialog pd = new PasswordDialog();
                         pd.Show();
@@ -671,8 +672,6 @@ namespace ImageProcessor
                 }
                 backgroundLayer = canvas.BackgroundLayer;
                 sameTransformButton.Checked = false;
-                if(!colorTransform.IsIdentical)
-                    previousColorTransform.CopyFrom(colorTransform);
                 colorTransform.Set();
                 RescaleCanvas(true);
                 actionBox.SelectedItem = ToolMode == ToolMode.FreeSelection ? "Selection" : ToolMode == ToolMode.RectSelection ? "RectSelection" : "Crop";
@@ -694,18 +693,20 @@ namespace ImageProcessor
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("ShowNewImage: Unable to diplay image " + imageInfo.FSPath + ": " + ex.Message);
+                Debug.WriteLine("ShowNewImage: Unable to diplay image " + currentImageInfo.FSPath + ": " + ex.Message);
             }
         }
         void DrawNextImage(object sender, PaintEventArgs e)
         {
-            if (imageFiles == null || imageFiles.Count < 1)
+            if (hostImages == null || hostImages.Count < 1)
                 return;
             try
             {
-                int ind = imageFiles.NewInd(direction);
-                var file = ind >= 0 ? imageFiles[ind] : null;
-                ImageFileInfo ifi = new ImageFileInfo(new FileInfo(file.FSPath));
+                var ind = hostImages.NewDisplayIndex(dir);
+                if (ind < 0)
+                    return;
+                ImageFileInfo ifi = hostImages[ind];
+                Debug.WriteLine("active: '"+hostImages.ActiveFile.RealName+" next index & direction: " + ind + ',' + dir + "' name: '" + ifi.RealName);
                 DrawSmallImage(ifi.SynchronizeThumbnail(), e.Graphics);
             }
             catch (Exception ex)
@@ -727,8 +728,8 @@ namespace ImageProcessor
         }
         void SetWindowTitle()
         {
-            string dir = imageFiles != null ? imageFiles.RealName : Path.GetDirectoryName(imageInfo.RealPath);
-            Text = dir + '/'+ imageInfo.RealName + ' ' + imageInfo.StoreTypeString + ' ' + canvas.FrameSizeString;
+            string dir = hostImages != null ? hostImages.DirRealName : Path.GetDirectoryName(currentImageInfo.RealPath);
+            Text = dir + '/'+ currentImageInfo.RealName + ' ' + currentImageInfo.StoreTypeString + ' ' + canvas.FrameSizeString;
         }
         void RescaleCanvas(bool initial) { canvas.ResizeImage(initial, 0, panel.Width / dpiScaleX, panel.Height / dpiScaleY); }
         void FormResize(object s, EventArgs e)
@@ -740,7 +741,9 @@ namespace ImageProcessor
         #region Operations
         void deleteButton_Click(object s, EventArgs e)
         {
-            File.SetAttributes(imageInfo.FSPath, FileAttributes.Normal);
+            if (currentImageInfo == null)
+                return;
+            File.SetAttributes(currentImageInfo.FSPath, FileAttributes.Normal);
             if (imageModified)
             {
                 MessageBoxResult res = System.Windows.MessageBox.Show("Are you sure you want to delete current image?",
@@ -748,12 +751,13 @@ namespace ImageProcessor
                 if (res == MessageBoxResult.No)
                     return;
             }
-            FileInfo fi = new FileInfo(imageInfo.FSPath);
+            FileInfo fi = new FileInfo(currentImageInfo.FSPath);
             if (fi.Exists)
             {
                 try
                 {
-                    deletedImageName = imageInfo.FSPath;
+                    Debug.WriteLine("DELEDE "+ fi.Name+" active: " + hostImages.ActiveFile.RealName);
+                    deletedImageInfo = currentImageInfo;
                     File.Delete(deletedImageFile);
                     if (parent == null)
                         fi.MoveTo(deletedImageFile);
@@ -763,22 +767,25 @@ namespace ImageProcessor
                         parent.DeleteActiveImage();
                     }
                     File.SetAttributes(deletedImageFile, FileAttributes.Normal);
+                    dir = Direction.Next;
+                    hostImages?.SetActiveFile(dir);
+                    nextImagePanel.Invalidate();
                 }
                 catch(Exception ex)
                 {
-                    System.Windows.Forms.MessageBox.Show(ex.Message, "Failed deleting " + deletedImageName);
+                    System.Windows.Forms.MessageBox.Show(ex.Message, "Failed deleting " + deletedImageInfo.FSPath);
                 }
             }
-            if(imageFiles == null)
+            if(hostImages == null)
                 Close();
         }
         void restoreButton_Click(object sender, EventArgs e)
         {
             FileInfo fi = new FileInfo(deletedImageFile);
-            if (!fi.Exists || deletedImageName == null)
+            if (!fi.Exists || deletedImageInfo == null)
                 return;
-            fi.MoveTo(deletedImageName);
-            ShowNewImage(deletedImageName);
+            fi.MoveTo(deletedImageInfo.FSPath);
+            ShowNewImage(deletedImageInfo);
         }
         void effectsButton_Click(object sender, EventArgs e)
         {
@@ -786,7 +793,7 @@ namespace ImageProcessor
             {
                 if (editForm == null || editForm.IsDisposed)
                     editForm = new ImageEditForm();
-                editForm.ShowNewImage(imageInfo);
+                editForm.ShowNewImage(currentImageInfo);
             }
             catch (Exception ex)
             {
@@ -814,34 +821,36 @@ namespace ImageProcessor
             try
             {
                 if (infoMode)
-                    SaveImage(Path.Combine(Path.GetDirectoryName(imageInfo.FSPath), ImageFileName.InfoFileWithExtension(infoType)), -1);
+                    SaveImage(new ImageFileInfo(new FileInfo(Path.Combine(Path.GetDirectoryName(currentImageInfo.FSPath), ImageFileName.InfoFileWithExtension(infoType)))), -1);
                 else
-                    SaveImage(imageInfo.FSPath, resizeBox.Checked ? (int)Conversion.ReduceSize : 0);
+                    SaveImage(currentImageInfo, resizeBox.Checked ? (int)Conversion.ReduceSize : 0);
             }
             catch (Exception ex)
             {
-                System.Windows.Forms.MessageBox.Show(ex.Message, "Failed saving " + imageInfo.FSPath);
+                System.Windows.Forms.MessageBox.Show(ex.Message, "Failed saving " + currentImageInfo.FSPath);
             }
         }
         void saveAsButton_Click(object s, EventArgs e)
         {
             SaveFileDialog saveAsDialog = new SaveFileDialog();
-            saveAsDialog.FileName = imageInfo.RealName;
+            saveAsDialog.FileName = currentImageInfo.RealName;
             saveAsDialog.Filter = DataAccess.PrivateAccessEnforced ? "regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
-            saveAsDialog.FilterIndex = imageInfo.IsMultiLayer ? 3 : imageInfo.IsExact ? 2 : 1;
+            saveAsDialog.FilterIndex = currentImageInfo.IsMultiLayer ? 3 : currentImageInfo.IsExact ? 2 : 1;
             saveAsDialog.RestoreDirectory = true;
-            saveAsDialog.InitialDirectory = Path.GetDirectoryName(imageInfo.FSPath);
+            saveAsDialog.InitialDirectory = Path.GetDirectoryName(currentImageInfo.FSPath);
             saveAsDialog.OverwritePrompt = true;
             if (saveAsDialog.ShowDialog() == DialogResult.OK)
             {
-                string saveName = DataAccess.PrivateAccessEnforced ? FileName.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName;
-                SaveImage(saveName, resizeBox.Checked ? (int)Conversion.ReduceSize : 0);
+                var ifi = new ImageFileInfo(new FileInfo(DataAccess.PrivateAccessEnforced ? FileName.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName));
+                SaveImage(ifi, resizeBox.Checked ? (int)Conversion.ReduceSize : 0);
             }
         }
-        void SaveImage(string path, int maxSize)
+        void SaveImage(ImageFileInfo ifi, int maxSize)
         {
-            if (canvas.SaveRendering(path, maxSize))
-                ShowNewImage(path);
+            if (!colorTransform.IsIdentical)
+                previousColorTransform.CopyFrom(colorTransform);
+            if (canvas.SaveRendering(ifi.FSPath, maxSize))
+                ShowNewImage(ifi);
             ToolMode = ToolMode.Crop;
         }
         void SaveTypeChanged(object sender, EventArgs e)

@@ -368,32 +368,32 @@ namespace DirTreeCompare
             else
             {
                 FileInfo fi = new FileInfo(path);
-                ImageFileName dt = new ImageFileName(path);
+                ImageFileInfo dt = new ImageFileInfo(fi);
                 if (!fi.Exists)
                     System.Windows.MessageBox.Show("File " + path + " does not exist");
                 else if (dt.IsImage)
                 {
                     ImageViewForm viewForm = new ImageViewForm(null);
                     invoked.Add(viewForm);
-                    viewForm.ShowNewImage(path);
+                    viewForm.ShowNewImage(new ImageFileInfo(new FileInfo(path)));
                 }
                 else if (dt.IsMovie)
-                {
-                    if (dt.IsEncrypted)
-                    {
-                        try
-                        {
-                            Cursor = System.Windows.Input.Cursors.Wait;
-                            DataAccess.DecryptToFile(navigator.MediaTmpLocation, fi.FullName);
-                            Process.Start(navigator.MediaExe, navigator.MediaTmpLocation);
-                        }
-                        finally { Cursor = System.Windows.Input.Cursors.Arrow; }
-                    }
-                    else
-                        Process.Start(navigator.MediaExe, '\"' + path + '\"');
-                }
-                else
-                    System.Windows.MessageBox.Show(path + Environment.NewLine + "Length=" + fi.Length + Environment.NewLine + fi.LastWriteTime.ToLongDateString());
+                    navigator.RunVideoFile = dt;
+                //    if (dt.IsEncrypted)
+                //    {
+                //        try
+                //        {
+                //            Cursor = System.Windows.Input.Cursors.Wait;
+                //            DataAccess.DecryptToTemp(fi.FullName, navigator.TempFile);
+                //            Process.Start(navigator.MediaExe, navigator.TempFile);
+                //        }
+                //        finally { Cursor = System.Windows.Input.Cursors.Arrow; }
+                //    }
+                //    else
+                //        Process.Start(navigator.MediaExe, '\"' + path + '\"');
+                //}
+                //else
+                //    System.Windows.MessageBox.Show(path + Environment.NewLine + "Length=" + fi.Length + Environment.NewLine + fi.LastWriteTime.ToLongDateString());
             }
         }
     }

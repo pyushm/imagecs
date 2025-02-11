@@ -25,10 +25,11 @@ namespace ImageProcessor
 		TextBox outputBox;
         TextBox oldTextBox;
 		Panel infoImagePanel;
-		TreeView locationTreeView;
+        TreeView locationTreeView;
         bool privateAccessRequested;
         Navigator navigator;				// object handling directory tree
-		DirectoryInfo selectedNode=null;	// currently selected directory
+		DirectoryInfo selectedNode = null;	// currently selected directory
+        TreeNode nodeUnderMouse = null;     // tree node under curret
         string processNodeName = "";
         FileManager fileManager;            // resize and rename images
         DirectoryInfoImages itemInfoImages;	// shows info images
@@ -171,7 +172,8 @@ namespace ImageProcessor
             this.locationTreeView.Size = new System.Drawing.Size(444, 1333);
             this.locationTreeView.TabIndex = 10;
             this.locationTreeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.RetrievNodes);
-            this.locationTreeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.DisplaySelectedNode);
+            this.locationTreeView.NodeMouseHover += new System.Windows.Forms.TreeNodeMouseHoverEventHandler(this.locationTreeView_NodeMouseHover);
+            this.locationTreeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.locationTreeView_AfterSelect);
             this.locationTreeView.Click += new System.EventHandler(this.locationTreeView_Click);
             // 
             // addPrefixButton
@@ -598,6 +600,7 @@ namespace ImageProcessor
                 // Force the ToolTip text to be displayed whether or not the form is active.
                 toolTip1.ShowAlways = true;
                 EnableSearchButtons(false);
+                Text = "Image viewer v3.1";
             }
             catch (Exception ex )
             {
@@ -645,14 +648,17 @@ namespace ImageProcessor
             {
                 ImageFileInfo ifi = new ImageFileInfo(new FileInfo(searchImagePath));
                 Image im = ifi.SynchronizeThumbnail();
-                float areaSize = 173 * e.Graphics.DpiX / 96;
-                float scale = Math.Min(areaSize / im.Width, areaSize / im.Height);
-                float iw = im.Width * scale;
-                float ih = im.Height * scale; 
-                float d = (iw - ih) / 2;
-                PointF del = d < 0 ? new PointF(-d, 0) : new PointF(0, d);
-                e.Graphics.DrawImage(im, del.X, del.Y, iw, ih);
-                findLookBtn.Enabled = true;
+                if (im != null)
+                {
+                    float areaSize = 173 * e.Graphics.DpiX / 96;
+                    float scale = Math.Min(areaSize / im.Width, areaSize / im.Height);
+                    float iw = im.Width * scale;
+                    float ih = im.Height * scale;
+                    float d = (iw - ih) / 2;
+                    PointF del = d < 0 ? new PointF(-d, 0) : new PointF(0, d);
+                    e.Graphics.DrawImage(im, del.X, del.Y, iw, ih);
+                    findLookBtn.Enabled = true;
+                }
             }
             catch (Exception ex) {
                 Debug.WriteLine(ex.Message); }
@@ -815,11 +821,15 @@ namespace ImageProcessor
             }
             Cursor = Cursors.Default;
 		}
-		void DisplaySelectedNode(object sender, TreeViewEventArgs e)
-		{
-			if(e.Node==null || e.Node.Tag==null)
-				return;
-            selectedNode = (DirectoryInfo)e.Node.Tag;
+        void locationTreeView_Click(object sender, EventArgs e) { itemInfoImages.HideInfoImages(); } // clear old selection
+        void locationTreeView_NodeMouseHover(object sender, TreeNodeMouseHoverEventArgs e) { nodeUnderMouse = e.Node; }
+        void locationTreeView_DoubleClick(object sender, EventArgs e) { DisplaySelectedNode(nodeUnderMouse); }
+        void locationTreeView_AfterSelect(object sender, TreeViewEventArgs e) { DisplaySelectedNode(e.Node); }
+        void DisplaySelectedNode(TreeNode node)
+        {
+            if (node == null || node.Tag == null)
+                return;
+            selectedNode = (DirectoryInfo)node.Tag;
             if (selectedNode.Exists)
             {
                 outputBox.Text = (new ImageDirInfo(selectedNode)).RealPath;
@@ -916,22 +926,11 @@ namespace ImageProcessor
                     {
                         ImageViewForm editForm = new ImageViewForm(null);
                         invoked.Add(editForm);
-                        editForm.ShowNewImage(dt.FSPath);
+                        editForm.ShowNewImage(dt);
                     }
                     else if (dt.IsMovie)
                     {
-                        if (dt.IsEncrypted)
-                        {
-                            try
-                            {
-                                Cursor = Cursors.WaitCursor;
-                                DataAccess.DecryptToFile(navigator.MediaTmpLocation, dt.FSPath);
-                                Process.Start(navigator.MediaExe, navigator.MediaTmpLocation);
-                            }
-                            finally { Cursor = Cursors.Default; }
-                        }
-                        else
-                            Process.Start(navigator.MediaExe, '\"' + dt.FSPath + '\"');
+                        navigator.RunVideoFile = dt;
                     }
                 }
             }
@@ -1059,10 +1058,6 @@ namespace ImageProcessor
                 outputBox.Text = "";
                 outputBox.ForeColor = System.Drawing.Color.Black;
             }
-        }
-        private void locationTreeView_Click(object sender, EventArgs e)
-        {
-            itemInfoImages.HideInfoImages();
         }
         private void RequestPassword()
         {

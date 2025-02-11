@@ -7,14 +7,22 @@ using System.Threading.Tasks;
 
 namespace ImageProcessor
 {
+    public enum SpecName
+    {
+        Downloaded,
+        NewArticles,
+        AllDevicy,
+        Work,
+        Root       // parent - has to be last
+    }
     public interface IAssociatedPath
     {
         string RootName         { get; }
         string PaintExe         { get; }
-        string EditorExe        { get; }
-        string MediaExe         { get; }
-        string MediaTmpLocation { get; }
+        //string MediaExe         { get; }
+        //string TempFile         { get; }
         string ActiveImageName  { set; }
+        ImageFileInfo RunVideoFile{ set; }
     }
     public class Navigator : IAssociatedPath
 	{
@@ -61,9 +69,27 @@ namespace ImageProcessor
         string activeImageName = null;
         public string RootName          { get; private set; }
         public string PaintExe          { get; private set; }
-        public string EditorExe         { get; private set; }
         public string MediaExe          { get; private set; }
-        public string MediaTmpLocation  { get { return "_._"; } }
+        public string TempFile          { get { return "_._"; } }
+        ImageFileInfo videoFile;
+        public ImageFileInfo RunVideoFile 
+        { 
+            private get
+            { return videoFile; } 
+            set 
+            {
+                videoFile = value;
+                Process p;
+                if (videoFile.IsEncrypted)
+                    DataAccess.DecryptToTemp(videoFile.FSPath, TempFile);
+                string name = videoFile.IsEncrypted ? TempFile : '\"' + videoFile.FSPath + '\"';
+                p = Process.Start(MediaExe, name);
+                p.WaitForExit();
+                p.Dispose();
+                if (videoFile.IsEncrypted) 
+                    File.Delete(TempFile);
+            }
+        }
         public string ActiveImageName   { get { return activeImageName; } set { activeImageName = value; onNewImageSelection?.Invoke(activeImageName); } }
         public bool StopSearch          { get { return stopSearch; } set { stopSearch = value; } }
         public string[] GetMatchedDirNames()
@@ -78,7 +104,6 @@ namespace ImageProcessor
             Common.XMLStore settings = new Common.XMLStore(Path.Combine(Directory.GetCurrentDirectory(), "Customization.xml"));
             RootName = settings.GetString("location.root", "../stuff/");
             PaintExe = settings.GetString("path.paint");
-            EditorExe = settings.GetString("path.editor");
             MediaExe = settings.GetString("path.media");
             searchResult = new SearchResult();
             string[] dirNames = Enum.GetNames(typeof(SpecName));

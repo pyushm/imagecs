@@ -197,7 +197,7 @@ namespace ImageProcessor
                         right = j;
                         break;
                     }
-                for (int j = left; j < right; j--)
+                for (int j = left; j < right; j++)
                     if (bval[ri, j] == 0)
                         bval[ri, j] = val;
             }

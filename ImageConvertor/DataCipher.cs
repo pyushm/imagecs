@@ -207,15 +207,15 @@ namespace ImageProcessor
             using (var fs = File.OpenWrite(fullPath)) { fs.Write(src, 0, src.Length); }
             return true;
         }
-        public static bool DecryptToFile(string filePath, string srcPath)
+        public static bool DecryptToTemp(string srcPath, string tmpPath)
         {
             byte[] src = File.ReadAllBytes(srcPath);
             byte[] imageBytes = ReadBytes(src, true);
             if (imageBytes.Length > 0)
             {
-                if (File.Exists(filePath))
-                    File.Delete(filePath);
-                return WriteFile(filePath, imageBytes, false);
+                if (File.Exists(tmpPath))
+                    File.Delete(tmpPath);
+                return WriteFile(tmpPath, imageBytes, false);
             }
             return false;
         }
