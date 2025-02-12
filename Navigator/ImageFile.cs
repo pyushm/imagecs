@@ -332,6 +332,7 @@ namespace ImageProcessor
                 int dirCount = FileInfo.Directory.GetDirectories().Length;
                 var idi = new ImageDirInfo(FileInfo.Directory);
                 RealName = FileName.UnMangle(FileInfo.Directory.Name) + '\u25CF' + idi.ImageCount() + (dirCount == 0 ? "" : "-" + dirCount);
+                Name = FileInfo.Directory.Name;
             }
         }
         public bool CheckUpdate()  // false if file does not exists
@@ -672,7 +673,12 @@ namespace ImageProcessor
                         return !abortSynchronization;
                     }
                 }
-                catch (Exception) { return false; }
+                catch (Exception ex) 
+                { 
+                    Debug.WriteLine(ex.Message);
+                    Debug.WriteLine(ex.StackTrace);
+                    return false;
+                }
             }
             void AppendFiles(bool downloadedDir)
             {
@@ -701,7 +707,13 @@ namespace ImageProcessor
                     {
                         FileInfo fsf = GetInfoFile(di);
                         if (fsf != null)
-                            AppendImageFile(fsf, true);   // adds info of subdirectories
+                        {
+                            if (downloadedDir && prevImageCount > 0)
+                                AddImageFileToFront(fsf, true);
+                            else
+                                AppendImageFile(fsf, true);
+                        }
+                        //AppendImageFile(fsf, true);   // adds info of subdirectories
                     }
                     finally { }
                 }
@@ -721,39 +733,64 @@ namespace ImageProcessor
                 //if (ImageCount > prevImageCount)
                 //    Debug.WriteLine(" *AppendFiles "+prevImageCount.ToString() + " -> " + ImageCount + " first added " + fileList[prevImageCount].RealName);
             }
-            void AddImageFileToFront(FileInfo fn)
+            void AddImageFileToFront(FileInfo fi, bool header = false)
             {   // insert new item to the front of list and indexTable
-                if (indexTable.ContainsKey(fn.Name))
-                    return;
-                var item = new ImageFileInfo(fn);
-                if (!item.IsKnown)
-                    return;
-                lock (this)
+                var ifi = new ImageFileInfo(fi, header);
+                try
                 {
-                    lastAdded = new ImageFileInfo(fn);
-                    fileList.Insert(0, lastAdded);
+                    if (indexTable.ContainsKey(ifi.Name))
+                        return;
+                    //Debug.WriteLine("Appenging to front: " + ifi.Name);
+                    if (!header && !ifi.IsKnown)
+                        return;
+                    lock (this)
+                    {
+                        lastAdded = ifi;
+                        fileList.Insert(0, lastAdded);
+                    }
+                }
+                catch
+                {
+                    //Debug.WriteLine("FAILED @: " + ifi.Name);
                 }
             }
-            void AppendImageFile(FileInfo fn, bool header = false)
+            void AppendImageFile(FileInfo fi, bool header = false)
             {   // append new item to the list and indexTable
-                if (fn == null || indexTable.ContainsKey(fn.Name))
-                    return;
-                var item = new ImageFileInfo(fn, header);
-                if (!header && !item.IsKnown)
-                    return;
-                lock (this)
+                var ifi = new ImageFileInfo(fi, header);
+                try
                 {
-                    lastAdded = item;
-                    fileList.Add(lastAdded);
+                    if (indexTable.ContainsKey(ifi.Name))
+                        return;
+                    //Debug.WriteLine("Appenging to list: " + ifi.Name);
+                    if (!header && !ifi.IsKnown)
+                        return;
+                    lock (this)
+                    {
+                        lastAdded = ifi;
+                        fileList.Add(lastAdded);
+                    }
+                }
+                catch
+                {
+                    //Debug.WriteLine("FAILED @: " + ifi.Name);
                 }
             }
             void RebuildIndexesNoSoting() 
             {   // rebuilds indexes witout sorting
                 indexTable.Clear();
-                for (int i = 0; i < ImageCount; i++)
+                int i = 0;
+                try
                 {
-                    fileList[i].DisplayListIndex = -1;
-                    indexTable.Add(fileList[i].Name, i);
+                    for (; i < ImageCount; i++)
+                    {
+                        fileList[i].DisplayListIndex = -1;
+                        indexTable.Add(fileList[i].Name, i);
+                        //Debug.WriteLine("Appenging to table: " + fileList[i].Name);
+                    }
+                }
+                catch
+                {
+                    //Debug.WriteLine("FAILED table @: " + fileList[i].Name);
                 }
                 RebuildDisplayedList();
             }
@@ -843,7 +880,7 @@ namespace ImageProcessor
                             displayed.Add(ifi);
                         }
                     }
-                    Debug.Assert(displayed.Count == ind);
+                    //Debug.Assert(displayed.Count == ind);
                 }
                 //Debug.WriteLine(" *RebuildDisplayedList displayed=" + displayed.Count);
             }

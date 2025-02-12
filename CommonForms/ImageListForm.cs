@@ -287,17 +287,14 @@ namespace ImageProcessor
         {
             try
             {
-                if (Images == null)
+                if (Images == null || imageListView == null)
                     return;
                 if (!Images.ValidDirectory)
                     Images.Clear();
-                if (viewForm != null)
+                if (imageListView.VirtualListSize != Images.Count)
                 {
-                    if (imageListView.VirtualListSize < Images.Count)
+                    if (viewForm != null)
                         ViewImage(Images.LastAdded);
-                }
-                if (imageListView != null && imageListView.VirtualListSize != Images.Count)
-                {
                     imageListView.VirtualListSize = Images.Count;
                     int dc = sourceDir.DirCount();
                     Text = sourceDir.RealPath + ": " + sourceDir.ImageCount() + " images " + Images.GroupCount + " groups " + (dc == 0 ? "" : ", " + dc + " directories ");
