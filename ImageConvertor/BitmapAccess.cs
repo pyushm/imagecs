@@ -167,8 +167,8 @@ namespace ImageProcessor
             bi.BeginInit();
             bi.StreamSource = dataStream;
             bi.DecodePixelWidth = maxWidth;
-            //bi.CreateOptions = BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreColorProfile;
-            bi.CreateOptions = BitmapCreateOptions.IgnoreColorProfile; // removed to process Bgra32
+            //bi.CreateOptions = BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.IgnoreColorProfile; // removed to process Bgra32
+            bi.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
             bi.EndInit();
             Initialize(new WriteableBitmap(bi), null);
         }

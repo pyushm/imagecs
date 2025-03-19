@@ -32,12 +32,12 @@
             this.passBox = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
-            // label1
+            // BackBtn
             // 
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(15, 22);
             this.label1.Margin = new System.Windows.Forms.Padding(6, 0, 6, 0);
-            this.label1.Name = "label1";
+            this.label1.Name = "BackBtn";
             this.label1.Size = new System.Drawing.Size(106, 25);
             this.label1.TabIndex = 0;
             this.label1.Text = "Password";

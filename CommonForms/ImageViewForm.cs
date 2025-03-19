@@ -155,12 +155,12 @@ namespace ImageProcessor
             this.angleCtrl.Size = new System.Drawing.Size(124, 31);
             this.angleCtrl.TabIndex = 82;
             // 
-            // label1
+            // BackBtn
             // 
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(27, 879);
             this.label1.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.label1.Name = "label1";
+            this.label1.Name = "BackBtn";
             this.label1.Size = new System.Drawing.Size(66, 25);
             this.label1.TabIndex = 80;
             this.label1.Text = "Scale";
@@ -581,7 +581,7 @@ namespace ImageProcessor
             panel.Size = new System.Drawing.Size(ClientSize.Width - viewingAreaOffset, ClientSize.Height);
             nextImageButton.Click += delegate (object sender, EventArgs e) { dir = Direction.Next; ShowNewImage(hostImages?.SetActiveFile(dir)); };
             previousImageButton.Click += delegate (object sender, EventArgs e) { dir = Direction.Prev; ShowNewImage(hostImages?.SetActiveFile(dir)); };
-            nextSetButton.Click += delegate (object sender, EventArgs e) { dir = Direction.NextGroup; dir = Direction.Next; ShowNewImage(hostImages?.SetActiveFile(dir)); };
+            nextSetButton.Click += delegate (object sender, EventArgs e) { dir = Direction.NextGroup; ShowNewImage(hostImages?.SetActiveFile(dir)); };
             previousSetButton.Click += delegate (object sender, EventArgs e) { dir = Direction.PrevGroup; ShowNewImage(hostImages?.SetActiveFile(dir)); };
             scaleCtrl.ValueChanged += delegate (object sender, EventArgs e) { GeometryTransformChanged(); };
             angleCtrl.ValueChanged += delegate (object sender, EventArgs e) { GeometryTransformChanged(); };
@@ -660,7 +660,7 @@ namespace ImageProcessor
                 deleteButton.Enabled = true;
                 currentImageInfo = ifi;// new ImageFileInfo(new FileInfo(fsPath));
                 string warn = canvas.LoadFile(currentImageInfo, (double)delayBox.Value+0.3);
-                Debug.WriteLine("loading: " + currentImageInfo.RealName + " active: " + hostImages.ActiveFile.RealName);
+                //Debug.WriteLine("loading: " + currentImageInfo.RealName + " active: " + hostImages.ActiveFile.RealName);
                 if (warn.Length > 0)
                 {
                     if (currentImageInfo.IsEncrypted && warn == DataAccess.NullCipher)
@@ -706,7 +706,7 @@ namespace ImageProcessor
                 if (ind < 0)
                     return;
                 ImageFileInfo ifi = hostImages[ind];
-                Debug.WriteLine("active: '"+hostImages.ActiveFile.RealName+" next index & direction: " + ind + ',' + dir + "' name: '" + ifi.RealName);
+                //Debug.WriteLine("active: '"+hostImages.ActiveFile.RealName+" next index & direction: " + ind + ',' + dir + "' name: '" + ifi.RealName);
                 DrawSmallImage(ifi.SynchronizeThumbnail(), e.Graphics);
             }
             catch (Exception ex)
@@ -756,7 +756,7 @@ namespace ImageProcessor
             {
                 try
                 {
-                    Debug.WriteLine("DELEDE "+ fi.Name+" active: " + hostImages.ActiveFile.RealName);
+                    //Debug.WriteLine("DELEDE "+ fi.Name+" active: " + hostImages.ActiveFile.RealName);
                     deletedImageInfo = currentImageInfo;
                     File.Delete(deletedImageFile);
                     if (parent == null)
@@ -782,8 +782,10 @@ namespace ImageProcessor
         void restoreButton_Click(object sender, EventArgs e)
         {
             FileInfo fi = new FileInfo(deletedImageFile);
-            if (!fi.Exists || deletedImageInfo == null)
+            if (!fi.Exists)
                 return;
+            if (deletedImageInfo == null)
+                deletedImageInfo = new ImageFileInfo(new FileInfo(Path.Combine(currentImageInfo.FileInfo.DirectoryName, "unknown.jpe")));
             fi.MoveTo(deletedImageInfo.FSPath);
             ShowNewImage(deletedImageInfo);
         }

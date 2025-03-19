@@ -64,12 +64,19 @@ namespace ImageProcessor
                 MessageBox.Show("No directory selected");
                 return;
             }
-            dirSelection = new DirectoryInfo(inputOutputBox.Text);
-            if (!dirSelection.Exists)
-                dirSelection = new DirectoryInfo(Path.Combine(dirSelection.Parent.FullName, FileName.Mangle(dirSelection.Name)));
+            var realDir = new DirectoryInfo(inputOutputBox.Text); // unmangled dir name 
+            var FSdir = new DirectoryInfo(Path.Combine(realDir.Parent.FullName, FileName.RawMangle(realDir.Name))); // scrambled
+            dirSelection = DataAccess.PrivateAccessEnforced ? FSdir : realDir;
+            var otherDir = DataAccess.PrivateAccessEnforced ? realDir : FSdir;
+            if(otherDir.Exists)
+            {   // prevents creating directory with same real name
+                string msg = DataAccess.PrivateAccessEnforced ? "Unmangled dir " + realDir.Name + " exists" : "Mangled dir " + FSdir.Name + " exists";
+                MessageBox.Show(msg, "Can't create directory: duplicate name detected");
+                return;
+            }
             if (!dirSelection.Exists)
             {
-                int c = 10;
+                int c = 3;
                 do
                 {
                     try
@@ -77,15 +84,16 @@ namespace ImageProcessor
                         dirSelection.Create();
                         Thread.Sleep(300);
                         dirSelection = new DirectoryInfo(dirSelection.FullName);
+                        Close();
+                        return;
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("Failed to create directory " + dirSelection.FullName + ": " + ex.Message);
-                        return;
+                        MessageBox.Show("Attempt " + c+" to create directory " + dirSelection.FullName, ex.Message);
                     }
                 } while(!dirSelection.Exists && c-- > 0);
-                if (c<=0)
-                    MessageBox.Show("Failed to create directory " + dirSelection.FullName);
+                MessageBox.Show("Directory " + dirSelection.FullName + " was NOT created after " + c +" attempts");
+                dirSelection = null;
             }
             Close();
         }

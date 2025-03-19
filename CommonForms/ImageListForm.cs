@@ -340,7 +340,7 @@ namespace ImageProcessor
                 for (int i = firstVisible; i <= lastVisible; i++)
                 {
                     ImageFileInfo f = Images[i];
-                    f.CheckUpdate();
+                    f.CheckExistsSetUpdate();
                     if (f.Modified)
                         imageListView.Invalidate(imageListView.GetItemRect(i));
                 }
@@ -369,7 +369,7 @@ namespace ImageProcessor
             Images.RebuildDisplayedList();
             try
             {
-                if (!d.IsHeader)
+                if (!d.IsDirInfo)
 				{
                     if (d.IsImage || d.IsMultiLayer)
                     {
@@ -423,11 +423,11 @@ namespace ImageProcessor
         {
             DirectoryInfo directory = sourceDir.DirInfo;
             if (!directory.Exists || directory.GetDirectories().Length > 0 || Navigator.IsSpecDir(directory))
-                return;
+                return; // keep dirs with subdirs or special dirs
             FileInfo[] files = directory.GetFiles();
             foreach(FileInfo fi in files)
                 if ((new ImageFileInfo(fi)).IsKnown)
-                    return;
+                    return; // dir has images
             int items = files.Length;
             if (items > 0)
             {
@@ -442,10 +442,10 @@ namespace ImageProcessor
                     items = 0;
                 }
             }
-            Close();
+            Close();    // no images => close even if has items 
             try
             {
-                if (items == 0)
+                if (items == 0) // delete if nothing there
                     directory.Delete();
             }
             finally { }
@@ -474,7 +474,7 @@ namespace ImageProcessor
                 for (int i = 0; i < imageListView.SelectedIndices.Count; i++)
                 {
                     var ifi = (ImageFileInfo)imageListView.Items[imageListView.SelectedIndices[i]].Tag;
-                    if (ifi != null && !ifi.IsHeader)
+                    if (ifi != null && !ifi.IsDirInfo)
                         deleteFileList.Add(ifi);
                     else if (ifi != null)
                         hasDirs = true;
@@ -516,21 +516,22 @@ namespace ImageProcessor
                 MessageBox.Show(msg);
             Cursor = Cursors.Default;
         }
-        string MoveFilesTo(ImageFileInfo[] fileListToMove, DirectoryInfo to)  // fileList == null means all content of Images
+        string MoveFilesTo(ImageFileInfo[] imagesToMove, DirectoryInfo to)  // fileList == null means all content of Images
         {
             string msg = "";
             try
             {
                 int lastDeleted = -1;
-                if (fileListToMove != null)
-                    foreach (var ifi in fileListToMove)
+                if (imagesToMove != null)
+                    foreach (var ifi in imagesToMove)
                     {
                         if (lastDeleted < ifi.DisplayListIndex)
                             lastDeleted = ifi.DisplayListIndex;
                     }
-                msg = Images.MoveFiles(fileListToMove, to);
+                msg = Images.MoveFiles(imagesToMove, to);
                 imageListView.VirtualListSize = 0;
                 imageListView.ArrangeIcons(ListViewAlignment.SnapToGrid);
+                imageListView.Invalidate();
                 int newInd = Images.Count == 0 || lastDeleted == -1 ? -1 : Math.Min(lastDeleted + 1, Images.Count - 1);
                 if (newInd >= 0)
                 {

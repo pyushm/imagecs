@@ -761,7 +761,7 @@ namespace ImageProcessor
         }
         void Rename(RenameType operation)   
         {
-            if (selectedNode == null)
+            if (selectedNode == null || operation == RenameType.None)
                 return;
             if (operation == RenameType.Directory)
             {
