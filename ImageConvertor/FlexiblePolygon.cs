@@ -255,7 +255,7 @@ namespace ImageProcessor
             if (Poly.Count > 2)
             {
                 var wsum = 0.0;
-                Vector c = (Vector)Poly[0];
+                Vector c = new Vector();
                 double prev = (Poly[0] - Poly[Poly.Count - 1]).Length;
                 var ends = prev;
                 double w;

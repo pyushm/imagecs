@@ -327,7 +327,7 @@ namespace ImageProcessor
                             ptr++;
                         }
                     }
-                    //}
+                //}
                 });
             }
             Source.Unlock();
@@ -477,7 +477,7 @@ namespace ImageProcessor
                                 while (nodeInd < nodes.Count && nodes[nodeInd] < j)
                                     nodeInd++;
                                 if (nodeInd % 2 == 0) // pixels outside contour
-                                    *uptr = clearOutside ? 0x00FFFFFF : *(uint*)bptr & 0x00FFFFFF;
+                                    *uptr = clearOutside ? 0xFFFFFFFF : *(uint*)bptr & 0x00FFFFFF;
                                 else // remove transparency
                                     *uptr = *(uint*)bptr | 0xFF000000;
                                 uptr++;
@@ -633,8 +633,8 @@ namespace ImageProcessor
             int w = Width;
             unsafe
             {
-                foreach(var chank in chanks)
-                //Parallel.ForEach(chanks, (chank) =>
+                //foreach(var chank in chanks)
+                Parallel.ForEach(chanks, (chank) =>
                 {
                     byte a = 0, r, g, b;
                     byte* ptr0 = (byte*)chank.FromData;
@@ -679,8 +679,8 @@ namespace ImageProcessor
                         ptrn0 += bmn.BackBufferStride;
                         ptr0 += Source.BackBufferStride;
                     }
-                }
-                //});
+                //}
+                });
             }
             bmn.Unlock();
             //TimeSpan t = DateTime.Now - to;
@@ -733,7 +733,7 @@ namespace ImageProcessor
         }
         public void DebugSave(string path) { DebugSave(path, Source); }
     }
-    public class ValueMartixBitmap : BitmapAccess
+    public class ValueMartixBitmap : BitmapAccess // not used - apparently benefits of algorithm not clear
     {
         int hSize;              // src horizontal evaluation size
         int vSize;              // src vertical evaluation size
@@ -884,7 +884,7 @@ namespace ImageProcessor
             dataRange.average = (float)dataRange.average / (w - 1) / (h - 1);
             return new ValueMartix(1, gradN, dataRange, resolution);
         }
-        unsafe ValueMartix CreateValueMartix(FilterType type, int resolution_, bool compressed, int darkLevel)
+        unsafe ValueMartix CreateValueMartix(FilterType type, int resolution_, bool compressed, int darkLevel) 
         {
             resolution = Math.Max(resolution_, 1);
             int compression = Math.Max(compressed ? resolution : 1, 1);
@@ -904,8 +904,8 @@ namespace ImageProcessor
                 Chank[] chanks = Chank.CreateChanks(h, 500, matrixOffset, DataPtr, vStep, (IntPtr)amat, w * sizeof(float));
                 try
                 {
-                    foreach (var chank in chanks)
-                    //Parallel.ForEach(chanks, (chank) =>
+                    //foreach (var chank in chanks)
+                    Parallel.ForEach(chanks, (chank) =>
                     {
                         byte* ptr = (byte*)chank.FromData;
                         float* mptr = (float*)chank.ToData;
@@ -918,8 +918,8 @@ namespace ImageProcessor
                             ptr += vStep;
                             mptr += w;
                         }
-                    //});
-                    };
+                    });
+                    //};
                 }
                 catch (Exception ex)
                 {

@@ -421,7 +421,7 @@ namespace ImageProcessor
                 if (dif < imageInfoComparer.MaxDifference)
                 {
                     matchingDir.AddFile(Path.Combine(relativePath, item.Key), dif);
-                    Debug.WriteLine(imageInfoComparer.Pattern.ToDifString(item.Value) + '\t' + dif + '\t' + item.Key);
+                    //Debug.WriteLine(imageInfoComparer.Pattern.ToDifString(item.Value) + '\t' + dif + '\t' + item.Key);
                 }
             }
             if(!matchingDir.IsEmpty)

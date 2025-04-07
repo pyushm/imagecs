@@ -12,6 +12,16 @@ using System.Collections.Generic;
 
 namespace ShaderEffects
 {
+    //using System.Diagnostics;
+    //static string[] MethodName()
+    //{
+    //    StackTrace curTrace = new StackTrace();
+    //    StackFrame[] curFrame = curTrace.GetFrames();
+    //    string[] mn = new string[curFrame.Length];
+    //    for (int i = 0; i < curFrame.Length; i++)
+    //        mn[i] = curFrame[i].GetMethod().Name;
+    //    return mn;
+    //}
     public enum EffectType
     {
         None,

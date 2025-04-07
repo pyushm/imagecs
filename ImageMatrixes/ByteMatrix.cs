@@ -2,6 +2,8 @@ using System;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Text;
+using System.Diagnostics;
+using System.Windows;
 
 namespace ImageProcessor
 {
@@ -73,19 +75,19 @@ namespace ImageProcessor
         public ByteMatrix transformed;
     }
     public class ByteMatrix
-    {   // operation on byte[height, width]
+    {   // operations on byte[height, width]
         byte[,] bval = null;
         Convolution convolution = null;
         int xBase = 0;  // left-most side of matrix
         int yBase = 0;  // top-most side of matrix
         int offset = 0; // value offset: value = bval[,]+offset
-        public int ValueOffset { get { return offset; } }
-        public int RowOffset { get { return xBase; } }
-        public int RowStart { get { return yBase; } }
-        public int RowEnd { get { return yBase + Height; } }
-        public int Width { get { return bval.GetLength(1); } }
-        public int Height { get { return bval.GetLength(0); } }
-        public byte[,] Data { get { return bval; } }
+        public int ValueOffset => offset;
+        public int RowOffset => xBase;
+        public int RowStart => yBase;
+        public int RowEnd => yBase + Height;
+        public int Width => bval.GetLength(1);
+        public int Height => bval.GetLength(0);
+        public byte[,] Data => bval;
         public byte this[int i, int j] { get { return bval[i, j]; } set { bval[i, j] = value; } }
         public static ByteMatrix CreateConeFilter(double radius) // cone with max byte.MaxValue and base radius
         {
@@ -177,34 +179,8 @@ namespace ImageProcessor
             }
             return fi;
         }
-        public void FillVoids(byte val)
-        {   // fills internal zero bytes with 'val'
-            for(int ri=0; ri< Height; ri++)
-            {
-                int left = Width;
-                for(int j=0; j< Width; j++)
-                    if(bval[ri,j]>0)
-                    {
-                        left=j+1;
-                        break;
-                    }
-                if (left == Width)
-                    continue;
-                int right = left;
-                for(int j= Width-1; j> left; j--)
-                    if(bval[ri, j] > 0)
-                    {
-                        right = j;
-                        break;
-                    }
-                for (int j = left; j < right; j++)
-                    if (bval[ri, j] == 0)
-                        bval[ri, j] = val;
-            }
-        }
         public ByteMatrix SmoothingWithMidlevelCut(ByteMatrix filter, int sizePerChank)
         {
-            FillVoids(byte.MaxValue);
             ByteMatrix ret = ConeSmoothing(filter, sizePerChank);
             unsafe
             {
@@ -221,14 +197,8 @@ namespace ImageProcessor
             }
             return ret;
         }
-        public ByteMatrix ConeSmoothing(ByteMatrix filter, int sizePerChank)
-        {
-            return CreateByConvolution(filter, sizePerChank, byte.MaxValue, false); // no mixing with original
-        }
-        public ByteMatrix WaveletContrasting(ByteMatrix filter, int sizePerChank, int mixLevel, bool inverse)
-        {
-            return CreateByConvolution(filter, sizePerChank, 5*mixLevel, inverse);
-        }
+        public ByteMatrix ConeSmoothing(ByteMatrix filter, int sizePerChank) => CreateByConvolution(filter, sizePerChank, byte.MaxValue, false); 
+        public ByteMatrix WaveletContrasting(ByteMatrix filter, int sizePerChank, int mixLevel, bool inverse) => CreateByConvolution(filter, sizePerChank, 5*mixLevel, inverse);
         ByteMatrix CreateByConvolution(ByteMatrix filter, int rowPerChank, int mixLevel, bool inverse)
         {   // convolution with 'filter' corrected by average 'offset'; mixed with original if 'mixLevel'>0; byte.MaxValue-convolution if 'inverce'
             if (filter.Height <= 1 && filter.Width <= 1)
@@ -390,7 +360,7 @@ namespace ImageProcessor
             {
                 char[] row = new char[Width];
                 for (int i = 0; i < Width; i++)
-                    row[i] = bval[j, i] == 0 ? ' ' : '*';
+                    row[i] = bval[j, i] == 0 ? ' ' : bval[j, i] < 128 ? '.' : '*';
                 res.Append(row);
                 res.Append(Environment.NewLine);
             }

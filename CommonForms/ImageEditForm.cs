@@ -8,7 +8,6 @@ using System.Windows.Forms.Integration;
 using System.Diagnostics;
 using CustomControls;
 using ShaderEffects;
-using System.Windows.Media.Imaging;
 
 namespace ImageProcessor
 {
@@ -656,10 +655,10 @@ namespace ImageProcessor
                 BitmapAccess clip = new BitmapAccess(ClipboardBitmapAccess.GetImage());
                 panel.Focus();
                 int transparencyEdge = SelectedEdge();
-                Debug.WriteLine("AddClipboardLayer: " + clip.ToString());
                 Cursor = System.Windows.Forms.Cursors.WaitCursor;
                 canvas.Cursor = System.Windows.Input.Cursors.Wait;
-                VisualLayer vl = new BitmapDerivativeLayer("Clip" + transparencyEdge, clip, new ViewPointEffect(), transparencyEdge);
+                var vl = new BitmapDerivativeLayer("Clip" + transparencyEdge, clip, new ViewPointEffect(), transparencyEdge);
+                //vl.Image.DebugSave("vl.png");
                 vl?.SetEffectParameters(SelectedSensitivity(), 0, 0);
                 UpdateLayerList(canvas.AddVisualLayer(vl, canvas.BackgroundLayer.MatrixControl.RenderScale));
                 canvas.Cursor = System.Windows.Input.Cursors.Arrow;
@@ -670,10 +669,6 @@ namespace ImageProcessor
             {
                 Debug.WriteLine(ex.Message);
             }
-        }
-        System.Windows.Media.Color SetMediaColor(Color nc)
-        {
-            return System.Windows.Media.Color.FromArgb(nc.A, nc.R, nc.G, nc.B);
         }
         void RescaleCanvas(bool initial) { canvas.ResizeImage(initial, DisplayScale, panel.Width / dpiScaleX, panel.Height / dpiScaleY); }
         void saveSameLocation_Click(object s, EventArgs e) { save(prevFSdir == null ? Path.GetDirectoryName(imageInfo.FSPath) : prevFSdir); }

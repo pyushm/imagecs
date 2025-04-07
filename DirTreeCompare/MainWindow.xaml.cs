@@ -42,6 +42,7 @@ namespace DirTreeCompare
             if(info.IsDirectory)
                 tb.TextDecorations = TextDecorations.Underline;
             tb.Background = new SolidColorBrush(color);
+            tb.Foreground = new SolidColorBrush(Colors.Black); // added to avoid overriding
             dp.Children.Add(cb);
             dp.Children.Add(tb);
             IsExpanded = info.Dir.Length == 0;
@@ -82,7 +83,7 @@ namespace DirTreeCompare
             backgroundWorker.WorkerReportsProgress = true;
             backgroundWorker.ProgressChanged += delegate (object sender, ProgressChangedEventArgs e) { opProgress.Value = e.ProgressPercentage; };
             textBox1.Text = @"C:\data\OldC\stuff";
-            textBox2.Text = @"\\MSI\OldC\stuff";
+            textBox2.Text = @"E:\C\data\OldC\stuff";
         }
         void PerformBackgroundOperation(Operation op, System.Windows.Controls.TreeView listBox)
         {

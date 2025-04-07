@@ -312,8 +312,8 @@ namespace ImageProcessor
         }
         static public IntSize ThumbnailSize() { return new IntSize(infoImageHeight, infoImageHeight); }
         static public IntSize PixelSize(DirShowMode it) { return it == DirShowMode.Detail || it == DirShowMode.Preview ? new IntSize(infoImageWidth, infoImageHeight) : new IntSize(infoImageWidth / 2, infoImageWidth / 2); }
-        public bool Modified { get; private set; } // true indicatates for client to get new image 
-        bool cynchronized = false;          // false indicatates need to load image
+        public bool NeedThumbnail { get; private set; } = true; // true if thumbnail == null || image modifiled
+        //bool cynchronized = false;          // false indicatates need to load image
         bool priority = false;              // true indicatates need for priority loading of visible image
         Image thumbnail;                    // image displayed in preview mode
         DateTime modifiedTime;              // update time of the image 
@@ -342,14 +342,13 @@ namespace ImageProcessor
             if (!fi.Exists || fi.Length == 0)
                 return false; // no data exists
             if (fi.LastWriteTime > modifiedTime)
-                cynchronized = false;// image updated
+                NeedThumbnail = true;// image updated
             return true;
         }
         void SetCynchronized(DateTime dt)   
         {
             modifiedTime = dt;
-            cynchronized = true;
-            Modified = true;
+            NeedThumbnail = false;
             priority = false;
         }
         Image CreateThumbnail(Image image)
@@ -360,7 +359,7 @@ namespace ImageProcessor
             int h = (int)(image.Height * scale);
             return image.GetThumbnailImage(w, h, new Image.GetThumbnailImageAbort(ThumbnailCallback), IntPtr.Zero);
         }
-        public Image SynchronizeThumbnail()                
+        public Image UpdateThumbnail()                
         {
             switch (data)
             {
@@ -378,7 +377,7 @@ namespace ImageProcessor
                         thumbnail = CreateThumbnail(bm);
                         thumbnail.Tag = FSPath;
                         FileInfo fi = new FileInfo(FSPath);   // FileInfo recreated to get new LastWriteTime
-                        SetCynchronized(fi.LastWriteTime);
+                        SetCynchronized(DateTime.Now);
                     }
                     catch (Exception)   // legal exception - update may fail if file is being modified
                     {   // TODO show exception
@@ -405,12 +404,11 @@ namespace ImageProcessor
         public bool ThumbnailCallback()     { return false; }
         public Image GetThumbnail()         // called by the clent if modified=true
         {
-            if (!cynchronized)
+            if (NeedThumbnail)
             {
                 priority = true;
                 return null;
             }
-            Modified = false;
             return thumbnail;
         }
         void Rename(string newName)       // returns new full name
@@ -426,7 +424,7 @@ namespace ImageProcessor
                 newName = FSName + ext;
                 string newFullPath = Path.Combine(FileInfo.Directory.FullName, newName);
                 FileInfo.MoveTo(newFullPath);
-                Modified = true;
+                NeedThumbnail = true;
                 FileInfo = new FileInfo(newFullPath);
                 Name = FileInfo.Name;
             }
@@ -515,9 +513,9 @@ namespace ImageProcessor
             const int synchronizationDelay = 300; // synchronization delay [ms] between directory and image collection
             const int mandatoryUpdate = 3;     // time between mandatory updates [s] 
             ListShowMode viewMode = ListShowMode.Auto;         
-            DirectoryInfo directory = null; // source directory (search path of dirList or image and subDir source)
+            DirectoryInfo directory = null; // source directory (search path of srcList or image and subDir source)
             bool dirModified = false;
-            string[] dirList = null;        // if(dirList!=null) list of subDirs of the directory matching search criteria else => all images and subDirs of the directory will be shown
+            string[] srcList = null;        // subDirs of the directory matching search criteria
             DateTime lastUpdated;           // last access time of underlying directory
             DirShowMode viewInfoType;       // type of info if view mode is info     
             Dictionary<string, int> indexTable = new Dictionary<string, int>(); // stores system file name and fileList index pairs
@@ -558,13 +556,18 @@ namespace ImageProcessor
                     throw new Exception("Directory '"+dir.FSPath+"' does not exists");
                 viewInfoType = it;
                 SetViewMode(mode);
-                dirList = list;
+                srcList = list;
                 //isTemp = list == null && Navigator.IsSpecDir(dir.DirInfo, SpecName.NewArticles);
                 ActiveFile = null;
-                fileSyncWorker = new BackgroundWorker();
-                fileSyncWorker.DoWork += Synchronization_DoWork;
-                fileSyncWorker.RunWorkerCompleted += Synchronization_RunWorkerCompleted;
-                SynchronizeDirectory();
+                if (srcList == null)
+                {
+                    fileSyncWorker = new BackgroundWorker();
+                    fileSyncWorker.DoWork += Synchronization_DoWork;
+                    fileSyncWorker.RunWorkerCompleted += Synchronization_RunWorkerCompleted;
+                    fileSyncWorker.RunWorkerAsync();
+                }
+                else
+                    UpdateImageList();
             }
             ~ImageList()
             {
@@ -576,7 +579,7 @@ namespace ImageProcessor
             {
                 abortSynchronization = true;
                 directory = null;
-                dirList = null;
+                srcList = null;
                 fileList.Clear();
                 prevImageCount = 0;
                 indexTable.Clear();
@@ -618,10 +621,9 @@ namespace ImageProcessor
             {
                 try
                 {
-                    if (ValidDirectory)
-                        directory = new DirectoryInfo(directory.FullName);  // updates info
                     if (!ValidDirectory)
                         return false;
+                    directory = new DirectoryInfo(directory.FullName);  // updates info
                     var downloadedDir = Navigator.IsSpecDir(directory, SpecName.Downloaded);
                     lock (this)
                     {
@@ -644,11 +646,15 @@ namespace ImageProcessor
                                         fileList.RemoveAt(indexes[i]);
                             }
                             AppendNewFiles(downloadedDir);           // appending new files to the list
-                            if (downloadedDir && prevImageCount > 0)
-                                RebuildIndexesNoSoting();
-                            else
-                                RebuildIndexesAndGroups();
-                            if(prevImageCount == 0)
+                            if (srcList == null)
+                            {
+                                if (downloadedDir && prevImageCount > 0)
+                                    RebuildIndexesNoSoting();
+                                else
+                                    RebuildIndexesAndGroups();
+                            }
+                            RebuildDisplayedList();
+                            if (prevImageCount == 0)
                                 lastAdded = null;
                             dirModified = false;
                             lastUpdated = DateTime.Now;
@@ -660,7 +666,7 @@ namespace ImageProcessor
                                 break;
                             if (!ifo.priority)
                                 continue;
-                            ifo.SynchronizeThumbnail();
+                            ifo.UpdateThumbnail();
                             loaded++;
                             //Debug.WriteLine("priority " + d.Name + " updated");
                         }
@@ -679,18 +685,18 @@ namespace ImageProcessor
             void AppendNewFiles(bool downloadedDir)
             {
                 DirectoryInfo[] directories;
-                if (dirList == null) // so far only directories passes => all entries treated as directories
+                if (srcList == null) // so far only directories passes => all entries treated as directories
                     directories = directory.GetDirectories();
                 else
                 {
-                    directories = new DirectoryInfo[dirList.Length];
-                    for (int i = 0; i < dirList.Length; i++)
+                    directories = new DirectoryInfo[srcList.Length];
+                    for (int i = 0; i < srcList.Length; i++)
                     {
-                        string dirFullName = Path.Combine(directory.FullName, dirList[i]);
+                        string dirFullName = Path.Combine(directory.FullName, srcList[i]);
                         directories[i] = Directory.Exists(dirFullName) ? new DirectoryInfo(dirFullName) : null;
                         if (DataAccess.PrivateAccessEnforced && directories[i] == null)
                         {
-                            dirFullName = Path.Combine(directory.FullName, FileName.MangleFile(dirList[i]));
+                            dirFullName = Path.Combine(directory.FullName, FileName.MangleFile(srcList[i]));
                             directories[i] = Directory.Exists(dirFullName) ? new DirectoryInfo(dirFullName) : null;
                         }
                     }
@@ -709,12 +715,11 @@ namespace ImageProcessor
                             else
                                 AppendNewImageFile(fsf, true);
                         }
-                        //AppendImageFile(fsf, true);   // adds info of subdirectories
                     }
                     finally { }
                 }
                 FileInfo[] files;
-                if (dirList == null)
+                if (srcList == null)
                     files = directory.GetFiles();
                 else
                     files = new FileInfo[0]; // all entries treated as directories
@@ -787,7 +792,6 @@ namespace ImageProcessor
                 {
                     //Debug.WriteLine("FAILED table @: " + fileList[i].Name);
                 }
-                RebuildDisplayedList();
             }
             void RebuildIndexesAndGroups()
             {   // applied when fileList changed
@@ -832,7 +836,6 @@ namespace ImageProcessor
                     string s = fileList[i].FSPath;
                 }
                 //Debug.WriteLine(" *RebuildIndexesAndGroups list=" + ImageCount + " groups=" + GroupCount);
-                RebuildDisplayedList();
                 //foreach (var gr in groupList)
                 //    Debug.WriteLine(gr.ToString());
             }
@@ -978,17 +981,6 @@ namespace ImageProcessor
                 }
                 return -1;
             }
-            void SynchronizeDirectory()     
-            {
-                if (IsUpdating)
-                    return;
-                try
-                {
-                    abortSynchronization = false;
-                    fileSyncWorker.RunWorkerAsync();
-                }
-                catch { }
-            }
             void UpdateHiddenThumbnails(int max)
             {
                 if (thumbnailUpdateIndex >= ImageCount)
@@ -999,12 +991,12 @@ namespace ImageProcessor
                 while (thumbnailUpdateIndex < ImageCount)
                 {
                     ImageFileInfo ifi = fileList[thumbnailUpdateIndex];
-                    if (!ifi.cynchronized && !ifi.priority)
+                    if (ifi.NeedThumbnail && !ifi.priority)
                     {
                         //Debug.WriteLine("hidden " + d.Name + " updated " + max);
                         if (abortSynchronization)
                             break;
-                        ifi.SynchronizeThumbnail();
+                        ifi.UpdateThumbnail();
                         if(max-- <0)
                             return;
                     }

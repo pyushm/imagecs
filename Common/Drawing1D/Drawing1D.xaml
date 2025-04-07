@@ -1,0 +1,13 @@
+﻿<Window x:Class="Presentation.Drawing1D"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Height="490" Width="880" WindowStyle="ToolWindow" MinWidth="300" MinHeight="200"
+        SnapsToDevicePixels="True" ResizeMode="CanResize" Background="#E0E0E0"
+        SizeChanged="WindowSizeChanged">
+    <!--<Grid Name="grid">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="auto" />
+        </Grid.ColumnDefinitions>
+    </Grid>-->
+    <Canvas Name="plotCanvas" Width="770" Height="430" />
+</Window>

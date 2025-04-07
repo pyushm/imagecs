@@ -24,7 +24,7 @@ namespace ImageProcessor
         IAssociatedPath associatedPath;
         ImageDirInfo sourceDir;	                // direcory to build sourceCollection from
         string[] searchList;                    // list of items from search
-        bool srcNewArticles;                    // source is NewArticles
+        bool noOtherDirs;                       // list or special directory
         public ImageFileInfo.ImageList Images    { get; private set; } = null; // images to be displayed 
         ImageList thumbnails;                   // currently displayed thumbnailes
         ImageViewForm viewForm;                 // form displaying active image of ImageCollection
@@ -222,7 +222,8 @@ namespace ImageProcessor
             try
             {
                 InitializeComponent();
-                srcNewArticles = list == null && Navigator.IsSpecDir(di, SpecName.NewArticles);
+                searchList = list;
+                noOtherDirs = searchList != null || Navigator.IsSpecDir(di);
                 sourceDir = new ImageDirInfo(di);
                 if (Navigator.IsSpecDir(di, SpecName.Downloaded))
                 {
@@ -230,9 +231,8 @@ namespace ImageProcessor
                     autoButton.Enabled = groupButton.Enabled = listButton.Enabled = false;
                     listButton.Checked = true;
                 }
-                searchList = list;
                 associatedPath = paths;
-                nextSetButton.Visible = previousSetButton.Visible = !srcNewArticles;
+                nextSetButton.Visible = previousSetButton.Visible = false; // !noOtherDirs;
                 imageListView.VirtualMode = true;
                 Text = sourceDir.RealPath;
                 infoModeBox.Items.AddRange(Enum.GetNames(typeof(DirShowMode)));
@@ -242,8 +242,8 @@ namespace ImageProcessor
                 thumbnails = new ImageList();
                 thumbnails.ColorDepth = ColorDepth.Depth16Bit;
                 imageListView.LargeImageList = thumbnails;
-                infoModeBox.SelectedIndexChanged += delegate (object s, System.EventArgs e) { ShowImages(); };
-                sizeBox.SelectedIndexChanged += delegate (object s, System.EventArgs e) { ShowImages(); };
+                infoModeBox.SelectedIndexChanged += delegate (object s, System.EventArgs e) { RecreateThumbnails(); };
+                sizeBox.SelectedIndexChanged += delegate (object s, System.EventArgs e) { RecreateThumbnails(); };
                 FormResized(null, null);
                 ContextMenu selectMenu = new ContextMenu();
                 selectMenu.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
@@ -251,13 +251,13 @@ namespace ImageProcessor
                 new MenuItem("Move to ...", new EventHandler(MoveSelected)),
                 new MenuItem("Copy to ...", new EventHandler(CopySelected)),
                 new MenuItem("Delete", new EventHandler(DeleteSelected)) });
-                imageListView.ContextMenu = selectMenu;
+                imageListView.ContextMenu = selectMenu; 
                 listUpdateTimer = new System.Windows.Forms.Timer();
                 listUpdateTimer.Interval = updateListFrequency;
-                listUpdateTimer.Tick += new EventHandler(UpdateList);
+                listUpdateTimer.Tick += new EventHandler(synchronizeThumbnails);
                 listUpdateTimer.Start();
                 infoModeBox.Visible = sourceDir.DirInfo.GetDirectories().Length > 7;
-                ShowImages();
+                RecreateThumbnails();
                 Load += ImageViewForm_Load;
             }
             catch (Exception ex) { MessageBox.Show(ex.Message, "Can't open directory"); }
@@ -283,8 +283,8 @@ namespace ImageProcessor
                 listUpdateTimer.Dispose();
             }
         }
-        void UpdateList(object s, EventArgs e) // updates list and images on timer
-        {
+        void synchronizeThumbnails(object s, EventArgs e) // updates list and images on timer
+        {   // synchronizes visible thumbnails with image list
             try
             {
                 if (Images == null || imageListView == null)
@@ -299,16 +299,8 @@ namespace ImageProcessor
                     int dc = sourceDir.DirCount();
                     Text = sourceDir.RealPath + ": " + sourceDir.ImageCount() + " images " + Images.GroupCount + " groups " + (dc == 0 ? "" : ", " + dc + " directories ");
                 }
-                UpdateThumbnail();
-            }
-            catch (Exception) { }
-        }
-        void UpdateThumbnail()                     // updates visible images
-        {
-            if (imageListView.VirtualListSize == 0)
-                return;
-            try
-            {
+                if (imageListView.VirtualListSize == 0)
+                    return;
                 redrawRequest = false;
                 int firstVisible = -1;
                 int lastVisible = -1;
@@ -340,10 +332,33 @@ namespace ImageProcessor
                 for (int i = firstVisible; i <= lastVisible; i++)
                 {
                     ImageFileInfo f = Images[i];
+                    if (f == null)
+                        continue;
                     f.CheckExistsSetUpdate();
-                    if (f.Modified)
+                    if (f.NeedThumbnail) // causes redraw request 
+                    {
+                        f.UpdateThumbnail();
                         imageListView.Invalidate(imageListView.GetItemRect(i));
+                    }
                 }
+            }
+            catch (Exception) { }
+        }
+        void RecreateThumbnails()
+        {
+            try
+            {
+                DirShowMode infoType = infoModeBox.Visible ? (DirShowMode)Enum.Parse(typeof(DirShowMode), (string)infoModeBox.SelectedItem) : DirShowMode.Detail;
+                double scale = (int)Enum.Parse(typeof(InfoSize), (string)sizeBox.SelectedItem) / 10.0;
+                IntSize si = ImageFileInfo.PixelSize(infoType);
+                if (si.Height * scale > 255)
+                    scale = 255.0 / si.Height;
+                thumbnails.ImageSize = new Size((int)(si.Width * scale), (int)(si.Height * scale));
+                var mode = Navigator.IsSpecDir(sourceDir.DirInfo, SpecName.Downloaded)  ? listButton.Text : autoButton.Text;
+                Images = searchList != null ? new ImageFileInfo.ImageList(sourceDir, listButton.Text, searchList) : new ImageFileInfo.ImageList(sourceDir, infoType, mode);
+                Images.notifyEmptyDir += EmptyDirHandler;
+                imageListView.VirtualListSize = 0;
+                imageListView.ArrangeIcons(ListViewAlignment.SnapToGrid);
             }
             catch { }
         }
@@ -419,6 +434,7 @@ namespace ImageProcessor
                 return d.FSPath; 
            return "";
         }
+        [System.Runtime.ExceptionServices.HandleProcessCorruptedStateExceptions] // added to let try to capture access violation
         void EmptyDirHandler()
         {
             DirectoryInfo directory = sourceDir.DirInfo;
@@ -566,24 +582,6 @@ namespace ImageProcessor
 			if(fileName.Length>0)
                 Process.Start(associatedPath.PaintExe, '\"' + fileName + '\"');
 		}
-        void ShowImages()
-        {
-            try
-            {
-                DirShowMode infoType = infoModeBox.Visible ? (DirShowMode)Enum.Parse(typeof(DirShowMode), (string)infoModeBox.SelectedItem) : DirShowMode.Detail;
-                double scale = (int)Enum.Parse(typeof(InfoSize), (string)sizeBox.SelectedItem) / 10.0;
-                IntSize si = ImageFileInfo.PixelSize(infoType);
-                if (si.Height * scale > 255)
-                    scale = 255.0 / si.Height;
-                thumbnails.ImageSize = new Size((int)(si.Width * scale), (int)(si.Height * scale));
-                var mode = Navigator.IsSpecDir(sourceDir.DirInfo, SpecName.Downloaded) ? listButton.Text : autoButton.Text;
-                Images = searchList != null ? new ImageFileInfo.ImageList(sourceDir, mode, searchList) : new ImageFileInfo.ImageList(sourceDir, infoType, mode);
-                Images.notifyEmptyDir += EmptyDirHandler;
-                imageListView.VirtualListSize = 0;
-                imageListView.ArrangeIcons(ListViewAlignment.SnapToGrid);
-            }
-            catch { }
-       }
 		void imageListView_AfterLabelEdit(object s, System.Windows.Forms.LabelEditEventArgs e)
 		{
             ImageFileInfo file = SelectedImageFile();
@@ -653,12 +651,12 @@ namespace ImageProcessor
         internal void nextSetButton_Click(object sender, EventArgs e)
         {
             sourceDir = new ImageDirInfo(NavigateGroup(1));
-            ShowImages();
+            RecreateThumbnails();
         }
         internal void previousSetButton_Click(object sender, EventArgs e)
         {
             sourceDir = new ImageDirInfo(NavigateGroup(-1));
-            ShowImages();
+            RecreateThumbnails();
         }
         DirectoryInfo NavigateGroup(int delta)
         {

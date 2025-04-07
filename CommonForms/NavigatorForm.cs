@@ -647,7 +647,7 @@ namespace ImageProcessor
             try
             {
                 ImageFileInfo ifi = new ImageFileInfo(new FileInfo(searchImagePath));
-                Image im = ifi.SynchronizeThumbnail();
+                Image im = ifi.UpdateThumbnail();
                 if (im != null)
                 {
                     float areaSize = 173 * e.Graphics.DpiX / 96;

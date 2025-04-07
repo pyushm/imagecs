@@ -62,8 +62,8 @@ namespace ImageProcessor
         private Panel panel;
         private CheckBox resizeBox;
         private ComboBox sensitivityBox;
-        private Panel nextImagePanel;
         Panel capturePanel;
+        private Panel nextImagePanel;
         private Label label3;
         private NumericUpDown delayBox;
         private Label mouseSensitivityLabel;
@@ -155,12 +155,12 @@ namespace ImageProcessor
             this.angleCtrl.Size = new System.Drawing.Size(124, 31);
             this.angleCtrl.TabIndex = 82;
             // 
-            // BackBtn
+            // label1
             // 
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(27, 879);
             this.label1.Margin = new System.Windows.Forms.Padding(5, 0, 5, 0);
-            this.label1.Name = "BackBtn";
+            this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(66, 25);
             this.label1.TabIndex = 80;
             this.label1.Text = "Scale";
@@ -255,7 +255,7 @@ namespace ImageProcessor
             this.applyEffectsButton.Name = "applyEffectsButton";
             this.applyEffectsButton.Size = new System.Drawing.Size(108, 42);
             this.applyEffectsButton.TabIndex = 73;
-            this.applyEffectsButton.Text = "Effects";
+            this.applyEffectsButton.Text = "Edit";
             // 
             // saveAsButton
             // 
@@ -449,7 +449,7 @@ namespace ImageProcessor
             this.resizeBox.Location = new System.Drawing.Point(32, 175);
             this.resizeBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.resizeBox.Name = "resizeBox";
-            this.resizeBox.Size = new System.Drawing.Size(184, 29);
+            this.resizeBox.Size = new System.Drawing.Size(136, 29);
             this.resizeBox.TabIndex = 65;
             this.resizeBox.Text = "Max size ";
             this.resizeBox.UseVisualStyleBackColor = true;
@@ -707,7 +707,7 @@ namespace ImageProcessor
                     return;
                 ImageFileInfo ifi = hostImages[ind];
                 //Debug.WriteLine("active: '"+hostImages.ActiveFile.RealName+" next index & direction: " + ind + ',' + dir + "' name: '" + ifi.RealName);
-                DrawSmallImage(ifi.SynchronizeThumbnail(), e.Graphics);
+                DrawSmallImage(ifi.UpdateThumbnail(), e.Graphics);
             }
             catch (Exception ex)
             {

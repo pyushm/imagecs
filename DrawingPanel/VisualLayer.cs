@@ -28,23 +28,23 @@ namespace ImageProcessor
         public MatrixControl MatrixControl { get; private set; } 
         public List<MorthPoint> morthPoints = new List<MorthPoint>();
         public virtual void SetEffectParameters(double weight, double middle, double resolution) { }
-        public virtual EffectType DerivativeType { get { return EffectType.None; } }
+        public virtual EffectType DerivativeType => EffectType.None;
         public bool FromSelection { get; set; } = false;
         public string Name { get; set; }
-        public bool IsImageLayer    { get { return this as BitmapLayer != null; } }
+        public bool IsImageLayer => this as BitmapLayer != null; 
         public IntSize LayoutSize   { get; protected set; } // image size used by layout system 
         public VisualLayerType Type { get; protected set; }
         public bool Deleted         { get; set; }   // marked for delayed deletion (do not display in layer list)
         public Rect RenderRect      { get { var diag = new Point[] { new Point(0, 0), new Point(LayoutSize.Width, LayoutSize.Height) }; RenderTransform.Value.Transform(diag); return new Rect(diag[0], diag[1]); } }
-        public bool IntersectsWith(VisualLayer vl) { return RenderRect.IntersectsWith(vl.RenderRect); }
+        public bool IntersectsWith(VisualLayer vl) => RenderRect.IntersectsWith(vl.RenderRect); 
         public ColorTransform ColorTransform { get { return colorTransform; } set { colorTransform.CopyFrom(value); } }
         public VisualLayer(string name_)
         {
             Name = name_;
             children = new VisualCollection(this);
         }
-        public int AddVisual(Visual v) { return children.Add(v); }
-        public void RemoveVisual(Visual v) { children.Remove(v); }
+        public int AddVisual(Visual v) => children.Add(v); 
+        public void RemoveVisual(Visual v) => children.Remove(v); 
         public bool HitTest(Point pt) 
         {
             Matrix rm = RenderTransform.Value;
@@ -54,16 +54,16 @@ namespace ImageProcessor
         }
         public void Clear() { children.Clear(); }
         public void SwitchSideSize() { LayoutSize = new IntSize(LayoutSize.Height, LayoutSize.Width); }
-        protected override int VisualChildrenCount { get { return children.Count; } }
+        protected override int VisualChildrenCount => children.Count;
         protected override Visual GetVisualChild(int index)
         {
             if (index < 0 || index >= VisualChildrenCount)
                 throw new ArgumentOutOfRangeException();
             return children[index];
         }
-        protected override Size MeasureCore(Size s) { return LayoutSize.Size; }
-        internal void SetStoredMatrixContro(MatrixControl stored) { MatrixControl = stored; }
-        public VisualLayerData CreateVisualLayerData(byte[] data) { return new VisualLayerData(Type, Name, LayoutSize, MatrixControl, data); }
+        protected override Size MeasureCore(Size s) => LayoutSize.Size;
+        internal void SetStoredMatrixContro(MatrixControl stored) => MatrixControl = stored;
+        public VisualLayerData CreateVisualLayerData(byte[] data) => new VisualLayerData(Type, Name, LayoutSize, MatrixControl, data);
         public byte[] SerializeImage(bool exact)
         {
             using (MemoryStream dataStream = new MemoryStream())
@@ -97,7 +97,7 @@ namespace ImageProcessor
             for (int i = 0; i < VisualChildrenCount; i++)
                 rtb.Render(GetVisualChild(i));
         }
-        public virtual bool TransformColor() { return false; }
+        public virtual bool TransformColor() => false; 
         public void SetScale(double s) { MatrixControl.RenderScale = s; }
         public void InitializeTransforms(VisualLayer renderSrc)
         {
@@ -157,14 +157,14 @@ namespace ImageProcessor
         }
         public MorthPoint GetLastMorthPoint() { int nmp = morthPoints.Count; return nmp > 0 ? morthPoints[nmp - 1] : null; }
         public void AddMorthPoint(MorthPoint mp) { morthPoints.Add(mp); }
-        public override string ToString() { return string.Format("mode={0} name={1} children={4} size={2}x{3} ", Type, Name, LayoutSize.Width, LayoutSize.Height, VisualChildrenCount); }
-        public string ToTransformString() { return "MatrixControl: " + MatrixControl?.ToString() + " RenderTransform: " + RenderTransform?.Value.ToString(); }
+        public override string ToString() => string.Format("mode={0} name={1} children={4} size={2}x{3} ", Type, Name, LayoutSize.Width, LayoutSize.Height, VisualChildrenCount); 
+        public string ToTransformString() => "MatrixControl: " + MatrixControl?.ToString() + " RenderTransform: " + RenderTransform?.Value.ToString(); 
     }
     public class DrawingLayer : VisualLayer
     {
         List<FlexiblePolygon> polygons;
         Brush editBrush = null;
-        public List<FlexiblePolygon> Polygons { get { return polygons; } }
+        public List<FlexiblePolygon> Polygons => polygons;
         public DrawingLayer(string name, IntSize s, List<FlexiblePolygon> polygons_) : base(name)
         {
             Type = VisualLayerType.Drawing;
@@ -197,7 +197,7 @@ namespace ImageProcessor
     public class BitmapLayer : VisualLayer  // layers of this type shown on the layer list
     {
         protected BitmapAccess image = null;         // current image
-        public virtual BitmapAccess Image { get { return image; } }
+        public virtual BitmapAccess Image => image;
         public BitmapLayer(string name) : base(name) { }    // for derivation
         public BitmapLayer(string name, BitmapAccess ba) : base(name) { SetImage(ba, -1); }
         public BitmapLayer(string name, BitmapAccess ba, int edge) : base(name) { SetImage(ba, edge); }
@@ -231,7 +231,7 @@ namespace ImageProcessor
                     {
                         ByteMatrix filter = ByteMatrix.CreateConeFilter(transparentEdge);
                         transparencyMask = transparencyMask.SmoothingWithMidlevelCut(filter, 120);
-                        //Debug.WriteLine("transparencyMask *******" + Environment.NewLine + transparencyMask.ToString());
+                        //Debug.WriteLine("transparencyMask *******" + Environment.NewLine + transparencyMask.ToBWString());
                         image.UpdateTransparency(transparencyMask);
                     }
                 }
@@ -266,14 +266,14 @@ namespace ImageProcessor
             catch { }
             return drawingVisual;
         }
-        public string ToEffectString() { return Effect.ToString(); }
+        public string ToEffectString() => Effect.ToString();
     }
     public class BitmapDerivativeLayer : BitmapLayer
     {
         BitmapLayer derivative;
         ParametricEffect derivativeEffect;
-        public override BitmapAccess Image { get { return derivative.Image; } }
-        public override EffectType DerivativeType { get { return derivativeEffect.Type; } }
+        public override BitmapAccess Image => derivative.Image;
+        public override EffectType DerivativeType => derivativeEffect.Type;
         public BitmapDerivativeLayer(string name, BitmapAccess ba, ParametricEffect effect, int edge) : base(name)
         {
             try
@@ -300,6 +300,6 @@ namespace ImageProcessor
                 cae.SetParameters(colorTransform, strength, level, size);
             derivativeEffect.SetParameters(colorTransform, strength, level, size);
         }
-        public string ToDerivativeEffectString() { return derivativeEffect.ToString(); }
+        public string ToDerivativeEffectString() => derivativeEffect.ToString(); 
     }
 }

@@ -561,7 +561,6 @@ namespace ImageProcessor
             ba = DataAccess.WriteBytes(ba, true);
             return new VisualLayerData(VisualLayerType.Tool, "", new IntSize(ms, ms), new MatrixControl(), ba);
         }
-        //public byte[] SerializeRendering(int maxSize, BitmapEncoder bitmapEncoder)
         public byte[] SerializeRendering(int maxSize, bool exact)
         {
             if (CropRectangle == null)

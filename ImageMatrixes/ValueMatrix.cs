@@ -2,16 +2,6 @@
 
 namespace ImageProcessor
 {
-    //using System.Diagnostics;
-    //static string[] MethodName()
-    //{
-    //    StackTrace curTrace = new StackTrace();
-    //    StackFrame[] curFrame = curTrace.GetFrames();
-    //    string[] mn = new string[curFrame.Length];
-    //    for (int i = 0; i < curFrame.Length; i++)
-    //        mn[i] = curFrame[i].GetMethod().Name;
-    //    return mn;
-    //}
     public struct DataRange
     {
         public double min;        // data min
@@ -24,11 +14,11 @@ namespace ImageProcessor
         float[,] matrix;            //[h,w]
         int compression;            // compression with respect to original
         DataRange dataRange;
-        public int Width            { get { return matrix.GetLength(1); } }
-        public int Height           { get { return matrix.GetLength(0); } }
-        public float[,] Matrix      { get { return matrix; } }
-        public DataRange DataRange  { get { return dataRange; } }
-        public int Compression      { get { return compression; } }
+        public int Width => matrix.GetLength(1); 
+        public int Height => matrix.GetLength(0);
+        public float[,] Matrix => matrix;
+        public DataRange DataRange => dataRange;
+        public int Compression => compression;
         public ValueMartix(int offset, float[,] matrix_, DataRange dataRange_, int compression_)
         {
             matrix = matrix_;
