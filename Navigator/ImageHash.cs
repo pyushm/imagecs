@@ -88,10 +88,10 @@ namespace ImageProcessor
         const byte maxValueH = (1 << bitH) - 1; // max value of histogram element = 2^bitH-1
         const int hCoef = (byte.MaxValue + 1) / sizeH; // conversion of byte into sizeH
         public readonly DateTime CreateTime; // time when info was created
-        public readonly ulong Lum;   // luminosity distribution of compact image 
-        public readonly ulong Sat;   // saturation distribution of compact image 
-        public readonly ulong Hue;   // hue distribution of compact image 
-        public readonly ulong BWM;   // BW matrix of compact image 
+        public readonly ulong Lum;  // luminosity distribution of compact image 
+        public readonly ulong Sat;  // saturation distribution of compact image 
+        public readonly ulong Hue;  // hue distribution of compact image 
+        public readonly ulong BWM;  // BW matrix of compact image 
         public readonly byte Aspect;
         public readonly byte AverageR;
         public readonly byte AverageG;

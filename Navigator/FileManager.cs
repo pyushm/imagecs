@@ -3,6 +3,9 @@ using System.IO;
 using System.Collections.Generic;
 using System.Windows.Media;
 using System.Diagnostics;
+using System.Windows.Media.Imaging;
+using System.Windows;
+using System.Windows.Media.Media3D;
 
 namespace ImageProcessor
 {
@@ -18,9 +21,9 @@ namespace ImageProcessor
     public enum Conversion
     {
         None = 0,
-        Encode = 1,         // mangle name and encrypt file
-        ToJPG = 3,          // compress to JPG format
-        ReduceSize = 2000,  // resize large images to max size 
+        Encode = 1,             // mangle name and encrypt file
+        ToJPG = 3,              // compress to JPG format
+        LimitSize = 2200,       // image dimension limit: xxxxyyyy or ssss for both
     }
     public class FileManager
 	{
@@ -51,14 +54,24 @@ namespace ImageProcessor
                     notifyFinal?.Invoke(messages);
             }
         }
-        public string ResizeImage(string fullPath, bool exact, int maxSize, bool encrypted)
+        public string ResizeImage(string fullPath, bool exact, int sizeLimit, bool encrypted)
         {
             var ba = BitmapAccess.LoadImage(fullPath, encrypted);
-            double scale = ba.ScaleReducingImageTo(maxSize);
+            double scale = ba.ScaleReducingImageTo(sizeLimit);
             if (scale >= 1)
-                return ""; // image already smaller than maxSize
-            var bs = new BitmapAccess(ba.Source, new ScaleTransform(scale, scale));
-            return bs.SaveToFile(fullPath, exact, encrypted);
+                return ""; // image already smaller than sizeLimit
+            IntSize saveSize = Scaler.GetSize(ba.Width, ba.Height, sizeLimit);
+            Rect rect = new Rect(0, 0, saveSize.Width, saveSize.Height);
+            var group = new DrawingGroup();
+            RenderOptions.SetBitmapScalingMode(group, BitmapScalingMode.HighQuality);
+            RenderTargetBitmap rtb = new RenderTargetBitmap(saveSize.Width, saveSize.Height, 96, 96, PixelFormats.Default);
+            group.Children.Add(new ImageDrawing(ba.Source, rect));
+            var drawingVisual = new DrawingVisual();
+            using (var drawingContext = drawingVisual.RenderOpen())
+                drawingContext.DrawDrawing(group);
+            rtb.Render(drawingVisual);
+            var bs = new BitmapAccess(rtb);
+            return bs.SaveToExistingFile(fullPath, exact, encrypted);
         }
         void ConvertFiles(DirectoryInfo directory, string relativePath)
         {   // called from recursive dierectory processing in Navigator
@@ -66,9 +79,9 @@ namespace ImageProcessor
                 return;
             if (sync)
                 ReportStatus(covertion.ToString() + " in " + directory.FullName);
-            if (covertion == Conversion.Encode && relativePath.Length > 0 && !FileName.IsMangled(directory.Name))
+            if (covertion == Conversion.Encode && relativePath.Length > 0 && !Scramble.IsMangled(directory.Name))
             {   // mangle dir name
-                string newDirName = FileName.Mangle(directory.Name);
+                string newDirName = Scramble.Mangle(directory.Name);
                 if(newDirName != directory.Name)
                     directory.MoveTo(Path.Combine(directory.Parent.FullName, newDirName));
             }
@@ -79,10 +92,10 @@ namespace ImageProcessor
                 {
                     if (stopFlag)
                         break;
-                    if (covertion == Conversion.ReduceSize)
+                    if (covertion == Conversion.LimitSize)
                     {
                         ImageFileInfo ifi = new ImageFileInfo(file);
-                        string ret = ResizeImage(file.FullName, ifi.IsExact, (int)Conversion.ReduceSize, ifi.IsEncrypted);
+                        string ret = ResizeImage(file.FullName, ifi.IsExact, (int)Conversion.LimitSize, ifi.IsEncrypted);
                         if (ret.Length > 0)
                             ReportResults(ret);
                         continue;
@@ -92,7 +105,7 @@ namespace ImageProcessor
                     {
                         ImageFileName ifi = new ImageFileName(name);
                         if (!ifi.IsInfoImage)
-                            name = FileName.MangleFile(name);
+                            name = Scramble.MangleFile(name);
                         bool mangled = name != file.Name;
                         bool needEncryption = !ifi.IsEncrypted;
                         string newFilePath = Path.Combine(file.DirectoryName, name);
@@ -103,8 +116,9 @@ namespace ImageProcessor
                                 string suffix = ifi.IsMovie ? ".vid" : !ifi.IsImage ? ".drw" : ifi.IsExact ? ".exa" : ".jpe";
                                 name = ifi.FSName + suffix;
                                 byte[] src = File.ReadAllBytes(file.FullName);
-                                if (!DataAccess.WriteFile(newFilePath, src, true))
-                                    ReportResults(name + ": " + DataAccess.Warning);
+                                var warn = DataAccess.CreateFile(newFilePath, src, true);
+                                if (warn.Length > 0)
+                                    ReportResults(name + ": " + warn + Environment.NewLine + file.FullName + "was not removed");
                                 else
                                 {
                                     string warnings = ImageFileInfo.Delete(file.FullName);
@@ -134,7 +148,7 @@ namespace ImageProcessor
                             var ba = BitmapAccess.LoadImage(file.FullName, ifi.IsEncrypted);
                             string newFilePath = Path.GetFileNameWithoutExtension(name) + (ifi.IsEncrypted ? ".jpe" : ".jpg");
                             newFilePath = Path.Combine(file.DirectoryName, newFilePath);
-                            var ret = ba.SaveToFile(newFilePath, false, ifi.IsEncrypted);
+                            var ret = ba.SaveToNewFile(newFilePath, false, ifi.IsEncrypted);
                             if (ret.Length > 0)
                                 ReportResults(name + ": " + DataAccess.Warning);
                             else
@@ -167,7 +181,7 @@ namespace ImageProcessor
                 string dn = NewDirName.Trim();
                 if (dn.Length > 0)
                 {
-                    string ndn = Path.Combine(directory.Parent.FullName, FileName.Mangle(dn));
+                    string ndn = Path.Combine(directory.Parent.FullName, Scramble.Mangle(dn));
                     directory.MoveTo(ndn);
                 }
                 return;
@@ -182,7 +196,7 @@ namespace ImageProcessor
                 //name = ImageFileName.NameWithoutTempPrefix(name);
                 if (ImageFileName.InfoType(name) != null)
                     continue;
-                name = FileName.UnMangleFile(name);
+                name = Scramble.UnMangleFile(name);
                 try
                 {
                     if(renameType == RenameType.AddPrefix)
@@ -196,7 +210,7 @@ namespace ImageProcessor
                             continue;
                         name = name.Substring(0, ind) + TextReplacement + name.Substring(ind+l);
                     }
-                    string newFileName = Path.Combine(file.DirectoryName, FileName.MangleFile(name));
+                    string newFileName = Path.Combine(file.DirectoryName, Scramble.MangleFile(name));
                     if (newFileName != file.FullName)
                     {
                         try { file.MoveTo(newFileName); }

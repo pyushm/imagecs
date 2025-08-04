@@ -32,7 +32,6 @@ namespace ImageProcessor
         Polygon collectedPolygon = null; // temporary selection: mouse path in image pixels
         bool strokeEdit = false;
         IPanelHolder panelHolder;
-        string lastImageFile = "lastImageFile";
         Size previousHostSize;
         bool mouseDown;                 // true between mouseDown and MouseUp events
         MouseOperation mouseAction;     // support of mouse control manipulations
@@ -455,7 +454,7 @@ namespace ImageProcessor
                 }
                 else if (info.IsMovie)
                 {
-                    BitmapAccess ba = BitmapAccess.LoadImage("mediaImage.png", info.IsEncrypted, 200);
+                    BitmapAccess ba = BitmapAccess.LoadImage("mediaImage.png", info.IsEncrypted);
                     AddVisualLayer(new BitmapLayer("Video", ba));
                 }
             }
@@ -481,46 +480,47 @@ namespace ImageProcessor
             }
             return BackgroundLayer == null ? "BackgroundLayer failure" : "";
         }
-        public bool SaveRendering(string path, int maxSize)
+        public bool SaveRendering(string path, int sizeLimit)
         {
             ImageFileName info = new ImageFileName(path);
-            var ret = info.IsImage ? SaveSingleImage(path, maxSize, info.IsExact, info.IsEncrypted) : SaveLayers(path, info.IsExact);
+            var ret = info.IsImage ? SaveSingleImage(path, sizeLimit, info.IsExact, info.IsEncrypted) : SaveLayers(path, info.IsExact);
             if (ret.Length != 0) 
                 System.Windows.Forms.MessageBox.Show(ret, "Saving " + path + " failed");
             return ret.Length == 0;
         }
-        public string SaveSingleImage(string fileName, int maxSize, bool exact, bool encrypt)
+        public string SaveSingleImage(string fileName, int sizeLimit, bool exact, bool encrypt)
         {
-            byte[] data = SerializeRendering(maxSize, exact);
-            FileInfo fi = new FileInfo(fileName);
-            if (fi.Exists)
-            {
-                try
-                {
-                    if (File.Exists(lastImageFile))
-                    {
-                        File.SetAttributes(lastImageFile, FileAttributes.Normal);
-                        File.Delete(lastImageFile);
-                    }
-                    fi.MoveTo(lastImageFile);
-                    File.SetAttributes(lastImageFile, FileAttributes.Normal);
-                }
-                catch
-                {
-                    return "Original not saved to lastImageFile: '" + fileName + "' not saved";
-                }
-            }
-            if (!DataAccess.WriteFile(fileName, data, encrypt))
-            {
-                fi = new FileInfo(lastImageFile);
-                if (!fi.Exists || fileName == null)
-                    return "";
-                fi.MoveTo(fileName);
-                return DataAccess.Warning;
-            }
+            byte[] data = SerializeRendering(sizeLimit, exact);
+            string warn = DataAccess.UpdateFile(fileName, data, encrypt);
+            //    FileInfo fi = new FileInfo(fileName);
+            //if (fi.Exists)
+            //{
+            //    try
+            //    {
+            //        if (File.Exists(lastImageFile))
+            //        {
+            //            File.SetAttributes(lastImageFile, FileAttributes.Normal);
+            //            File.Delete(lastImageFile);
+            //        }
+            //        fi.MoveTo(lastImageFile);
+            //        File.SetAttributes(lastImageFile, FileAttributes.Normal);
+            //    }
+            //    catch
+            //    {
+            //        return "Original not saved to lastImageFile: '" + fileName + "' not saved";
+            //    }
+            //}
+            //if (!DataAccess.WriteFile(fileName, data, encrypt))
+            //{
+            //    fi = new FileInfo(lastImageFile);
+            //    if (!fi.Exists || fileName == null)
+            //        return "";
+            //    fi.MoveTo(fileName);
+            //    return DataAccess.Warning;
+            //}
             RenderTransform = Transform.Identity;
             UpdateLayout();
-            return "";
+            return warn;
         }
         public string SaveLayers(string fileName, bool exact)
         {
@@ -561,14 +561,14 @@ namespace ImageProcessor
             ba = DataAccess.WriteBytes(ba, true);
             return new VisualLayerData(VisualLayerType.Tool, "", new IntSize(ms, ms), new MatrixControl(), ba);
         }
-        public byte[] SerializeRendering(int maxSize, bool exact)
+        public byte[] SerializeRendering(int sizeLimit, bool exact)
         {
             if (CropRectangle == null)
             {
                 CropRectangle = new CropRect(backgroundLayoutSize, backgroundLayoutSize.Width / 2.0, backgroundLayoutSize.Height / 2.0);
                 CropRectangle.ToDrawing = new MatrixTransform(ToCanvas);
             }
-            IntSize saveSize = ScaleToSize(CropRectangle, maxSize);
+            IntSize saveSize = ScaleToSize(CropRectangle, sizeLimit);
             int w = saveSize.Width;
             int h = saveSize.Height;
             double scale = Math.Max(w / CropRectangle.Rect.Width, h / CropRectangle.Rect.Height);
@@ -597,43 +597,43 @@ namespace ImageProcessor
             {
                 var bdl = GetLayer(i) as BitmapDerivativeLayer;
                 if (bdl != null && bdl.DerivativeType == EffectType.ViewPoint) // any clip is a ViewPoint derivative; 0.0001 needed to activate drawing in case effect never activated
-                    bdl.SetEffectParameters(panelHolder.SelectedSensitivity(), bdl.MatrixControl.ViewDistortion.X+0.0001, bdl.MatrixControl.ViewDistortion.Y + 0.0001);
+                    bdl.SetEffectParameters(panelHolder.SelectedSensitivity(), bdl.MatrixControl.ViewDistortion.X + 0.0001, bdl.MatrixControl.ViewDistortion.Y + 0.0001);
             }
             UpdateLayout();
             RenderTargetBitmap rtb = new RenderTargetBitmap(w, h, 96, 96, PixelFormats.Pbgra32);
             rtb.Render(this);
             return BitmapAccess.SerializeFrame(BitmapFrame.Create(rtb), exact);
         }
-        IntSize ScaleToSize(CropRect rect, int maxSize)
-        {
-            if (rect == null || LayerCount == 0)
-                return new IntSize();
-            Rect saveRect = rect.Rect;
-            double scale = 1; // BackgroundLayer.MatrixControl.RenderScale;
-            if (maxSize > 0)
-            {   // cutRectangle is scaled the same way as image; for cutting perposes image should not be scaled
-                if (scale < saveRect.Width / maxSize)
-                    scale = saveRect.Width / maxSize;
-                if (scale < saveRect.Height / maxSize)
-                    scale = saveRect.Height / maxSize;
-            }
-            int w = (int)((saveRect.Width + 0.5) / scale);
-            int h = (int)((saveRect.Height + 0.5) / scale);
-            if (maxSize > 0 && (w > 1200 || h > 1200))
-            {   // resizing to standard dimentions multiple of 8
-                if (w > h)
-                {
-                    w = (w + 4) / 8 * 8;
-                    h = (int)(w * (double)saveRect.Height / saveRect.Width);
-                }
-                else
-                {
-                    h = (h + 4) / 8 * 8;
-                    w = (int)(h * (double)saveRect.Width / saveRect.Height);
-                }
-            }
-            return new IntSize((w + 1) / 2 * 2, (h + 1) / 2 * 2); // both dimentions multiple of 2 to avoid saving qulity deterioration
-        }
+        IntSize ScaleToSize(CropRect rect, int sizeLimit) => rect == null || LayerCount == 0 ? new IntSize() : Scaler.GetSize(rect.Rect.Width, rect.Rect.Height, sizeLimit);
+        //{
+        //    if (rect == null || LayerCount == 0)
+        //        return new IntSize();
+        //    Rect saveRect = rect.Rect;
+        //    double scale = 1; // BackgroundLayer.MatrixControl.RenderScale;
+        //    if (maxSize > 0)
+        //    {   // cutRectangle is scaled the same way as image; for cutting perposes image should not be scaled
+        //        if (scale < saveRect.Width / maxSize)
+        //            scale = saveRect.Width / maxSize;
+        //        if (scale < saveRect.Height / maxSize)
+        //            scale = saveRect.Height / maxSize;
+        //    }
+        //    int w = (int)((saveRect.Width + 0.5) / scale);
+        //    int h = (int)((saveRect.Height + 0.5) / scale);
+        //    if (maxSize > 0 && (w > 1200 || h > 1200))
+        //    {   // resizing to standard dimentions multiple of 8
+        //        if (w > h)
+        //        {
+        //            w = (w + 4) / 8 * 8;
+        //            h = (int)(w * (double)saveRect.Height / saveRect.Width);
+        //        }
+        //        else
+        //        {
+        //            h = (h + 4) / 8 * 8;
+        //            w = (int)(h * (double)saveRect.Width / saveRect.Height);
+        //        }
+        //    }
+        //    return new IntSize((w + 1) / 2 * 2, (h + 1) / 2 * 2); // both dimentions multiple of 2 to avoid saving qulity deterioration
+        //}
         #endregion
         Cursor ActionCursor
         {
@@ -691,7 +691,7 @@ namespace ImageProcessor
                         if (mouseAction == MouseOperation.Move)
                             mouseAction = MouseOperation.Add;
                     }
-                    if (panelHolder.ToolMode == ToolMode.Crop && CropRectangle != null)
+                    if (panelHolder.ToolMode == ToolMode.Crop && CropRectangle != null && CropRectangle.FromDrawing != null)
                         mouseAction = CropRectangle.OperationFromLine(CropRectangle.FromDrawing.Transform(position));
                     else if (panelHolder.ToolMode == ToolMode.InfoImage)
                         mouseAction = MouseAction.OperationFromMouse;

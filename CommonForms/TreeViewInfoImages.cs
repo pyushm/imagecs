@@ -7,32 +7,32 @@ namespace ImageProcessor
     public class DirectoryInfoImages
     {   // visual reprentation of selected item
         Image[] infoImages;
-        TreeView tree;
         Control displayArea;
-        public DirectoryInfoImages(TreeView tree_, Control displayArea_)
+        public DirectoryInfoImages(Control displayArea_)
         {
-            tree = tree_;
             displayArea = displayArea_;
             displayArea.Paint += new PaintEventHandler(DrawInfoImages);
         }
-        ~DirectoryInfoImages() { DisposeImages(); }
-        public int ShowInfoImages(DirectoryInfo di)
+        ~DirectoryInfoImages() { DisposeInfoImages(); }
+        public DirectoryInfo ReDrawInfoImages(DirectoryInfo di = null)
         {
             try
             {
-                FileInfo[] files = di.GetFiles();
-                DisposeImages();
-                infoImages = ImageFileName.InfoImages(di);
+                bool valid = di != null && di.Exists;
+                DisposeInfoImages();
+                infoImages = valid ? ImageFileName.InfoImages(di) : new Image[0];
                 displayArea.Invalidate();
-                return files.Length - infoImages.Length;
+                return valid ? di : null;
             }
-            catch { return 0; }
+            catch { return null; }
         }
-        public void HideInfoImages()
+        void DisposeInfoImages()
         {
-            DisposeImages();
-            infoImages = new Image[0];
-            displayArea.Invalidate();
+            if (infoImages == null)
+                return;
+            foreach (Image im in infoImages)
+                if (im != null)
+                    im.Dispose();
         }
         void DrawInfoImages(object sender, PaintEventArgs e)
         {
@@ -52,14 +52,6 @@ namespace ImageProcessor
                         x += (int)(im.Width * dpiScale);
                 }
             }
-        }
-        void DisposeImages()
-        {
-            if (infoImages == null)
-                return;
-            foreach (Image im in infoImages)
-                if (im != null)
-                    im.Dispose();
         }
     }
 }

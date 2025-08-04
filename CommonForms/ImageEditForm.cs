@@ -690,7 +690,7 @@ namespace ImageProcessor
             {
                 try
                 {
-                    string path = DataAccess.PrivateAccessEnforced ? FileName.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName;
+                    string path = DataAccess.PrivateAccessEnforced ? Scramble.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName;
                     prevFSdir = Path.GetDirectoryName(path);
                     if (canvas.SaveRendering(path, 0))
                         ShowNewImage(new ImageFileInfo(new FileInfo(path)));

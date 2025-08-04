@@ -17,12 +17,11 @@ namespace ImageProcessor
     }
     public interface IAssociatedPath
     {
-        string RootName         { get; }
-        string PaintExe         { get; }
-        //string MediaExe         { get; }
-        //string TempFile         { get; }
-        string ActiveImageName  { set; }
-        ImageFileInfo RunVideoFile{ set; }
+        string RootName { get; }
+        string PaintExe { get; }
+        void SetActiveDir(DirectoryInfo di);
+        void SetActiveImageName(string n);
+        void RunVideoFile(ImageFileInfo videoFile);
     }
     public class Navigator : IAssociatedPath
 	{
@@ -30,6 +29,7 @@ namespace ImageProcessor
         static ImageHash.Comparer imageInfoComparer = new ImageHash.Comparer(56);
         static DirectoryInfo[] specialDirectories = null;
         public delegate void NewDirectoryNode(DirectoryInfo fi, string relativePath);
+        public delegate void NewDirSelecton(DirectoryInfo fi);
         public delegate void NewImageSelection(string image);
         public static DirectoryInfo SpecDir(SpecName sd) { return specialDirectories == null ? null : specialDirectories[(int)sd]; }
         public static DirectoryInfo Root        { get { return specialDirectories == null ? null : specialDirectories[(int)SpecName.Root]; } }
@@ -64,33 +64,27 @@ namespace ImageProcessor
             CompareOnly
         }
         public NewDirectoryNode ProcessDirecory;
-        public NewImageSelection onNewImageSelection;
+        public NewImageSelection onNewImageSelection = null;
+        public NewDirSelecton onNewDirSelection = null;
         NewDirectoryNode searchDirecory = null;
         string activeImageName = null;
+        string MediaExe;
+        public const string TempFile = "_._";
         public string RootName          { get; private set; }
         public string PaintExe          { get; private set; }
-        public string MediaExe          { get; private set; }
-        public string TempFile          { get { return "_._"; } }
-        ImageFileInfo videoFile;
-        public ImageFileInfo RunVideoFile 
+        public void RunVideoFile(ImageFileInfo videoFile)
         { 
-            private get
-            { return videoFile; } 
-            set 
-            {
-                videoFile = value;
-                Process p;
-                if (videoFile.IsEncrypted)
-                    DataAccess.DecryptToTemp(videoFile.FSPath, TempFile);
-                string name = videoFile.IsEncrypted ? TempFile : '\"' + videoFile.FSPath + '\"';
-                p = Process.Start(MediaExe, name);
-                p.WaitForExit();
-                p.Dispose();
-                if (videoFile.IsEncrypted) 
-                    File.Delete(TempFile);
-            }
+            if (videoFile.IsEncrypted)
+                DataAccess.DecryptToTemp(videoFile.FSPath, TempFile);
+            string name = videoFile.IsEncrypted ? TempFile : '\"' + videoFile.FSPath + '\"';
+            Process p = Process.Start(MediaExe, name);
+            p.WaitForExit();
+            p.Dispose();
+            if (videoFile.IsEncrypted)
+                File.Delete(TempFile);
         }
-        public string ActiveImageName   { get { return activeImageName; } set { activeImageName = value; onNewImageSelection?.Invoke(activeImageName); } }
+        public void SetActiveImageName(string n) { activeImageName = n; onNewImageSelection?.Invoke(activeImageName); }
+        public void SetActiveDir(DirectoryInfo di) { activeImageName = new ImageDirInfo(di).RealPath; onNewDirSelection?.Invoke(di); }
         public bool StopSearch          { get { return stopSearch; } set { stopSearch = value; } }
         public string[] GetMatchedDirNames()
         {
@@ -219,12 +213,12 @@ namespace ImageProcessor
         {
             if (StopSearch)
                 return;
-            relativePath = FileName.UnMangleFile(relativePath);
+            relativePath = Scramble.UnMangleFile(relativePath);
             searchDirecory?.Invoke(dirNode, relativePath);
             DirectoryInfo[] subdirs = dirNode.GetDirectories();
             foreach (DirectoryInfo subdir in subdirs)
             {
-                string mn = FileName.UnMangle(subdir.Name);
+                string mn = Scramble.UnMangle(subdir.Name);
                 string newRelativePath = Path.Combine(relativePath, mn);
                 SearchRecursively(subdir, newRelativePath);
             }
@@ -337,7 +331,7 @@ namespace ImageProcessor
             double totalDif = 0;
             if (textPatterns != null && textPatterns.Length>0) // by name
             {
-                string item = FileName.UnMangle(dirNode.Name.ToLower());
+                string item = Scramble.UnMangle(dirNode.Name.ToLower());
                 string[] fields = item.Split(new char[] { ImageFileName.multiNameChar, ImageFileName.synonymChar });
                 double dif = int.MaxValue;
                 if (textPatterns.Length == 1)
@@ -381,7 +375,7 @@ namespace ImageProcessor
             if (soundPattern != null && soundPattern.Pattern != null)     // by sound
             {
                 int dif = int.MaxValue;
-                string item = FileName.UnMangle(dirNode.Name.ToLower());
+                string item = Scramble.UnMangle(dirNode.Name.ToLower());
                 string[] fields = item.Split(new char[] { ImageFileName.multiNameChar, ImageFileName.synonymChar });
                 foreach (string field in fields)
                 {
@@ -446,7 +440,7 @@ namespace ImageProcessor
                     else
                         difference += difDays;
                 }
-                string fn = FileName.UnMangleFile(file.Name).ToLower();
+                string fn = Scramble.UnMangleFile(file.Name).ToLower();
                 string fnne = Path.GetFileNameWithoutExtension(fn);
                 if (textPatterns != null && textPatterns.Length > 0) // multiple name patterns
                 {

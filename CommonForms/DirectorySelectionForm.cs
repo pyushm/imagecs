@@ -18,7 +18,7 @@ namespace ImageProcessor
             TreeNode node = locationTreeView.Nodes.Add(Navigator.Root.Name);
             node.Tag = Navigator.Root;
             node.Nodes.Add("fake");
-            itemInfoImages = new DirectoryInfoImages(locationTreeView, infoImagePanel);
+            itemInfoImages = new DirectoryInfoImages(infoImagePanel);
         }
         public static DirectoryInfo GetDirectory()
         {
@@ -34,7 +34,7 @@ namespace ImageProcessor
             DirectoryInfo[] dia = navigator.GetDirectories(((DirectoryInfo)node.Tag));
             string[] fna = new string[dia.Length];
             for (int i = 0; i < dia.Length; i++)
-                fna[i] = FileName.UnMangle(dia[i].Name);
+                fna[i] = Scramble.UnMangle(dia[i].Name);
             Array.Sort(fna, dia, new ImageFileInfo.NameComparer());
             for (int i = 0; i < dia.Length; i++)
             {
@@ -51,49 +51,55 @@ namespace ImageProcessor
             selectedNode = (DirectoryInfo)e.Node.Tag;
             if (selectedNode.Exists)
             {
-                itemInfoImages.ShowInfoImages(selectedNode);
-                inputOutputBox.Text = Path.Combine(selectedNode.Parent.FullName, FileName.UnMangle(selectedNode.Name));
+                itemInfoImages.ReDrawInfoImages(selectedNode);
+                inputOutputBox.Text = Path.Combine(selectedNode.Parent.FullName, Scramble.UnMangle(selectedNode.Name));
                 if (Navigator.IsSpecDir(selectedNode.Parent, SpecName.AllDevicy))
                     inputOutputBox.Text += '/';
             }
         }
         void moveToButton_Click(object sender, System.EventArgs e)
-        {
+        {   // sets 'dirSelection' and closes dialog
             if (inputOutputBox.Text.Length == 0)
             {
                 MessageBox.Show("No directory selected");
                 return;
             }
-            var realDir = new DirectoryInfo(inputOutputBox.Text); // unmangled dir name 
-            var FSdir = new DirectoryInfo(Path.Combine(realDir.Parent.FullName, FileName.RawMangle(realDir.Name))); // scrambled
-            dirSelection = DataAccess.PrivateAccessEnforced ? FSdir : realDir;
-            var otherDir = DataAccess.PrivateAccessEnforced ? realDir : FSdir;
-            if(otherDir.Exists)
-            {   // prevents creating directory with same real name
-                string msg = DataAccess.PrivateAccessEnforced ? "Unmangled dir " + realDir.Name + " exists" : "Mangled dir " + FSdir.Name + " exists";
-                MessageBox.Show(msg, "Can't create directory: duplicate name detected");
-                return;
-            }
-            if (!dirSelection.Exists)
+            var realDir = new DirectoryInfo(inputOutputBox.Text); // unmangled full paff of destination dir
+            var pp = realDir.Parent != null && realDir.Parent.Parent != null ? realDir.Parent.Parent : null;
+            if (pp == null || !Navigator.IsSpecDir(pp, SpecName.AllDevicy)) 
+                dirSelection = realDir;
+            else
             {
-                int c = 3;
-                do
+                var FSdir = new DirectoryInfo(Path.Combine(realDir.Parent.FullName, Scramble.RawMangle(realDir.Name))); // scrambled
+                dirSelection = DataAccess.PrivateAccessEnforced ? FSdir : realDir;
+                var otherDir = DataAccess.PrivateAccessEnforced ? realDir : FSdir;
+                if (otherDir.Exists)
+                {   // prevents creating directory with same real name
+                    string msg = DataAccess.PrivateAccessEnforced ? "Unmangled dir " + realDir.Name + " exists" : "Mangled dir " + FSdir.Name + " exists";
+                    MessageBox.Show(msg, "Can't create directory: duplicate name detected");
+                    return;
+                }
+                if (!dirSelection.Exists)
                 {
-                    try
+                    int c = 3;
+                    do
                     {
-                        dirSelection.Create();
-                        Thread.Sleep(300);
-                        dirSelection = new DirectoryInfo(dirSelection.FullName);
-                        Close();
-                        return;
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show("Attempt " + c+" to create directory " + dirSelection.FullName, ex.Message);
-                    }
-                } while(!dirSelection.Exists && c-- > 0);
-                MessageBox.Show("Directory " + dirSelection.FullName + " was NOT created after " + c +" attempts");
-                dirSelection = null;
+                        try
+                        {
+                            dirSelection.Create();
+                            Thread.Sleep(300);
+                            dirSelection = new DirectoryInfo(dirSelection.FullName);
+                            Close();
+                            return;
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Attempt " + c + " to create directory " + dirSelection.FullName, ex.Message);
+                        }
+                    } while (!dirSelection.Exists && c-- > 0);
+                    MessageBox.Show("Directory " + dirSelection.FullName + " was NOT created after " + c + " attempts");
+                    dirSelection = null;
+                }
             }
             Close();
         }

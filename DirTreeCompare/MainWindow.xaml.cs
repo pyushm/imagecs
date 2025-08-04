@@ -38,7 +38,7 @@ namespace DirTreeCompare
             DockPanel dp = new DockPanel();
             cb = new System.Windows.Controls.CheckBox();
             TextBlock tb = new TextBlock();
-            tb.Text = FileName.UnMangleFile(info.Name);
+            tb.Text = Scramble.UnMangleFile(info.Name);
             if(info.IsDirectory)
                 tb.TextDecorations = TextDecorations.Underline;
             tb.Background = new SolidColorBrush(color);
@@ -379,7 +379,7 @@ namespace DirTreeCompare
                     viewForm.ShowNewImage(new ImageFileInfo(new FileInfo(path)));
                 }
                 else if (dt.IsMovie)
-                    navigator.RunVideoFile = dt;
+                    navigator.RunVideoFile(dt);
                 //    if (dt.IsEncrypted)
                 //    {
                 //        try

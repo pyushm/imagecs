@@ -544,7 +544,7 @@ namespace ImageProcessor
             //Geometry geom = new RectangleGeometry(Rect);
             g.DrawGeometry(null, pen, geom);
         }
-        public override string ToString() { return ((int)(Rect.Width + 0.5)).ToString() + 'x' + (int)(Rect.Height + 0.5)+'('+ Ratio.ToString("f2")+')'; }
+        public override string ToString() { return ((int)(Rect.Width + 0.5)).ToString() + 'x' + (int)(Rect.Height + 0.5) + " (" + Ratio.ToString("f2") + ')'; }
         public string ToRectString() { return Rect.ToString(); }
     }
     public class MatrixControl : MouseAction

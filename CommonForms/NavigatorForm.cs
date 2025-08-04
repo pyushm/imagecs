@@ -6,6 +6,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Media.Imaging;
+using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace ImageProcessor
 {
@@ -29,7 +30,6 @@ namespace ImageProcessor
         bool privateAccessRequested;
         Navigator navigator;				// object handling directory tree
 		DirectoryInfo selectedNode = null;	// currently selected directory
-        TreeNode nodeUnderMouse = null;     // tree node under curret
         string processNodeName = "";
         FileManager fileManager;            // resize and rename images
         DirectoryInfoImages itemInfoImages;	// shows info images
@@ -42,7 +42,7 @@ namespace ImageProcessor
         SearchResult matchingItems;
         Navigator.SearchMode searchMode;
         DirectoryInfo searchRoot;
-        DirectoryInfo infoImageDir = null;
+        //DirectoryInfo infoImageDir = null;
         private Button findNameButton;
         private Label label2;
         private TextBox patternBox;
@@ -147,17 +147,17 @@ namespace ImageProcessor
             this.infoImagePanel.Location = new System.Drawing.Point(484, 463);
             this.infoImagePanel.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.infoImagePanel.Name = "infoImagePanel";
-            this.infoImagePanel.Size = new System.Drawing.Size(282, 931);
+            this.infoImagePanel.Size = new System.Drawing.Size(282, 952);
             this.infoImagePanel.TabIndex = 7;
             this.infoImagePanel.DoubleClick += new System.EventHandler(this.infoImagePanel_DoubleClick);
             // 
             // outputList
             // 
             this.outputList.ItemHeight = 25;
-            this.outputList.Location = new System.Drawing.Point(788, 463);
+            this.outputList.Location = new System.Drawing.Point(790, 463);
             this.outputList.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.outputList.Name = "outputList";
-            this.outputList.Size = new System.Drawing.Size(476, 929);
+            this.outputList.Size = new System.Drawing.Size(468, 954);
             this.outputList.TabIndex = 8;
             this.outputList.SelectedIndexChanged += new System.EventHandler(this.DisplayFoundItem);
             this.outputList.DoubleClick += new System.EventHandler(this.ActivateFoundItem);
@@ -169,10 +169,9 @@ namespace ImageProcessor
             this.locationTreeView.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.locationTreeView.Name = "locationTreeView";
             this.locationTreeView.ShowNodeToolTips = true;
-            this.locationTreeView.Size = new System.Drawing.Size(444, 1333);
+            this.locationTreeView.Size = new System.Drawing.Size(444, 1352);
             this.locationTreeView.TabIndex = 10;
             this.locationTreeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.RetrievNodes);
-            this.locationTreeView.NodeMouseHover += new System.Windows.Forms.TreeNodeMouseHoverEventHandler(this.locationTreeView_NodeMouseHover);
             this.locationTreeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.locationTreeView_AfterSelect);
             this.locationTreeView.Click += new System.EventHandler(this.locationTreeView_Click);
             // 
@@ -519,7 +518,7 @@ namespace ImageProcessor
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1252, 1412);
+            this.ClientSize = new System.Drawing.Size(1252, 1430);
             this.Controls.Add(this.tabControl1);
             this.Controls.Add(this.outputBox);
             this.Controls.Add(this.locationTreeView);
@@ -551,6 +550,7 @@ namespace ImageProcessor
             {
                 navigator = new Navigator();
                 navigator.onNewImageSelection = NewImageSelected;
+                navigator.onNewDirSelection = SetActiveDirAndInfoImages; 
                 InitializeComponent();
                 privateAccessRequested = accessRequested;
                 if (accessRequested)
@@ -572,7 +572,7 @@ namespace ImageProcessor
                 makePrivateBtn.Click += (object s, EventArgs e) => ConvertToPrivate();
                 compressBtn.Click += (object s, EventArgs e) => ConvertTojpg();
                 reduceButton.Click += (object s, EventArgs e) => ResizeImages();
-                reduceButton.Text = "Reduce to " + (int)Conversion.ReduceSize + " pix";
+                reduceButton.Text = "Reduce to " + (int)Conversion.LimitSize + " pix";
                 changeNameButton.Click += (object s, EventArgs e) => Rename(RenameType.FileName);
                 addPrefixButton.Click += (object s, EventArgs e) => Rename(RenameType.AddPrefix);
                 renameDirBtn.Click += (object s, EventArgs e) => Rename(RenameType.Directory);
@@ -584,7 +584,7 @@ namespace ImageProcessor
                 TreeNode nodeRoot = locationTreeView.Nodes.Add(Navigator.Root.Name);
                 nodeRoot.Tag = Navigator.Root;
                 nodeRoot.Nodes.Add("fake");
-                itemInfoImages = new DirectoryInfoImages(locationTreeView, infoImagePanel);
+                itemInfoImages = new DirectoryInfoImages(infoImagePanel);
                 findImagePanel.Paint += new PaintEventHandler(DrawSearchImage);
                 findLookBtn.Enabled = false;
                 fileManager = new FileManager(navigator);
@@ -608,6 +608,12 @@ namespace ImageProcessor
             }
         }
         ~NavigatorForm()				    { Dispose(true); }
+        void SetActiveDirAndInfoImages(DirectoryInfo di)
+        { 
+            selectedNode = itemInfoImages.ReDrawInfoImages(di);
+            outputBox.Text = di == null ? "" : (new ImageDirInfo(selectedNode)).RealPath;
+            if(di != null && selectedNode == null) outputBox.Text += " does NOT EXIST";
+        }
 		void ShowResults(string message)	{ outputList.Items.Add(message); }
         void ShowFinalResults(List<string> messages)
         {
@@ -634,7 +640,7 @@ namespace ImageProcessor
             searchImagePath = imagePath;
             findImagePanel.Invalidate();
             userAction = false;
-            patternBox.Text = FileName.UnMangle(Path.GetFileNameWithoutExtension(imagePath));
+            patternBox.Text = Scramble.UnMangle(Path.GetFileNameWithoutExtension(imagePath));
             userAction = true;
         }
         void DrawSearchImage(object sender, PaintEventArgs e)
@@ -727,7 +733,7 @@ namespace ImageProcessor
         {
             if (selectedNode == null)
                 return;
-            conversion = Conversion.ReduceSize;
+            conversion = Conversion.LimitSize;
             OperationButtonsEnabled(false);
             imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
         }
@@ -765,6 +771,11 @@ namespace ImageProcessor
                 return;
             if (operation == RenameType.Directory)
             {
+                if (Navigator.IsSpecDir(selectedNode))
+                {
+                    MessageBox.Show("Special directory "+ selectedNode.Name+" can't be renamed");
+                    return;
+                }
                 fileManager.NewDirName = directoryNameBox.Text.Trim();
                 if (fileManager.NewDirName.Length == 0)
                 {
@@ -774,14 +785,17 @@ namespace ImageProcessor
             }
             else
             {
-                fileManager.TextToReplace = oldTextBox.Text.Trim();
+                fileManager.TextToReplace = oldTextBox.Text;
                 if (operation == RenameType.FileName && fileManager.TextToReplace.Length == 0)
                 {
                     MessageBox.Show("Replacement text has to be specified", "");
                     return;
                 }
                 oldTextBox.Text = "";
-                fileManager.TextReplacement = newTextBox.Text.Trim();
+                fileManager.TextReplacement = newTextBox.Text;
+                if(newTextBox.Text.Trim() != newTextBox.Text)
+                    if(MessageBox.Show("Is there a white space in the replacement?", "", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                        fileManager.TextReplacement = newTextBox.Text.Trim();
                 if (operation == RenameType.AddPrefix && fileManager.TextReplacement.Length == 0)
                 {
                     MessageBox.Show("Prefix has to be specified", "", MessageBoxButtons.YesNo);
@@ -811,7 +825,7 @@ namespace ImageProcessor
 			DirectoryInfo[] dia=navigator.GetDirectories(((DirectoryInfo)node.Tag));
             string[] fna = new string[dia.Length];
             for(int i=0; i<dia.Length; i++)
-                fna[i] = FileName.UnMangle(dia[i].Name);
+                fna[i] = Scramble.UnMangle(dia[i].Name);
             Array.Sort(fna, dia, new ImageFileInfo.NameComparer());
             for (int i = 0; i < dia.Length; i++)
             {
@@ -821,23 +835,8 @@ namespace ImageProcessor
             }
             Cursor = Cursors.Default;
 		}
-        void locationTreeView_Click(object sender, EventArgs e) { itemInfoImages.HideInfoImages(); } // clear old selection
-        void locationTreeView_NodeMouseHover(object sender, TreeNodeMouseHoverEventArgs e) { nodeUnderMouse = e.Node; }
-        void locationTreeView_DoubleClick(object sender, EventArgs e) { DisplaySelectedNode(nodeUnderMouse); }
-        void locationTreeView_AfterSelect(object sender, TreeViewEventArgs e) { DisplaySelectedNode(e.Node); }
-        void DisplaySelectedNode(TreeNode node)
-        {
-            if (node == null || node.Tag == null)
-                return;
-            selectedNode = (DirectoryInfo)node.Tag;
-            if (selectedNode.Exists)
-            {
-                outputBox.Text = (new ImageDirInfo(selectedNode)).RealPath;
-                itemInfoImages.ShowInfoImages(selectedNode);
-            }
-            else
-                outputBox.Text += " does NOT EXIST";
-        }
+        void locationTreeView_Click(object sender, EventArgs e) { itemInfoImages.ReDrawInfoImages(); } // clear old selection
+        void locationTreeView_AfterSelect(object sender, TreeViewEventArgs e) { if (e.Node != null && e.Node.Tag != null) SetActiveDirAndInfoImages((DirectoryInfo)e.Node.Tag); }
         void ShowImageListForm(DirectoryInfo di)
 		{
             if (di == null)
@@ -859,7 +858,7 @@ namespace ImageProcessor
                 MessageBox.Show(ex.Message);
             }
 		}
-        FileSystemInfo selectedItem()               // both dir and image in human readable form 
+        FileSystemInfo SearchSelectedItem()               // both dir and image in human readable form 
         {
             if (outputList == null || outputList.SelectedItem == null || searchRoot == null)
                 return null;
@@ -874,7 +873,7 @@ namespace ImageProcessor
             DirectoryInfo di = new DirectoryInfo(dirPath);
             if (!di.Exists)
             {
-                dirPath = FileName.MangleFile(dirPath);
+                dirPath = Scramble.MangleFile(dirPath);
                 di = new DirectoryInfo(dirPath);
                 if (!di.Exists)
                     return null;
@@ -885,38 +884,31 @@ namespace ImageProcessor
             FileSystemInfo fi = new FileInfo(filePath);
             if (!fi.Exists)
             {
-                filePath = FileName.MangleFile(filePath);
+                filePath = Scramble.MangleFile(filePath);
                 fi = new FileInfo(filePath);
             }
             return fi.Exists ? fi : null;
         }
         void DisplayFoundItem(object s, EventArgs e)
         {
-            FileSystemInfo fsi = selectedItem();
+            FileSystemInfo fsi = SearchSelectedItem();
             if (fsi == null)
                 return;
             bool isDir = (fsi.Attributes & FileAttributes.Directory) == FileAttributes.Directory;
             DirectoryInfo di = isDir ? (DirectoryInfo)fsi : ((FileInfo)fsi).Directory;
-            infoImageDir = null;
-            if (di.Exists)
-            {
-                itemInfoImages.ShowInfoImages(di);
-                infoImageDir = di;
-            }
+            SetActiveDirAndInfoImages(di);
         }
         void ActivateFoundItem(object s, EventArgs e)
 		{
-            FileSystemInfo fsi = selectedItem();
+            FileSystemInfo fsi = SearchSelectedItem();
             if (fsi == null)
                 return;
             try
             {
                 if ((fsi.Attributes & FileAttributes.Directory) == FileAttributes.Directory)
                 {
-                    selectedNode = (DirectoryInfo)fsi;
-                    ShowImageListForm(selectedNode);
-                    outputBox.Text = (new ImageDirInfo(selectedNode)).RealPath;
-                    itemInfoImages.ShowInfoImages(selectedNode);
+                    if(selectedNode != null)
+                        ShowImageListForm(selectedNode);
                 }
                 else
                 {
@@ -930,7 +922,7 @@ namespace ImageProcessor
                     }
                     else if (dt.IsMovie)
                     {
-                        navigator.RunVideoFile = dt;
+                        navigator.RunVideoFile(dt);
                     }
                 }
             }
@@ -1010,8 +1002,8 @@ namespace ImageProcessor
         }
         void infoImagePanel_DoubleClick(object sender, EventArgs e)
         {
-            if (infoImageDir != null)
-                ShowImageListForm(infoImageDir);
+            if (selectedNode != null)
+                ShowImageListForm(selectedNode);
         }
         void patternBox_TextChanged(object sender, EventArgs e)
         {

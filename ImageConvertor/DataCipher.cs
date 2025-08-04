@@ -1,52 +1,11 @@
-﻿using System;
+﻿using ImageProcessor;
+using System;
 using System.IO;
 using System.Security.Cryptography;
+using System.Windows.Markup;
 
 namespace ImageProcessor
 {
-    //public class EncDec
-    //{
-    //    public static void Encrypt(string fileIn, string fileOut, string Password)
-    //    {
-    //        FileStream fsIn = new FileStream(fileIn, FileMode.Open, FileAccess.Read);
-    //        FileStream fsOut = new FileStream(fileOut, FileMode.OpenOrCreate, FileAccess.Write);
-    //        PasswordDeriveBytes pdb = new PasswordDeriveBytes(Password, new byte[] {0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64, 0x76, 0x65, 0x64, 0x65, 0x76});
-    //        Rijndael alg = Rijndael.Create();
-    //        alg.Key = pdb.GetBytes(32);
-    //        alg.IV = pdb.GetBytes(16);
-    //        CryptoStream cs = new CryptoStream(fsOut, alg.CreateEncryptor(), CryptoStreamMode.Write);
-    //        int bufferLen = 4096;
-    //        byte[] buffer = new byte[bufferLen];
-    //        int bytesRead;
-    //        do
-    //        {
-    //            bytesRead = fsIn.Read(buffer, 0, bufferLen);// read a chunk of data from the input file 
-    //            cs.Write(buffer, 0, bytesRead);
-    //        } while (bytesRead != 0);
-    //        cs.Close();
-    //        fsIn.Close();
-    //    }
-    //    public static void Decrypt(string fileIn, string fileOut, string Password)
-    //    {
-    //        FileStream fsIn = new FileStream(fileIn, FileMode.Open, FileAccess.Read);
-    //        FileStream fsOut = new FileStream(fileOut, FileMode.OpenOrCreate, FileAccess.Write);
-    //        PasswordDeriveBytes pdb = new PasswordDeriveBytes(Password, new byte[] {0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64, 0x76, 0x65, 0x64, 0x65, 0x76});
-    //        Rijndael alg = Rijndael.Create();
-    //        alg.Key = pdb.GetBytes(32);
-    //        alg.IV = pdb.GetBytes(16);
-    //        CryptoStream cs = new CryptoStream(fsOut, alg.CreateDecryptor(), CryptoStreamMode.Write);
-    //        int bufferLen = 4096;
-    //        byte[] buffer = new byte[bufferLen];
-    //        int bytesRead;
-    //        do
-    //        {
-    //            bytesRead = fsIn.Read(buffer, 0, bufferLen);
-    //            cs.Write(buffer, 0, bytesRead);
-    //        } while (bytesRead != 0);
-    //        cs.Close(); // this will also close the unrelying fsOut stream 
-    //        fsIn.Close();
-    //    }
-    //}
     public class DataCipher
     {
         static string passwordFile = "password";
@@ -149,10 +108,11 @@ namespace ImageProcessor
     public static class DataAccess
     {
         static DataCipher cipher = null;
+        static string lastImageFile = "lastImageFile";
         public static string NullCipher = "Can't access private data: encryption not set";
         public static string Warning { get; private set; }
         public static bool AllowPrivateAccess(string password) { cipher = DataCipher.Create(password); return PrivateAccessEnforced; }
-        public static bool PrivateAccessEnforced { get { return cipher != null; } } // enforces conversion to private state for any file change 
+        public static bool PrivateAccessEnforced => cipher != null; // enforces conversion to private state for any file change 
         public static byte[] ReadBytes(byte[] src, bool encrypted)
         {
             Warning = "";
@@ -196,7 +156,7 @@ namespace ImageProcessor
             }
             return new byte[0];
         }
-        public static bool WriteFile(string fullPath, byte[] src, bool encrypt)
+        static bool WriteFile(string fullPath, byte[] src, bool encrypt)
         {
             if (encrypt)
             {
@@ -206,6 +166,47 @@ namespace ImageProcessor
             }
             using (var fs = File.OpenWrite(fullPath)) { fs.Write(src, 0, src.Length); }
             return true;
+        }
+        public static string CreateFile(string fullPath, byte[] src, bool encrypt)
+        {
+            if (fullPath == null)
+                return "";
+            FileInfo fi = new FileInfo(fullPath);
+            if (fi.Exists)
+                    return "File '\" + fullPath + \"' exists";
+            if (WriteFile(fullPath, src, encrypt))
+                return "";
+            return "Faled to create '\" + fullPath + \"' ";
+        }
+        public static string UpdateFile(string fullPath, byte[] src, bool encrypt)
+        {
+            if (fullPath == null)
+                return "";
+            FileInfo fi = new FileInfo(fullPath);
+            if (fi.Exists)
+            {
+                try
+                {
+                    if (File.Exists(lastImageFile))
+                    {
+                        File.SetAttributes(lastImageFile, FileAttributes.Normal);
+                        File.Delete(lastImageFile);
+                    }
+                    fi.MoveTo(lastImageFile);
+                    File.SetAttributes(lastImageFile, FileAttributes.Normal);
+                }
+                catch
+                {
+                    return "Image '\" + fullPath + \"' not saved to lastImageFile";
+                }
+            }
+            if (WriteFile(fullPath, src, encrypt))
+                return "";
+            fi = new FileInfo(lastImageFile);
+            if (!fi.Exists)
+                return "Image '\" + fullPath + \"' lost";
+            fi.MoveTo(fullPath);
+            return "Image '\" + fullPath + \"' was not updated"; ;
         }
         public static bool DecryptToTemp(string srcPath, string tmpPath)
         {

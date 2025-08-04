@@ -10,6 +10,7 @@ using CustomControls;
 using System.Windows.Media.Imaging;
 using System.Media;
 using ShaderEffects;
+using System.Threading;
 
 namespace ImageProcessor
 {
@@ -599,7 +600,7 @@ namespace ImageProcessor
             //capturePanel.Paint += new PaintEventHandler(ShowSelection);
             sensitivityBox.Items.AddRange(NumEnum.Values(typeof(MouseSensitivity), 0.1));
             sensitivityBox.SelectedIndex = 2;
-            resizeBox.Text = "Max size " + (int)Conversion.ReduceSize;
+            resizeBox.Text = "Max size " + (int)Conversion.LimitSize;
             KeyUp += CaptureCtrlC;
             actionBox.Items.Add("Crop");
             actionBox.Items.AddRange(Enum.GetNames(typeof(DirShowMode)));
@@ -715,11 +716,11 @@ namespace ImageProcessor
             }
         }
         void DrawSmallImage(Image im, Graphics g)
-        {
+        { 
             if (im == null)
                 return;
-            float areaSize = 138 * g.DpiX / 96;
-            float scale = Math.Min(areaSize / im.Width, areaSize / im.Height);
+            float areaSize = nextImagePanel.Size.Width/2 * g.DpiX / 96;
+            float scale = Math.Min(areaSize / (im.Width + 2), areaSize / (im.Height + 2));
             float iw = im.Width * scale;
             float ih = im.Height * scale;
             float d = (iw - ih) / 2;
@@ -825,7 +826,7 @@ namespace ImageProcessor
                 if (infoMode)
                     SaveImage(new ImageFileInfo(new FileInfo(Path.Combine(Path.GetDirectoryName(currentImageInfo.FSPath), ImageFileName.InfoFileWithExtension(infoType)))), -1);
                 else
-                    SaveImage(currentImageInfo, resizeBox.Checked ? (int)Conversion.ReduceSize : 0);
+                    SaveImage(currentImageInfo, resizeBox.Checked ? (int)Conversion.LimitSize : 0);
             }
             catch (Exception ex)
             {
@@ -843,15 +844,15 @@ namespace ImageProcessor
             saveAsDialog.OverwritePrompt = true;
             if (saveAsDialog.ShowDialog() == DialogResult.OK)
             {
-                var ifi = new ImageFileInfo(new FileInfo(DataAccess.PrivateAccessEnforced ? FileName.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName));
-                SaveImage(ifi, resizeBox.Checked ? (int)Conversion.ReduceSize : 0);
+                var ifi = new ImageFileInfo(new FileInfo(DataAccess.PrivateAccessEnforced ? Scramble.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName));
+                SaveImage(ifi, resizeBox.Checked ? (int)Conversion.LimitSize : 0);
             }
         }
-        void SaveImage(ImageFileInfo ifi, int maxSize)
+        void SaveImage(ImageFileInfo ifi, int sizeLimit)
         {
             if (!colorTransform.IsIdentical)
                 previousColorTransform.CopyFrom(colorTransform);
-            if (canvas.SaveRendering(ifi.FSPath, maxSize))
+            if (canvas.SaveRendering(ifi.FSPath, sizeLimit))
                 ShowNewImage(ifi);
             ToolMode = ToolMode.Crop;
         }
