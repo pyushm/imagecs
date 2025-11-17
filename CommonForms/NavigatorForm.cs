@@ -76,6 +76,7 @@ namespace ImageProcessor
         private TextBox renameResultBox;
         private Label label5;
         private Button compressBtn;
+        private ComboBox reduceSizeBox;
         Dictionary<string, string[]> matchingImages = new Dictionary<string, string[]>();
         protected override void Dispose( bool disposing )
 		{
@@ -132,6 +133,7 @@ namespace ImageProcessor
             this.runningInfoIcon = new System.Windows.Forms.PictureBox();
             this.findSimilarImagesBtn = new System.Windows.Forms.Button();
             this.imageInfoBtn = new System.Windows.Forms.Button();
+            this.reduceSizeBox = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)(this.runningImage)).BeginInit();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
@@ -431,6 +433,7 @@ namespace ImageProcessor
             // 
             // tabPage3
             // 
+            this.tabPage3.Controls.Add(this.reduceSizeBox);
             this.tabPage3.Controls.Add(this.compressBtn);
             this.tabPage3.Controls.Add(this.reduceButton);
             this.tabPage3.Controls.Add(this.makePrivateBtn);
@@ -460,7 +463,7 @@ namespace ImageProcessor
             this.reduceButton.Location = new System.Drawing.Point(68, 262);
             this.reduceButton.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.reduceButton.Name = "reduceButton";
-            this.reduceButton.Size = new System.Drawing.Size(260, 38);
+            this.reduceButton.Size = new System.Drawing.Size(115, 38);
             this.reduceButton.TabIndex = 42;
             this.reduceButton.Text = "Resize to";
             this.reduceButton.TextAlign = System.Drawing.ContentAlignment.TopCenter;
@@ -513,6 +516,14 @@ namespace ImageProcessor
             this.imageInfoBtn.Size = new System.Drawing.Size(260, 40);
             this.imageInfoBtn.TabIndex = 35;
             this.imageInfoBtn.Text = "Update ImageInfo";
+            // 
+            // reduceSizeBox
+            // 
+            this.reduceSizeBox.FormattingEnabled = true;
+            this.reduceSizeBox.Location = new System.Drawing.Point(184, 266);
+            this.reduceSizeBox.Name = "reduceSizeBox";
+            this.reduceSizeBox.Size = new System.Drawing.Size(144, 33);
+            this.reduceSizeBox.TabIndex = 45;
             // 
             // NavigatorForm
             // 
@@ -572,7 +583,7 @@ namespace ImageProcessor
                 makePrivateBtn.Click += (object s, EventArgs e) => ConvertToPrivate();
                 compressBtn.Click += (object s, EventArgs e) => ConvertTojpg();
                 reduceButton.Click += (object s, EventArgs e) => ResizeImages();
-                reduceButton.Text = "Reduce to " + (int)Conversion.LimitSize + " pix";
+                reduceButton.Text = "Reduce to";
                 changeNameButton.Click += (object s, EventArgs e) => Rename(RenameType.FileName);
                 addPrefixButton.Click += (object s, EventArgs e) => Rename(RenameType.AddPrefix);
                 renameDirBtn.Click += (object s, EventArgs e) => Rename(RenameType.Directory);
@@ -580,7 +591,15 @@ namespace ImageProcessor
                 findSimilarImagesBtn.Click += (object s, EventArgs e) => { runningSimilarIcon.Visible = true; similarImagesWorker.RunWorkerAsync(); findSimilarImagesBtn.Enabled = false; }; ;
                 locationTreeView.DoubleClick += (object s, EventArgs e) => { if (selectedNode != null) ShowImageListForm(selectedNode); };
                 displayResultsBtn.Click += (object o, EventArgs e) => { onSearchClick?.Invoke(); };
-
+                foreach (int v in Enum.GetValues(typeof(Conversion)))
+                    if (v >= (int)Conversion.LimitSize1)
+                        reduceSizeBox.Items.Add(v.ToString());
+                reduceSizeBox.SelectedIndex = reduceSizeBox.Items.Count - 1;
+                //reduceSizeBox.SelectedIndexChanged += (object o, EventArgs e) =>
+                //{
+                //    var s=reduceSizeBox.SelectedText;
+                //    var i=reduceSizeBox.SelectedItem;   
+                //};
                 TreeNode nodeRoot = locationTreeView.Nodes.Add(Navigator.Root.Name);
                 nodeRoot.Tag = Navigator.Root;
                 nodeRoot.Nodes.Add("fake");
@@ -600,7 +619,7 @@ namespace ImageProcessor
                 // Force the ToolTip text to be displayed whether or not the form is active.
                 toolTip1.ShowAlways = true;
                 EnableSearchButtons(false);
-                Text = "Image viewer v3.1";
+                Text = "Image viewer v3.2";
             }
             catch (Exception ex )
             {
@@ -731,9 +750,14 @@ namespace ImageProcessor
         }
         void ResizeImages()                 
         {
-            if (selectedNode == null)
+            if (selectedNode == null || !int.TryParse((string)reduceSizeBox.SelectedItem, out int res))
                 return;
-            conversion = Conversion.LimitSize;
+            conversion = Conversion.None;
+            foreach(var v in Enum.GetValues(typeof(Conversion)))
+                if (res == (int)v)
+                    conversion = (Conversion)v;
+            if (conversion == Conversion.None)
+                return;
             OperationButtonsEnabled(false);
             imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
         }
@@ -916,7 +940,7 @@ namespace ImageProcessor
                     ImageFileInfo dt = new ImageFileInfo(fi);
                     if (dt.IsImage)
                     {
-                        ImageViewForm editForm = new ImageViewForm(null);
+                        ImageViewForm editForm = new ImageViewForm();
                         invoked.Add(editForm);
                         editForm.ShowNewImage(dt);
                     }

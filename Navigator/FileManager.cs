@@ -23,7 +23,10 @@ namespace ImageProcessor
         None = 0,
         Encode = 1,             // mangle name and encrypt file
         ToJPG = 3,              // compress to JPG format
-        LimitSize = 2200,       // image dimension limit: xxxxyyyy or ssss for both
+        LimitSize1 = 1100,      // image dimension limit: xxxxyyyy or ssss for both
+        LimitSize2 = 1560,      // image dimension limit: xxxxyyyy or ssss for both
+        LimitSize3 = 2200,      // image dimension limit: xxxxyyyy or ssss for both
+        LimitSize4 = 33002200,  // image dimension limit: xxxxyyyy or ssss for both
     }
     public class FileManager
 	{
@@ -92,10 +95,10 @@ namespace ImageProcessor
                 {
                     if (stopFlag)
                         break;
-                    if (covertion == Conversion.LimitSize)
+                    if ((int)covertion >= (int)Conversion.LimitSize1)
                     {
                         ImageFileInfo ifi = new ImageFileInfo(file);
-                        string ret = ResizeImage(file.FullName, ifi.IsExact, (int)Conversion.LimitSize, ifi.IsEncrypted);
+                        string ret = ResizeImage(file.FullName, ifi.IsExact, (int)covertion, ifi.IsEncrypted);
                         if (ret.Length > 0)
                             ReportResults(ret);
                         continue;

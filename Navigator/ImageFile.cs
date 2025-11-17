@@ -6,7 +6,6 @@ using System.IO;
 using System.Drawing;
 using System.Threading;
 using System.ComponentModel;
-using System.Runtime.Remoting.Messaging;
 
 namespace ImageProcessor
 {
@@ -17,12 +16,6 @@ namespace ImageProcessor
         Preview, 
         Sys,
         Vag
-    }
-    public enum ListShowMode
-    {
-        Auto,
-        List,
-        Groups
     }
     public enum Direction
     {
@@ -541,7 +534,8 @@ namespace ImageProcessor
         {   // sortable list of 'ImageFileInfo' accessible by key, index or Group of similar
             public const int synchronizationDelay = 300; // synchronization delay [ms] between directory and image collection
             const int mandatoryUpdate = 3;     // time between mandatory updates [s] 
-            ListShowMode viewMode = ListShowMode.Auto;         
+            public bool ViewList { get; set; }
+            public bool PreferedGroupView { get; set; } = false;
             DirectoryInfo directory = null; // source directory (search path of srcList or image and subDir source)
             bool dirModified = false;
             string[] srcList = null;        // subDirs of the directory matching search criteria
@@ -576,18 +570,24 @@ namespace ImageProcessor
                     catch { return null; }
                 }
             }
-            public ImageList(ImageDirInfo dir, DirShowMode it, string mode) { Initialize(dir, it, mode, null); }
-            public ImageList(ImageDirInfo dir, string mode, string[] list) { Initialize(dir, ImageProcessor.DirShowMode.Detail, mode, list); }
-            void Initialize(ImageDirInfo dir, DirShowMode it, string mode, string[] list)
-            {
+            public ImageList(ImageDirInfo dir, bool listOnly) { Initialize(dir, listOnly, null); }
+            public ImageList(ImageDirInfo dir, string[] list) { Initialize(dir, true, list); }
+            void Initialize(ImageDirInfo dir, bool listOnly, string[] list)
+             {
                 directory = dir.DirInfo;
                 if (!ValidDirectory)
                     throw new Exception("Directory '"+dir.FSPath+"' does not exists");
-                viewInfoType = it;
-                SetViewMode(mode);
+                viewInfoType = DirShowMode.Detail;
                 srcList = list;
-                //isTemp = list == null && Navigator.IsSpecDir(dir.DirInfo, SpecName.NewArticles);
                 ActiveFile = null;
+                ViewList = listOnly;
+                UpdateImageList();
+                if (!ViewList)
+                {
+                    int fc = ImageCount;
+                    int gc = GroupCount;
+                    PreferedGroupView = gc > 1 && fc > 200 || gc > 3 && fc > 100 || gc > 10 && gc < fc / 3;
+                }
                 if (srcList == null)
                 {
                     fileSyncWorker = new BackgroundWorker();
@@ -595,8 +595,6 @@ namespace ImageProcessor
                     fileSyncWorker.RunWorkerCompleted += Synchronization_RunWorkerCompleted;
                     fileSyncWorker.RunWorkerAsync();
                 }
-                else
-                    UpdateImageList();
             }
             ~ImageList()
             {
@@ -604,6 +602,7 @@ namespace ImageProcessor
                 if (fileSyncWorker != null)
                     fileSyncWorker.Dispose();
             }
+            public void SetInfoType(DirShowMode it) { viewInfoType = it; }
             public void Clear()
             {
                 abortSynchronization = true;
@@ -848,32 +847,38 @@ namespace ImageProcessor
                 {
                     lock (this)
                     {
-                        fileList.Sort(new ImageFileInfo.RealNameComparer());
-                        for (; i < ImageCount; i++)    
+                        fileList.Sort(new RealNameComparer());
+                        if (ViewList)
+                            for (; i < ImageCount; i++)
+                                indexTable.Add(fileList[i].Name, i);
+                        else
                         {
-                            var ifi = fileList[i];
-                            indexTable.Add(ifi.Name, i); // complete rebuild of index list
-                            int n = newGL.Count;
-                            if (ifi.IsDirInfo || ifi.IsInfoImage)
+                            for (; i < ImageCount; i++)
                             {
-                                if (n > 0)
-                                    newGL[n - 1].SetLast(i - 1);
-                                continue;
+                                var ifi = fileList[i];
+                                indexTable.Add(ifi.Name, i); // complete rebuild of index list
+                                int n = newGL.Count;
+                                if (ifi.IsDirInfo || ifi.IsInfoImage)
+                                {
+                                    if (n > 0)
+                                        newGL[n - 1].SetLast(i - 1);
+                                    continue;
+                                }
+                                if (n == 0 || !newGL[n - 1].NameMatches(ifi))
+                                {
+                                    newGL.Add(new ImageGroup(fileList, i));
+                                    ifi.Group = newGL[newGL.Count - 1];
+                                    if (n > 0)
+                                        newGL[n - 1].SetLast(i - 1);
+                                }
                             }
-                            if (n == 0 || !newGL[n - 1].NameMatches(ifi))
-                            {
-                                newGL.Add(new ImageGroup(fileList, i));
-                                ifi.Group = newGL[newGL.Count-1];
-                                if (n > 0)
-                                    newGL[n - 1].SetLast(i - 1);
-                            }
+                            if (newGL.Count > 0)
+                                newGL[newGL.Count - 1].SetLast(i - 1);
+                            if (newGL.Count == GroupCount)
+                                for (i = 0; i < newGL.Count; i++)
+                                    if (newGL[i].Name == groupList[i].Name)
+                                        newGL[i].Expanded = groupList[i].Expanded;
                         }
-                        if (newGL.Count > 0)
-                            newGL[newGL.Count - 1].SetLast(i - 1);
-                        if (newGL.Count == GroupCount)
-                            for (i = 0; i < newGL.Count; i++)
-                                if (newGL[i].Name == groupList[i].Name)
-                                    newGL[i].Expanded = groupList[i].Expanded;
                         groupList = newGL;
                     }
                 }
@@ -887,40 +892,42 @@ namespace ImageProcessor
             }
             public void RebuildDisplayedList()
             {
-                Thread.Sleep(150);
+                //Thread.Sleep(150);
+                UpdateImageList();
                 displayed.Clear();
-                int fc = ImageCount;
-                int gc = GroupCount;
-                bool groupsHeadsOnly = true;
-                switch (viewMode)
-                {
-                    case ListShowMode.Auto: groupsHeadsOnly = gc > 1 && fc > 200 || gc > 3 && fc > 100 || gc > 10 && gc < fc / 3; break;
-                    case ListShowMode.List: groupsHeadsOnly = false; break;
-                    case ListShowMode.Groups: groupsHeadsOnly = true; break;
-                }
                 lock (this)
-                {
-                    int gInd = 0;
-                    int ind = 0;
-                    for (int i = 0; i < ImageCount; i++)
-                    {   // complete rebuild of index list
-                        var ifi = fileList[i];
-                        if(!groupsHeadsOnly || ifi.IsDirInfo || ifi.IsInfoImage) // !groupsHeadsOnly showing all images
-                        {   // !groupsHeadsOnly showing all images
-                            ifi.DisplayListIndex = ind++;
-                            displayed.Add(ifi);
-                            continue;
-                        }
-                        if (!groupList[gInd].NameMatches(ifi))
+                {   // complete rebuild of index list
+                    if (ViewList || GroupCount < 2)
+                        for (int i = 0; i < ImageCount; i++)
                         {
-                            gInd++;
-                            if (gInd >= GroupCount)
+                            var ifi = fileList[i];
+                            ifi.DisplayListIndex = i;
+                            displayed.Add(ifi);
+                        }
+                    else
+                    {
+                        int gInd = 0;
+                        int ind = 0;
+                        for (int i = 0; i < ImageCount; i++)
+                        {
+                            var ifi = fileList[i];
+                            if (ifi.IsDirInfo || ifi.IsInfoImage)
+                            {
+                                ifi.DisplayListIndex = ind++;
+                                displayed.Add(ifi);
                                 continue;
-                        }
-                        if (groupList[gInd].NameMatches(ifi) && (ifi.IsGroupHead || groupList[gInd].Expanded))
-                        {
-                            ifi.DisplayListIndex = ind++;
-                            displayed.Add(ifi);
+                            }
+                            if (!groupList[gInd].NameMatches(ifi))
+                            {
+                                gInd++;
+                                if (gInd >= GroupCount)
+                                    continue;
+                            }
+                            if (groupList[gInd].NameMatches(ifi) && (ifi.IsGroupHead || groupList[gInd].Expanded))
+                            {
+                                ifi.DisplayListIndex = ind++;
+                                displayed.Add(ifi);
+                            }
                         }
                     }
                     //Debug.Assert(displayed.Count == ind);
@@ -928,18 +935,6 @@ namespace ImageProcessor
                 //Debug.WriteLine(" *RebuildDisplayedList displayed=" + displayed.Count);
             }
             #endregion
-            public void SetViewMode(string modeName)
-            {
-                string[] names = Enum.GetNames(typeof(ListShowMode));
-                for (int i = 0; i < names.Length; i++)
-                    if (names[i] == modeName)
-                        viewMode = (ListShowMode)i;
-                bool exp = viewMode == ListShowMode.List;
-                if (viewMode != ListShowMode.Auto)
-                    foreach (var gr in groupList)
-                        gr.Expanded = exp;
-                RebuildDisplayedList();
-            }
             public void SortFileListByRealName() { RebuildIndexesAndGroups(); }
             public int FileListIndex(string name) { if(indexTable.TryGetValue(name, out int ind)) return ind; return -1; }
             public string MoveFiles(ImageFileInfo[] filesToMove, DirectoryInfo toDirectory)

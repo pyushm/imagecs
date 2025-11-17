@@ -18,7 +18,6 @@ namespace ImageProcessor
     public interface IAssociatedPath
     {
         string RootName { get; }
-        string PaintExe { get; }
         void SetActiveDir(DirectoryInfo di);
         void SetActiveImageName(string n);
         void RunVideoFile(ImageFileInfo videoFile);
@@ -71,7 +70,6 @@ namespace ImageProcessor
         string MediaExe;
         public const string TempFile = "_._";
         public string RootName          { get; private set; }
-        public string PaintExe          { get; private set; }
         public void RunVideoFile(ImageFileInfo videoFile)
         { 
             if (videoFile.IsEncrypted)
@@ -97,7 +95,6 @@ namespace ImageProcessor
         {
             Common.XMLStore settings = new Common.XMLStore(Path.Combine(Directory.GetCurrentDirectory(), "Customization.xml"));
             RootName = settings.GetString("location.root", "../stuff/");
-            PaintExe = settings.GetString("path.paint");
             MediaExe = settings.GetString("path.media");
             searchResult = new SearchResult();
             string[] dirNames = Enum.GetNames(typeof(SpecName));

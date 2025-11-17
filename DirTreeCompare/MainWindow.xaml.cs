@@ -374,7 +374,7 @@ namespace DirTreeCompare
                     System.Windows.MessageBox.Show("File " + path + " does not exist");
                 else if (dt.IsImage)
                 {
-                    ImageViewForm viewForm = new ImageViewForm(null);
+                    ImageViewForm viewForm = new ImageViewForm();
                     invoked.Add(viewForm);
                     viewForm.ShowNewImage(new ImageFileInfo(new FileInfo(path)));
                 }

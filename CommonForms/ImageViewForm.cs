@@ -23,6 +23,7 @@ namespace ImageProcessor
         ImageEditForm editForm = null;
         int viewingAreaOffset;				// viewing area offset from left of client rectangle
         ImageListForm parent;				// parent image list form
+        int parentListIndex;				// index in the parent list of image forms
         ImageFileInfo.ImageList hostImages; // full image file name shown as big image
         ImageFileInfo currentImageInfo;     // curently displayed image file info 
         Direction dir;                      // direction predicting next image to show
@@ -61,13 +62,14 @@ namespace ImageProcessor
         private Button nextImageButton;
         private Button previousImageButton;
         private Panel panel;
-        private CheckBox resizeBox;
         private ComboBox sensitivityBox;
-        Panel capturePanel;
         private Panel nextImagePanel;
         private Label label3;
         private NumericUpDown delayBox;
+        private ComboBox maxSizeBox;
         private Label mouseSensitivityLabel;
+        private Panel capturePanel;
+        int GetMaxSize => int.TryParse((string)maxSizeBox.SelectedItem, out int res) ? res : 0;
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -109,11 +111,11 @@ namespace ImageProcessor
             this.deleteButton = new System.Windows.Forms.Button();
             this.nextImageButton = new System.Windows.Forms.Button();
             this.previousImageButton = new System.Windows.Forms.Button();
-            this.resizeBox = new System.Windows.Forms.CheckBox();
             this.panel = new System.Windows.Forms.Panel();
             this.nextImagePanel = new System.Windows.Forms.Panel();
             this.label3 = new System.Windows.Forms.Label();
             this.delayBox = new System.Windows.Forms.NumericUpDown();
+            this.maxSizeBox = new System.Windows.Forms.ComboBox();
             capturePanel = new System.Windows.Forms.Panel();
             ((System.ComponentModel.ISupportInitialize)(this.angleCtrl)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.scaleCtrl)).BeginInit();
@@ -444,18 +446,6 @@ namespace ImageProcessor
             this.previousImageButton.Size = new System.Drawing.Size(52, 42);
             this.previousImageButton.TabIndex = 68;
             // 
-            // resizeBox
-            // 
-            this.resizeBox.AutoSize = true;
-            this.resizeBox.Location = new System.Drawing.Point(32, 175);
-            this.resizeBox.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
-            this.resizeBox.Name = "resizeBox";
-            this.resizeBox.Size = new System.Drawing.Size(136, 29);
-            this.resizeBox.TabIndex = 65;
-            this.resizeBox.Text = "Max size ";
-            this.resizeBox.UseVisualStyleBackColor = true;
-            this.resizeBox.CheckedChanged += new System.EventHandler(this.resizeBox_CheckedChanged);
-            // 
             // panel
             // 
             this.panel.Location = new System.Drawing.Point(277, 0);
@@ -512,11 +502,20 @@ namespace ImageProcessor
             capturePanel.TabIndex = 86;
             capturePanel.Paint += new System.Windows.Forms.PaintEventHandler(this.ShowSelection);
             // 
+            // maxSizeBox
+            // 
+            this.maxSizeBox.FormattingEnabled = true;
+            this.maxSizeBox.Location = new System.Drawing.Point(21, 176);
+            this.maxSizeBox.Name = "maxSizeBox";
+            this.maxSizeBox.Size = new System.Drawing.Size(232, 33);
+            this.maxSizeBox.TabIndex = 89;
+            // 
             // ImageViewForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(2219, 1904);
+            this.Controls.Add(this.maxSizeBox);
             this.Controls.Add(capturePanel);
             this.Controls.Add(this.delayBox);
             this.Controls.Add(this.label3);
@@ -539,7 +538,6 @@ namespace ImageProcessor
             this.Controls.Add(this.deleteButton);
             this.Controls.Add(this.nextImageButton);
             this.Controls.Add(this.previousImageButton);
-            this.Controls.Add(this.resizeBox);
             this.KeyPreview = true;
             this.Margin = new System.Windows.Forms.Padding(5, 6, 5, 6);
             this.MinimumSize = new System.Drawing.Size(1229, 1180);
@@ -566,7 +564,7 @@ namespace ImageProcessor
         public double SelectedSensitivity() { return sensitivityBox.SelectedItem != null ? (double)sensitivityBox.SelectedItem : 1; }
         public void ActiveLayerUpdated(int i) { }
         #endregion
-        public ImageViewForm(ImageListForm parentListForm)    
+        public ImageViewForm(ImageListForm parentListForm = null, int index = 0)    
         {
             canvas = new DrawingPanel(this);
             InitializeComponent();
@@ -588,6 +586,7 @@ namespace ImageProcessor
             angleCtrl.ValueChanged += delegate (object sender, EventArgs e) { GeometryTransformChanged(); };
             saturationControl.ValueChanged += delegate (object sender, EventArgs e) { ColorTransformChanged(); };
             brightnessControl.ValueChanged += delegate (object sender, EventArgs e) { ColorTransformChanged(); };
+            FormClosing += delegate (object s, FormClosingEventArgs e) { if (parent != null && parentListIndex < parent.viewForms.Count) parent.viewForms[parentListIndex] = null; };
             deleteButton.Click += deleteButton_Click;
             restoreButton.Click += restoreButton_Click;
             rotateLeftButton.Click += flipRotateButton_Click;
@@ -600,14 +599,20 @@ namespace ImageProcessor
             //capturePanel.Paint += new PaintEventHandler(ShowSelection);
             sensitivityBox.Items.AddRange(NumEnum.Values(typeof(MouseSensitivity), 0.1));
             sensitivityBox.SelectedIndex = 2;
-            resizeBox.Text = "Max size " + (int)Conversion.LimitSize;
             KeyUp += CaptureCtrlC;
+            maxSizeBox.Items.Add("size not limited");
+            foreach (int v in Enum.GetValues(typeof(Conversion)))
+                if(v >= (int)Conversion.LimitSize1)
+                    maxSizeBox.Items.Add(v.ToString());
+            maxSizeBox.SelectedIndex = 0;
+            maxSizeBox.SelectedIndexChanged += delegate(object sender, EventArgs e) { saveButton.Enabled = maxSizeBox.SelectedIndex != 0; };
             actionBox.Items.Add("Crop");
             actionBox.Items.AddRange(Enum.GetNames(typeof(DirShowMode)));
             actionBox.Items.Add("Selection");
             actionBox.Items.Add("RectSelection");
             actionBox.KeyPress += delegate (object sender, KeyPressEventArgs e) { if (ModifierKeys == Keys.Control) e.Handled = true; };
             parent = parentListForm;
+            parentListIndex = Math.Max(index, 0);
             if (parent != null)             // launched from parent list form
                 hostImages = parent.Images;
             else
@@ -656,7 +661,7 @@ namespace ImageProcessor
             {
                 nextImagePanel.Invalidate();
                 userInput = false;
-                saveButton.Enabled = resizeBox.Checked;
+                saveButton.Enabled = GetMaxSize > 0;
                 imageModified = false;
                 deleteButton.Enabled = true;
                 currentImageInfo = ifi;// new ImageFileInfo(new FileInfo(fsPath));
@@ -677,7 +682,6 @@ namespace ImageProcessor
                 RescaleCanvas(true);
                 actionBox.SelectedItem = ToolMode == ToolMode.FreeSelection ? "Selection" : ToolMode == ToolMode.RectSelection ? "RectSelection" : "Crop";
                 infoMode = false;
-                saveButton.Enabled = resizeBox.Checked;
                 imageModified = false;
                 deleteButton.Enabled = true;
                 angleCtrl.Value = 0;
@@ -826,7 +830,7 @@ namespace ImageProcessor
                 if (infoMode)
                     SaveImage(new ImageFileInfo(new FileInfo(Path.Combine(Path.GetDirectoryName(currentImageInfo.FSPath), ImageFileName.InfoFileWithExtension(infoType)))), -1);
                 else
-                    SaveImage(currentImageInfo, resizeBox.Checked ? (int)Conversion.LimitSize : 0);
+                    SaveImage(currentImageInfo, GetMaxSize);
             }
             catch (Exception ex)
             {
@@ -845,7 +849,7 @@ namespace ImageProcessor
             if (saveAsDialog.ShowDialog() == DialogResult.OK)
             {
                 var ifi = new ImageFileInfo(new FileInfo(DataAccess.PrivateAccessEnforced ? Scramble.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName));
-                SaveImage(ifi, resizeBox.Checked ? (int)Conversion.LimitSize : 0);
+                SaveImage(ifi, GetMaxSize);
             }
         }
         void SaveImage(ImageFileInfo ifi, int sizeLimit)
@@ -947,7 +951,7 @@ namespace ImageProcessor
         }
         void resizeBox_CheckedChanged(object sender, EventArgs e)
         {
-            if (resizeBox.Checked)
+            if (GetMaxSize > 0)
                 saveButton.Enabled = true;
         }
         void flipRotateButton_Click(object sender, EventArgs e)

@@ -52,10 +52,10 @@ namespace ImageProcessor
         private Label BackBtn;
         private ValueControl resolutionControl;
         private Button saveSameLocationButton;
-
-        double SelectedStrength { get { return strengthControl.Values[0]; } }   // [0:1]
-        double SelectedLevel { get { return levelControl.Values[0]; } }         // [-1:1]
-        double SelectedSize { get { return resolutionControl.Values[0]; } }     // [0:4]
+        double DisplayScale => scaleBox.SelectedItem == null ? 0 : (int)Enum.Parse(typeof(ImageScale), (string)scaleBox.SelectedItem) / 10.0;
+        double SelectedStrength => strengthControl.Values[0];    // [0:1]
+        double SelectedLevel => levelControl.Values[0];          // [-1:1]
+        double SelectedSize => resolutionControl.Values[0];      // [0:4]
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -389,7 +389,6 @@ namespace ImageProcessor
             this.MinimumSize = new System.Drawing.Size(1233, 1191);
             this.Name = "ImageEditForm";
             this.Text = "Image Editing Form";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.ImageEditForm_FormClosing);
             this.Resize += new System.EventHandler(this.ImageEditForm_Resize);
             this.layerGroupBox.ResumeLayout(false);
             this.ResumeLayout(false);
@@ -536,10 +535,6 @@ namespace ImageProcessor
         }
         int SelectedEdge() { return edgeGapBox.SelectedItem != null ? (int)(double)edgeGapBox.SelectedItem : 0; }
         public double SelectedSensitivity() { return sensitivityBox.SelectedItem != null ? (double)sensitivityBox.SelectedItem : 1; }
-        double DisplayScale
-        {
-            get { return scaleBox.SelectedItem == null ? 0 : (int)Enum.Parse(typeof(ImageScale), (string)scaleBox.SelectedItem)/10.0; }
-        }
         public void ShowNewImage(ImageFileInfo info)
         {
             scaleBox.SelectedItem = ImageScale.Fit.ToString();
@@ -806,7 +801,7 @@ namespace ImageProcessor
             if (ca.Length > 0)
                 ((RadioButton)ca[0]).Checked = true;
         }
-        void ImageEditForm_FormClosing(object o, FormClosingEventArgs e) { }
+        //void ImageEditForm_FormClosing(object o, FormClosingEventArgs e) { }
         void ImageEditForm_Resize(object s, EventArgs e)
         {
             panel.Size = new System.Drawing.Size(ClientSize.Width - viewingAreaOffset, ClientSize.Height);
