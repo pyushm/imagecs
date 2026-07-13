@@ -2,8 +2,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.32328.378
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7F9949C8-E07F-4145-AFF0-8C3A85F61102}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DrawingPanel", "DrawingPanel\DrawingPanel.csproj", "{17A0103F-005B-4B56-8594-051B3B646970}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageSelectorWPF", "ImageSelectorWPF\ImageSelectorWPF.csproj", "{01DF3352-E319-4008-BA95-277CEF106152}"
@@ -22,6 +20,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MultiIndicatorControls", "MultiIndicatorControls\MultiIndicatorControls.csproj", "{90F0B528-AB54-4583-8A64-DCA8B931D156}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DirTreeCompare", "DirTreeCompare\DirTreeCompare.csproj", "{498CD285-00FC-4A57-9FA2-FC11E0846419}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShaderEffects", "ShaderEffectLib\ShaderEffects.csproj", "{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -159,6 +159,22 @@ Global
 		{498CD285-00FC-4A57-9FA2-FC11E0846419}.Release|x64.Build.0 = Release|Any CPU
 		{498CD285-00FC-4A57-9FA2-FC11E0846419}.Release|x86.ActiveCfg = Release|Any CPU
 		{498CD285-00FC-4A57-9FA2-FC11E0846419}.Release|x86.Build.0 = Release|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Debug|x64.Build.0 = Debug|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Debug|x86.Build.0 = Debug|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Release|x64.ActiveCfg = Release|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Release|x64.Build.0 = Release|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Release|x86.ActiveCfg = Release|Any CPU
+		{461246BC-5A5C-4A0F-BF5F-AF98C82F1B4D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -177,8 +177,9 @@ namespace ImageProcessor
                 }
             }
         }
-        public void DirectoryOrFilesRename(DirectoryInfo directory, RenameType renameType)
+        public string DirectoryOrFilesRename(DirectoryInfo directory, RenameType renameType)
         {
+            var oldName = directory.FullName;
             if (renameType == RenameType.Directory)
             {
                 string dn = NewDirName.Trim();
@@ -186,8 +187,10 @@ namespace ImageProcessor
                 {
                     string ndn = Path.Combine(directory.Parent.FullName, Scramble.Mangle(dn));
                     directory.MoveTo(ndn);
+                    return oldName;
+
                 }
-                return;
+                return null;
             }
             FileInfo[] filesToProcess = directory.GetFiles();
             int lr = TextToReplace.Length;
@@ -225,6 +228,7 @@ namespace ImageProcessor
                     throw new Exception(file.ToString());
                 }
             }
+            return null;
         }
         void ReportStatus(string message)	 { notifyStatus?.Invoke(message); }
 		public void ReportResults(string message)

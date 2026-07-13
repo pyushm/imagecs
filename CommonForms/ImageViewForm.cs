@@ -7,8 +7,6 @@ using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using System.Diagnostics;
 using CustomControls;
-using System.Windows.Media.Imaging;
-using System.Media;
 using ShaderEffects;
 using System.Threading;
 
@@ -24,7 +22,7 @@ namespace ImageProcessor
         int viewingAreaOffset;				// viewing area offset from left of client rectangle
         ImageListForm parent;				// parent image list form
         int parentListIndex;				// index in the parent list of image forms
-        ImageFileInfo.ImageList hostImages; // full image file name shown as big image
+        DisplayImageList hostImages; // full image file name shown as big image
         ImageFileInfo currentImageInfo;     // curently displayed image file info 
         Direction dir;                      // direction predicting next image to show
         bool infoMode;				        // indicates if info or original has to be extracted
@@ -35,7 +33,6 @@ namespace ImageProcessor
         VisualLayer backgroundLayer;
         bool userInput = false;
         ImageFileInfo deletedImageInfo = null;
-        string deletedImageFile = "deletedImage";
         Image capturedImage;
         private Label label2;
         private NumericUpDown angleCtrl;
@@ -703,7 +700,7 @@ namespace ImageProcessor
         }
         void DrawNextImage(object sender, PaintEventArgs e)
         {
-            if (hostImages == null || hostImages.Count < 1)
+            if (hostImages == null || hostImages.DisplayedCount < 1)
                 return;
             try
             {
@@ -763,15 +760,15 @@ namespace ImageProcessor
                 {
                     //Debug.WriteLine("DELEDE "+ fi.Name+" active: " + hostImages.ActiveFile.RealName);
                     deletedImageInfo = currentImageInfo;
-                    File.Delete(deletedImageFile);
+                    File.Delete(ImageFileName.DeletedFile);
                     if (parent == null)
-                        fi.MoveTo(deletedImageFile);
+                        fi.MoveTo(ImageFileName.DeletedFile);
                     else
                     {
-                        fi.CopyTo(deletedImageFile);
+                        fi.CopyTo(ImageFileName.DeletedFile);
                         parent.DeleteActiveImage();
                     }
-                    File.SetAttributes(deletedImageFile, FileAttributes.Normal);
+                    File.SetAttributes(ImageFileName.DeletedFile, FileAttributes.Normal);
                     dir = Direction.Next;
                     hostImages?.SetActiveFile(dir);
                     nextImagePanel.Invalidate();
@@ -786,7 +783,7 @@ namespace ImageProcessor
         }
         void restoreButton_Click(object sender, EventArgs e)
         {
-            FileInfo fi = new FileInfo(deletedImageFile);
+            FileInfo fi = new FileInfo(ImageFileName.DeletedFile);
             if (!fi.Exists)
                 return;
             if (deletedImageInfo == null)

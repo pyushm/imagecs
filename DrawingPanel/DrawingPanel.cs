@@ -413,6 +413,8 @@ namespace ImageProcessor
         }
         public string LoadFile(ImageFileInfo info, double replaceDuration)
         {
+            if (!info.CheckExistsSetUpdate())
+                return info.RealName + "does not exist";
             CropRectangle = null;
             if (replaceDuration > 0 && LayerCount > 0)
                 FadeAway(replaceDuration);

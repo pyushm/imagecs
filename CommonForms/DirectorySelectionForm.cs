@@ -2,6 +2,7 @@
 using System.Windows.Forms;
 using System.IO;
 using System.Threading;
+using System.Windows.Input;
 
 namespace ImageProcessor
 {
@@ -28,7 +29,7 @@ namespace ImageProcessor
         }
         void RetrievNodes(object sender, TreeViewCancelEventArgs e)
         {
-            Cursor = Cursors.WaitCursor;
+            Cursor = System.Windows.Forms.Cursors.WaitCursor;
             TreeNode node = e.Node;
             node.Nodes.Clear();
             DirectoryInfo[] dia = navigator.GetDirectories(((DirectoryInfo)node.Tag));
@@ -42,7 +43,7 @@ namespace ImageProcessor
                 subNode.Tag = dia[i];
                 subNode.Nodes.Add("fake");
             }
-            Cursor = Cursors.Default;
+            Cursor = System.Windows.Forms.Cursors.Default;
         }
         void DisplaySelectedNode(object sender, System.Windows.Forms.TreeViewEventArgs e)
         {

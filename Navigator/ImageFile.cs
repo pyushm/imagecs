@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Drawing;
 using System.Threading;
-using System.ComponentModel;
 
 namespace ImageProcessor
 {
@@ -98,8 +97,9 @@ namespace ImageProcessor
         {
             string n1 = Scramble.UnMangle(p1.Name);
             string n2 = Scramble.UnMangle(p2.Name);
-            return string.Compare(n1, n2);
+            return string.Compare(n1, n2, StringComparison.OrdinalIgnoreCase);
         };
+        public const string DeletedFile = "deletedImage";
         static Hashtable knownExtensions = new Hashtable();
         static Hashtable storeTypeString = new Hashtable();
         public const char synonymChar = '=';
@@ -267,6 +267,17 @@ namespace ImageProcessor
     }
     public class ImageFileInfo : ImageFileName
     {
+        public class NameComparer : IComparer<string>
+        {
+            public int Compare(string l1, string l2)
+            {
+                if (l1.IndexOf(multiNameChar) < 0 && l2.IndexOf(multiNameChar) >= 0)
+                    return -1;
+                else if (l1.IndexOf(multiNameChar) >= 0 && l2.IndexOf(multiNameChar) < 0)
+                    return 1;
+                return string.Compare(l1, l2, StringComparison.OrdinalIgnoreCase);
+            }
+        }
         static Image failedImage = LoadSpecialImage("failedImage.png");
         static Image mediaImage = LoadSpecialImage("mediaImage.png");
         static Image localFilesImage = LoadSpecialImage("localImage.png");
@@ -320,7 +331,7 @@ namespace ImageProcessor
         static public IntSize PixelSize(DirShowMode it) { return it == DirShowMode.Detail || it == DirShowMode.Preview ? new IntSize(infoImageWidth, infoImageHeight) : new IntSize(infoImageWidth / 2, infoImageWidth / 2); }
         public bool NeedThumbnail { get; private set; } = true; // true if thumbnail == null || image modifiled
         string dirSuffix = "";
-        bool priority = false;              // true indicatates need for priority loading of visible image
+        internal bool priority = false;     // true indicatates need for priority loading of visible image
         Image thumbnail;                    // image displayed in preview mode
         DateTime modifiedTime;              // update time of the image 
         public FileInfo FileInfo            { get; private set; }
@@ -341,7 +352,7 @@ namespace ImageProcessor
             }
         }
         public bool IsDirInfo               { get; private set; } // image representing child directory in image list - info image show with child directory name
-        public int DisplayListIndex         { get; private set; } = -1; // >=0 when in list
+        public int DisplayListIndex         { get; internal set; } = -1; // >=0 when in list
         public ImageFileInfo(FileInfo fi, bool header = false) : base(fi.Name) 
         { 
             FileInfo = fi;
@@ -433,619 +444,24 @@ namespace ImageProcessor
             }
             return thumbnail;
         }
-        void Rename(string newName)       // returns new full name
+        public string FileRename(string newName) // returns new full name
         {
-            if (IsInfoImage)
-                return;
+            if (IsInfoImage || string.IsNullOrEmpty(newName))
+                return null;
             try
             {
                 FileInfo.Refresh();
                 string ext = Path.GetExtension(FSPath);
                 RealName = newName;
-                FSName = Scramble.UnMangle(RealName);
-                newName = FSName + ext;
-                string newFullPath = Path.Combine(FileInfo.Directory.FullName, newName);
+                FSName = Scramble.Mangle(RealName);
+                string newFullPath = Path.Combine(FileInfo.Directory.FullName, FSName + ext);
                 FileInfo.MoveTo(newFullPath);
                 NeedThumbnail = true;
                 FileInfo = new FileInfo(newFullPath);
                 Name = FileInfo.Name;
             }
-            finally { }
-        }
-        public class NameComparer : IComparer
-        {
-            int IComparer.Compare(object l1, object l2)
-            {
-                string if1 = (string)l1;
-                string if2 = (string)l2;
-                if (if1.IndexOf(multiNameChar) < 0 && if2.IndexOf(multiNameChar) >= 0)
-                    return -1;
-                else if (if1.IndexOf(multiNameChar) >= 0 && if2.IndexOf(multiNameChar) < 0)
-                    return 1;
-                return string.Compare(if1, if2, true);
-            }
-        }
-        public class RealNameComparer : IComparer<ImageFileInfo>
-        {
-            IComparer ifhc = new NameComparer();
-            int IComparer<ImageFileInfo>.Compare(ImageFileInfo l1, ImageFileInfo l2)
-            {
-                if (l1.IsDirInfo && !l2.IsDirInfo)
-                    return -1;
-                if (!l1.IsDirInfo && l2.IsDirInfo)
-                    return 1;
-                if (l1.IsInfoImage && !l2.IsInfoImage)
-                    return -1;
-                if (!l1.IsInfoImage && l2.IsInfoImage)
-                    return 1;
-                return ifhc.Compare(l1.RealName, l2.RealName);
-            }
-        }
-        public class ImageGroup
-        {
-            public string Name { get; private set; }
-            public int First { get; private set; }
-            public int Last { get; private set; }
-            public bool Expanded { get; set; }
-            public ImageGroup(List<ImageFileInfo> fileInfos, int ind)
-            {
-                var fileName = fileInfos[ind].RealName;
-                int len = fileName.Length;
-                int dm = Math.Min(len, 3);
-                int digits = 0;
-                for (; digits < dm; digits++)
-                    if (!char.IsDigit(fileName[len - 1 - digits]))
-                        break;
-                First = ind;
-                Last = 0;
-                Name = len == digits ? "" : len == digits + 1 ? fileName.Substring(0, 1) : null;
-                if (Name == null)
-                {
-                    char last = fileName[len - 1 - digits];
-                    Name = IsSeparator(last) ? fileName.Substring(0, len - digits - 1) : fileName.Substring(0, len - digits);
-                }
-                Expanded = false;
-                return;
-            }
-            public void SetLast(int li) { if (Last == 0) Last = li; }
-            public override string ToString() => Name + " [" + First + '-' + Last + ']'; 
-            bool IsSeparator(char c) => c == '-' || c == '_'; 
-            internal bool NameMatches(ImageFileInfo ifi)
-            {
-                var fileName = ifi.RealName;
-                if (!fileName.StartsWith(Name))     // has starting with Name
-                    return false;
-                var len = fileName.Length;
-                if (len != Name.Length)             // allowed no separator or digit after Name
-                {
-                    int s = IsSeparator(fileName[Name.Length]) ? 1 : 0; // can have separator after Name
-                    int ds = Name.Length + s;
-                    if (len - ds > 3)               // not more than 3 digits
-                        return false;
-                    for (int i = ds; i < len; i++)  // only digits allowed at the end
-                        if (!char.IsDigit(fileName[i]))
-                            return false;
-                }
-                return true;
-            }
-            internal bool Contains(int ind) => ind >= First && ind <= Last; 
-        }
-        public class ImageList
-        {   // sortable list of 'ImageFileInfo' accessible by key, index or Group of similar
-            public const int synchronizationDelay = 300; // synchronization delay [ms] between directory and image collection
-            const int mandatoryUpdate = 3;     // time between mandatory updates [s] 
-            public bool ViewList { get; set; }
-            public bool PreferedGroupView { get; set; } = false;
-            DirectoryInfo directory = null; // source directory (search path of srcList or image and subDir source)
-            bool dirModified = false;
-            string[] srcList = null;        // subDirs of the directory matching search criteria
-            DateTime lastUpdated;           // last access time of underlying directory
-            DirShowMode viewInfoType;       // type of info if view mode is info     
-            Dictionary<string, int> indexTable = new Dictionary<string, int>(); // stores system file name and fileList index pairs
-            List<ImageFileInfo> fileList = new List<ImageFileInfo>();   // holds both local image files and subdir header files
-            List<ImageGroup> groupList = new List<ImageGroup>();        // header file names of image groups (same StartsWith). Applies only to directory source
-            List<ImageFileInfo> displayed = new List<ImageFileInfo>();  // image list displayed by list view window
-            public int Count => displayed.Count;
-            public int GroupCount => groupList.Count;
-            public int ImageCount => fileList.Count; 
-            int prevImageCount = 0;         // image count in directory before update
-            BackgroundWorker fileSyncWorker;// keeping synchronization between list and directory
-            public event VoidNoArg notifyEmptyDir = null;
-            int thumbnailUpdateIndex = 0;
-            bool abortSynchronization = false;
-            public string DirRealName => directory == null ? "" : Scramble.UnMangle(directory.Name);
-            bool IsUpdating => fileSyncWorker != null && fileSyncWorker.IsBusy; 
-            public ImageFileInfo ActiveFile { get; private set; } // current file name
-            public string ActiveFileFSPath => ActiveFile == null ? "" : ActiveFile.FSPath;
-            ImageFileInfo lastAdded;        // file added to a directory
-            public ImageFileInfo LastAdded  { get { bool show = ImageCount > prevImageCount; prevImageCount = ImageCount; return show ? lastAdded : null; } } 
-            public bool ValidDirectory => directory !=null && directory.Exists;
-            public ImageFileInfo this[int i]
-            {
-                get
-                {
-                    if (i < 0 && i >= Count)
-                        return null;
-                    try { return displayed[i]; }
-                    catch { return null; }
-                }
-            }
-            public ImageList(ImageDirInfo dir, bool listOnly) { Initialize(dir, listOnly, null); }
-            public ImageList(ImageDirInfo dir, string[] list) { Initialize(dir, true, list); }
-            void Initialize(ImageDirInfo dir, bool listOnly, string[] list)
-             {
-                directory = dir.DirInfo;
-                if (!ValidDirectory)
-                    throw new Exception("Directory '"+dir.FSPath+"' does not exists");
-                viewInfoType = DirShowMode.Detail;
-                srcList = list;
-                ActiveFile = null;
-                ViewList = listOnly;
-                UpdateImageList();
-                if (!ViewList)
-                {
-                    int fc = ImageCount;
-                    int gc = GroupCount;
-                    PreferedGroupView = gc > 1 && fc > 200 || gc > 3 && fc > 100 || gc > 10 && gc < fc / 3;
-                }
-                if (srcList == null)
-                {
-                    fileSyncWorker = new BackgroundWorker();
-                    fileSyncWorker.DoWork += Synchronization_DoWork;
-                    fileSyncWorker.RunWorkerCompleted += Synchronization_RunWorkerCompleted;
-                    fileSyncWorker.RunWorkerAsync();
-                }
-            }
-            ~ImageList()
-            {
-                Clear();
-                if (fileSyncWorker != null)
-                    fileSyncWorker.Dispose();
-            }
-            public void SetInfoType(DirShowMode it) { viewInfoType = it; }
-            public void Clear()
-            {
-                abortSynchronization = true;
-                directory = null;
-                srcList = null;
-                fileList.Clear();
-                prevImageCount = 0;
-                indexTable.Clear();
-            }
-            #region fileList maintenance and thumbnail sinchronization
-            void Synchronization_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e) => notifyEmptyDir?.Invoke(); 
-            void Synchronization_DoWork(object sender, DoWorkEventArgs e)
-            {
-                //Debug.WriteLine("RunSynchronization " + directory.Name + " thread "+Thread.CurrentThread.Name);
-                while (true)
-                {
-                    try
-                    {
-                        if (!UpdateImageList())
-                            break;
-                    }
-                    catch   //(Exception ex)
-                    {
-                        if (abortSynchronization || !IsUpdating)
-                            break;
-                        //Debug.WriteLine("RunSynchronization: " + ex.Message);
-                        if (directory != null)
-                            directory = new DirectoryInfo(directory.FullName); // needed to keep dir info up-to-date
-                        if (directory == null || !directory.Exists)
-                            break;
-                    }
-                    Thread.Sleep(synchronizationDelay);
-                }
-            }
-            bool UpdateImageList()
-            {
-                try
-                {
-                    if (!ValidDirectory)
-                        return false;
-                    directory = new DirectoryInfo(directory.FullName);  // updates info
-                    var downloadedDir = Navigator.IsSpecDir(directory, SpecName.Downloaded);
-                    lock (this)
-                    {
-                        if (dirModified || lastUpdated < directory.LastWriteTime || lastUpdated < DateTime.Now.AddSeconds(-mandatoryUpdate))
-                        {   // rebuild collection if directory content changed
-                            prevImageCount = ImageCount;
-                            lastAdded = null;
-                            List<string> deletedFiles = new List<string>(); // names of deleted, moved, or renamed files
-                            foreach (ImageFileInfo d in fileList)
-                                if (!d.CheckExistsSetUpdate())
-                                    deletedFiles.Add(d.Name);
-                            if (deletedFiles.Count > 0)
-                            {
-                                int[] indexes = new int[deletedFiles.Count]; // indexes of deleted, moved, or renamed files
-                                for (int i = 0; i < indexes.Length; i++)
-                                    indexes[i] = FileListIndex(deletedFiles[i]);
-                                Array.Sort(indexes);
-                                for (int i = indexes.Length - 1; i >= 0; i--)  // removing deleted files from the list
-                                    if (indexes[i] >= 0)
-                                        fileList.RemoveAt(indexes[i]);
-                            }
-                            AppendNewFiles(downloadedDir);           // appending new files to the list
-                            if (srcList == null)
-                            {
-                                if (downloadedDir && prevImageCount > 0)
-                                    RebuildIndexesNoSoting();
-                                else
-                                    RebuildIndexesAndGroups();
-                            }
-                            if (ImageCount == 0)
-                            {
-                                notifyEmptyDir?.Invoke(); // sends empty dir notification
-                                return false;
-                            }
-                            RebuildDisplayedList();
-                            if (prevImageCount == 0)
-                                lastAdded = null;
-                            dirModified = false;
-                            lastUpdated = DateTime.Now;
-                        }
-                        int loaded = 0;
-                        foreach (ImageFileInfo ifi in fileList)
-                        {
-                            if (abortSynchronization)
-                                break;
-                            if (!ifi.priority || (ifi.IsEncrypted && !DataAccess.PrivateAccessEnforced))
-                                continue;
-                            ifi.UpdateThumbnail();
-                            loaded++;
-                            //Debug.WriteLine("priority " + d.Name + " updated");
-                        }
-                        if (loaded == 0)
-                            UpdateHiddenThumbnails(8);
-                        return !abortSynchronization;
-                    }
-                }
-                catch (Exception) 
-                { 
-                    return false;
-                }
-            }
-            void UpdateHiddenThumbnails(int max)
-            {
-                if (thumbnailUpdateIndex >= ImageCount)
-                {
-                    thumbnailUpdateIndex = 0;
-                    return;
-                }
-                while (thumbnailUpdateIndex < ImageCount)
-                {
-                    ImageFileInfo ifi = fileList[thumbnailUpdateIndex];
-                    if (ifi.NeedThumbnail && (!ifi.IsEncrypted || DataAccess.PrivateAccessEnforced))
-                    {
-                        //Debug.WriteLine("hidden " + d.Name + " updated " + max);
-                        if (abortSynchronization)
-                            break;
-                        ifi.UpdateThumbnail();
-                        if (max-- < 0)
-                            return;
-                    }
-                    thumbnailUpdateIndex++;
-                }
-            }
-            void AppendNewFiles(bool downloadedDir)
-            {
-                DirectoryInfo[] directories;
-                if (srcList == null) // so far only directories passes => all entries treated as directories
-                    directories = directory.GetDirectories();
-                else
-                {
-                    directories = new DirectoryInfo[srcList.Length];
-                    for (int i = 0; i < srcList.Length; i++)
-                    {
-                        string dirFullName = Path.Combine(directory.FullName, srcList[i]);
-                        directories[i] = Directory.Exists(dirFullName) ? new DirectoryInfo(dirFullName) : null;
-                        if (DataAccess.PrivateAccessEnforced && directories[i] == null)
-                        {
-                            dirFullName = Path.Combine(directory.FullName, Scramble.MangleFile(srcList[i]));
-                            directories[i] = Directory.Exists(dirFullName) ? new DirectoryInfo(dirFullName) : null;
-                        }
-                    }
-                }
-                foreach (DirectoryInfo di in directories)
-                {
-                    if (di == null)
-                        continue;
-                    try
-                    {
-                        FileInfo fsf = GetInfoFile(di);
-                        if (fsf != null)
-                        {
-                            var ifi = new ImageFileInfo(fsf, true);
-                            if (downloadedDir && prevImageCount > 0)
-                                AddNewImageFileToFront(ifi, true);
-                            else
-                                AppendNewImageFile(ifi, true);
-                        }
-                    }
-                    finally { }
-                }
-                FileInfo[] files;
-                if (srcList == null)
-                    files = directory.GetFiles();
-                else
-                    files = new FileInfo[0]; // all entries treated as directories
-                foreach (var fi in files)
-                {
-                    var ifi = new ImageFileInfo(fi);
-                    if (downloadedDir && prevImageCount > 0)
-                        AddNewImageFileToFront(ifi);
-                    else
-                        AppendNewImageFile(ifi);
-                }
-                //if (ImageCount > prevImageCount)
-                //    Debug.WriteLine(" *AppendFiles "+prevImageCount.ToString() + " -> " + ImageCount + " first added " + fileList[prevImageCount].RealName);
-            }
-            void AddNewImageFileToFront(ImageFileInfo ifi, bool header = false)
-            {   // insert new item to the front of list and indexTable
-                try
-                {
-                    if (indexTable.ContainsKey(ifi.Name))
-                        return;
-                    //Debug.WriteLine("Appenging to front: " + ifi.Name);
-                    if (!header && !ifi.IsKnown)
-                        return;
-                    lock (this)
-                    {
-                        lastAdded = ifi;
-                        fileList.Insert(0, lastAdded);
-                    }
-                }
-                catch
-                {
-                    //Debug.WriteLine("FAILED @: " + ifi.Name);
-                }
-            }
-            void AppendNewImageFile(ImageFileInfo ifi, bool header = false)
-            {   // append new item to the list and indexTable
-                try
-                {
-                    if (indexTable.ContainsKey(ifi.Name))
-                        return;
-                    //Debug.WriteLine("Appenging to list: " + ifi.Name);
-                    if (!header && !ifi.IsKnown)
-                        return;
-                    lock (this)
-                    {
-                        lastAdded = ifi;
-                        fileList.Add(lastAdded);
-                    }
-                }
-                catch
-                {
-                    //Debug.WriteLine("FAILED @: " + ifi.Name);
-                }
-            }
-            void RebuildIndexesNoSoting() 
-            {   // rebuilds indexes witout sorting
-                indexTable.Clear();
-                int i = 0;
-                try
-                {
-                    for (; i < ImageCount; i++)
-                    {
-                        fileList[i].DisplayListIndex = -1;
-                        indexTable.Add(fileList[i].Name, i);
-                        //Debug.WriteLine("Appenging to table: " + fileList[i].Name);
-                    }
-                }
-                catch
-                {
-                    //Debug.WriteLine("FAILED table @: " + fileList[i].Name);
-                }
-            }
-            void RebuildIndexesAndGroups()
-            {   // applied when fileList changed
-                indexTable.Clear();
-                var newGL = new List<ImageGroup>();
-                int i = 0;
-                try
-                {
-                    lock (this)
-                    {
-                        fileList.Sort(new RealNameComparer());
-                        if (ViewList)
-                            for (; i < ImageCount; i++)
-                                indexTable.Add(fileList[i].Name, i);
-                        else
-                        {
-                            for (; i < ImageCount; i++)
-                            {
-                                var ifi = fileList[i];
-                                indexTable.Add(ifi.Name, i); // complete rebuild of index list
-                                int n = newGL.Count;
-                                if (ifi.IsDirInfo || ifi.IsInfoImage)
-                                {
-                                    if (n > 0)
-                                        newGL[n - 1].SetLast(i - 1);
-                                    continue;
-                                }
-                                if (n == 0 || !newGL[n - 1].NameMatches(ifi))
-                                {
-                                    newGL.Add(new ImageGroup(fileList, i));
-                                    ifi.Group = newGL[newGL.Count - 1];
-                                    if (n > 0)
-                                        newGL[n - 1].SetLast(i - 1);
-                                }
-                            }
-                            if (newGL.Count > 0)
-                                newGL[newGL.Count - 1].SetLast(i - 1);
-                            if (newGL.Count == GroupCount)
-                                for (i = 0; i < newGL.Count; i++)
-                                    if (newGL[i].Name == groupList[i].Name)
-                                        newGL[i].Expanded = groupList[i].Expanded;
-                        }
-                        groupList = newGL;
-                    }
-                }
-                catch
-                {
-                    string s = fileList[i].FSPath;
-                }
-                //Debug.WriteLine(" *RebuildIndexesAndGroups list=" + ImageCount + " groups=" + GroupCount);
-                //foreach (var gr in groupList)
-                //    Debug.WriteLine(gr.ToString());
-            }
-            public void RebuildDisplayedList()
-            {
-                //Thread.Sleep(150);
-                UpdateImageList();
-                displayed.Clear();
-                lock (this)
-                {   // complete rebuild of index list
-                    if (ViewList || GroupCount < 2)
-                        for (int i = 0; i < ImageCount; i++)
-                        {
-                            var ifi = fileList[i];
-                            ifi.DisplayListIndex = i;
-                            displayed.Add(ifi);
-                        }
-                    else
-                    {
-                        int gInd = 0;
-                        int ind = 0;
-                        for (int i = 0; i < ImageCount; i++)
-                        {
-                            var ifi = fileList[i];
-                            if (ifi.IsDirInfo || ifi.IsInfoImage)
-                            {
-                                ifi.DisplayListIndex = ind++;
-                                displayed.Add(ifi);
-                                continue;
-                            }
-                            if (!groupList[gInd].NameMatches(ifi))
-                            {
-                                gInd++;
-                                if (gInd >= GroupCount)
-                                    continue;
-                            }
-                            if (groupList[gInd].NameMatches(ifi) && (ifi.IsGroupHead || groupList[gInd].Expanded))
-                            {
-                                ifi.DisplayListIndex = ind++;
-                                displayed.Add(ifi);
-                            }
-                        }
-                    }
-                    //Debug.Assert(displayed.Count == ind);
-                }
-                //Debug.WriteLine(" *RebuildDisplayedList displayed=" + displayed.Count);
-            }
-            #endregion
-            public void SortFileListByRealName() { RebuildIndexesAndGroups(); }
-            public int FileListIndex(string name) { if(indexTable.TryGetValue(name, out int ind)) return ind; return -1; }
-            public string MoveFiles(ImageFileInfo[] filesToMove, DirectoryInfo toDirectory)
-            {
-                if (toDirectory != null && !Directory.Exists(toDirectory.FullName))
-                    return "Destination directory '" + toDirectory + "' does not exist";
-                string warnings = "";
-                lock (this)
-                {
-                    filesToMove = filesToMove == null ? fileList.ToArray() : filesToMove;
-                    bool delete = toDirectory == null;  // deleting files from filesToMove List
-                    foreach (ImageFileInfo ifi in filesToMove)
-                    {
-                        if (ifi == null || ifi.IsDirInfo) 
-                            continue;   // files representing child directories can't be moved
-                        try
-                        {
-                            if (delete)
-                            {
-                                var er = Delete(ifi.FSPath);
-                                if (!string.IsNullOrEmpty(er))
-                                    warnings += er + Environment.NewLine;
-                            }
-                            else if (ifi.IsEncrypted)
-                            {
-                                string dest = Path.Combine(toDirectory.FullName, Scramble.MangleFile(Path.GetFileName(ifi.FSPath)));
-                                File.Move(ifi.FSPath, dest);
-                            }
-                            else if (DataAccess.PrivateAccessEnforced && !ifi.IsEncrypted)
-                            {   // when PrivateAccessAllowed move images with encription and name mangling
-                                string name = ifi.IsMovie ? ifi.FSName + ".vid" : ifi.IsExact ? ifi.FSName + ".exa" : ifi.FSName + ".jpe";
-                                byte[] src = File.ReadAllBytes(ifi.FSPath);
-                                var warn = DataAccess.CreateFile(Path.Combine(toDirectory.FullName, Scramble.MangleFile(name)), src, true);
-                                if (warn.Length!=0)
-                                    warnings += ifi.FSName + ": " + warn + Environment.NewLine;
-                                else
-                                {
-                                    var er = Delete(ifi.FSPath);
-                                    if (!string.IsNullOrEmpty(er))
-                                        warnings += er + Environment.NewLine;
-                                }
-                            }
-                            else
-                            {
-                                string dest = Path.Combine(toDirectory.FullName, Path.GetFileName(ifi.FSPath));
-                                File.Move(ifi.FSPath, dest);
-                            }
-                        }
-                        catch (Exception ex)        // legal exception
-                        {
-                            warnings += ifi.FSPath + " was not moved: " + ex.Message + "  ";
-                        }
-                    }
-                }
-                //Thread.Sleep(synchronizationDelay);
-                dirModified = true;
-                return warnings;
-            }
-            public void Rename(ImageFileInfo ifi, string newName)
-            {
-                if (ifi == null || string.IsNullOrEmpty(newName))
-                    return;
-                lock (this)
-                {
-                    int ind = indexTable[ifi.Name];
-                    ifi.Rename(newName);
-                    dirModified = true;
-                    fileList.RemoveAt(ind);
-                }
-            }
-            public ImageFileInfo SetActiveFile(ImageFileInfo ifi) { return ActiveFile = ifi; }
-            public ImageFileInfo SetActiveFile(Direction dest) { int ind = NewDisplayIndex(dest); ActiveFile = ind < 0 ? null : displayed[ind]; return ActiveFile; }
-            public int NewDisplayIndex(Direction dest) // only predicts index of the  next image
-            {
-                if (ActiveFile != null && dest != Direction.current)
-                {
-                    int ind = ActiveFile.DisplayListIndex;
-                    int del = dest == Direction.Next || dest == Direction.NextGroup ? 1 : -1;
-                    ind += del;
-                    if (dest == Direction.Next || dest == Direction.Prev)
-                        return ind < 0 ? displayed.Count - 1 : ind >= displayed.Count ? 0 : ind; ;
-                    for (int i = ind; i < displayed.Count && i >= 0; i += del)
-                        if (displayed[i].IsGroupHead)
-                            return i;
-                    return dest == Direction.NextGroup ? displayed.Count - 1 : 0;
-                }
-                return -1;
-            }
-            FileInfo GetInfoFile(DirectoryInfo di)
-            {
-                bool useMangled = DataAccess.PrivateAccessEnforced;
-                string nInfo = InfoFileName(viewInfoType);
-                string nMangled = Scramble.MangleFile(nInfo);
-                FileInfo info = null;
-                FileInfo img = null;
-                foreach (var f in di.GetFiles())
-                {
-                    if (useMangled && f.Name.StartsWith(nMangled))
-                        return f;
-                    if (info == null && f.Name.StartsWith(nInfo))
-                    {
-                        if(!useMangled)
-                            return f;
-                        info = f;
-                    }
-                    var ft = new ImageFileName(f.Name);
-                    if (img == null && ft.IsImage)
-                        img = f;
-                }
-                return info != null ? info : img;
-            }
+            catch (Exception e) { return e.Message+Environment.NewLine+"Can't rename file"; }
+            return null;
         }
     }
 }

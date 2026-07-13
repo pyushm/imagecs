@@ -83,26 +83,26 @@ namespace NNTP
         {
             int IComparer<ArticleHeader>.Compare(ArticleHeader l1, ArticleHeader l2)
             {
-                return string.Compare(l1.Subject, l2.Subject);
+                return string.Compare(l1.Subject, l2.Subject, StringComparison.OrdinalIgnoreCase);
             }
         }
         public class IDComparer : IComparer<ArticleHeader>
         {
-            int IComparer<ArticleHeader>.Compare(ArticleHeader l1, ArticleHeader l2)
+            int IComparer<ArticleHeader>.Compare(ArticleHeader l1, ArticleHeader l2, StringComparison.OrdinalIgnoreCase)
             {
                 return l1.TrueID - l2.TrueID;
             }
         }
-        public class NameComparer : IComparer<ArticleHeader>
-        {
-            int IComparer<ArticleHeader>.Compare(ArticleHeader l1, ArticleHeader l2)
-            {
-                int ret = string.Compare(l1.Subject, l2.Subject);
-                if (ret == 0)
-                    return l1.TrueID - l2.TrueID;
-                return ret;
-            }
-        }
+        //public class NameComparer : IComparer<ArticleHeader>
+        //{
+        //    int IComparer<ArticleHeader>.Compare(ArticleHeader l1, ArticleHeader l2)
+        //    {
+        //        int ret = string.Compare(l1.Subject, l2.Subject);
+        //        if (ret == 0)
+        //            return l1.TrueID - l2.TrueID;
+        //        return ret;
+        //    }
+        //}
         public class Item : ArticleHeader   // one-to-one corresponds to headerListView.Item
         {
             static int numFields = 5;

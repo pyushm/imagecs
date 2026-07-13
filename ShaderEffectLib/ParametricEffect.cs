@@ -36,10 +36,6 @@ namespace ShaderEffects
     [Serializable]
     public class EffectData
     {
-        //EffectType type;
-        //double[] values;
-        //public EffectType Type { get { return type; } }
-        //public double[] Values { get { return values; } set { values = value; } }
         public EffectType Type { get; private set; }
         public double[] Values { get; set; }
         public EffectData(EffectType t) { Type = t; }
@@ -263,9 +259,10 @@ namespace ShaderEffects
         public override void SetParameters(ColorTransform trasform, double strength, double level, double size)
         {
             int i = 0;
-            SetParameter(inputProperties[i++], level);
+            SetParameter(inputProperties[i++], -level);
             SetParameter(inputProperties[i++], 4*strength);
-            SetParameter(inputProperties[i++], (size + 0.5) * (size / 4 + 0.5) / pixelSize.Width);
+            SetParameter(inputProperties[i++], (size + 0.5) * (size / 4 + 0.5) / Math.Sqrt(2000*pixelSize.Width));
+            //SetParameter(inputProperties[i++], (size + 0.5) * (size / 4 + 0.5) / pixelSize.Width);
             SetParameter(inputProperties[i++], (double)pixelSize.Width / pixelSize.Height);
             //Debug.Write(ToString());
         }

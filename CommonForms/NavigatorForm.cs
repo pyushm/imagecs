@@ -7,6 +7,8 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Media.Imaging;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Globalization;
+using System.Security.Policy;
 
 namespace ImageProcessor
 {
@@ -19,7 +21,7 @@ namespace ImageProcessor
         }
         private Container components = null;
         List<Form> invoked = new List<Form>();
-        List<string> warnings = new List<string>();
+        public DisplayImageList Images { get; private set; } = null; // images to be displayed 
         Button addPrefixButton;
         Button changeNameButton;
         ListBox outputList;
@@ -60,6 +62,7 @@ namespace ImageProcessor
         private Button displayResultsBtn;
         string searchImagePath="";
         Conversion conversion = Conversion.None;
+        Conversion? pendingConversion = null; // queue conversion request here ifimageAdjustmentWorker is busy
         delegate void OnSearchClick();
         OnSearchClick onSearchClick;
         bool userAction = true;
@@ -576,17 +579,17 @@ namespace ImageProcessor
                 similarImagesWorker.DoWork += new DoWorkEventHandler(FindSimilarImages);
                 similarImagesWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(FindSimilarImagesCompleted);
                 outputBox.ForeColor = Color.LightSalmon;
-                findNameButton.Click += (object s, EventArgs e) => FindItems(Navigator.SearchMode.Name);
-                findFileBtn.Click += (object s, EventArgs e) => FindItems(Navigator.SearchMode.File);
-                findSoundBtn.Click += (object s, EventArgs e) => FindItems(Navigator.SearchMode.Sound);
-                findLookBtn.Click += (object s, EventArgs e) => FindItems(Navigator.SearchMode.Image);
+                findNameButton.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.Name);
+                findFileBtn.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.File);
+                findSoundBtn.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.Sound);
+                findLookBtn.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.Image);
                 makePrivateBtn.Click += (object s, EventArgs e) => ConvertToPrivate();
                 compressBtn.Click += (object s, EventArgs e) => ConvertTojpg();
                 reduceButton.Click += (object s, EventArgs e) => ResizeImages();
                 reduceButton.Text = "Reduce to";
-                changeNameButton.Click += (object s, EventArgs e) => Rename(RenameType.FileName);
-                addPrefixButton.Click += (object s, EventArgs e) => Rename(RenameType.AddPrefix);
-                renameDirBtn.Click += (object s, EventArgs e) => Rename(RenameType.Directory);
+                changeNameButton.Click += (object s, EventArgs e) => ApplyRenameOperation(RenameType.FileName);
+                addPrefixButton.Click += (object s, EventArgs e) => ApplyRenameOperation(RenameType.AddPrefix);
+                renameDirBtn.Click += (object s, EventArgs e) => ApplyRenameOperation(RenameType.Directory);
                 imageInfoBtn.Click += (object s, EventArgs e) => { runningInfoIcon.Visible = true; infoWorker.RunWorkerAsync(); imageInfoBtn.Enabled = false; };
                 findSimilarImagesBtn.Click += (object s, EventArgs e) => { runningSimilarIcon.Visible = true; similarImagesWorker.RunWorkerAsync(); findSimilarImagesBtn.Enabled = false; }; ;
                 locationTreeView.DoubleClick += (object s, EventArgs e) => { if (selectedNode != null) ShowImageListForm(selectedNode); };
@@ -626,12 +629,11 @@ namespace ImageProcessor
                 MessageBox.Show(ex.Message, "NavigatorForm");
             }
         }
-        ~NavigatorForm()				    { Dispose(true); }
+        ~NavigatorForm()				    { Dispose(false); }
         void SetActiveDirAndInfoImages(DirectoryInfo di)
         { 
             selectedNode = itemInfoImages.ReDrawInfoImages(di);
-            outputBox.Text = di == null ? "" : (new ImageDirInfo(selectedNode)).RealPath;
-            if(di != null && selectedNode == null) outputBox.Text += " does NOT EXIST";
+            outputBox.Text = di == null ? "" : selectedNode != null ? (new ImageDirInfo(selectedNode)).RealPath : di.FullName + " does NOT EXIST";
         }
 		void ShowResults(string message)	{ outputList.Items.Add(message); }
         void ShowFinalResults(List<string> messages)
@@ -688,13 +690,18 @@ namespace ImageProcessor
             catch (Exception ex) {
                 Debug.WriteLine(ex.Message); }
         }
-        void FindItems(Navigator.SearchMode mode)
+        void StartSearch(Navigator.SearchMode mode)
         {
+            if (searchWorker.IsBusy)
+                return;
+            searchRoot = navigator.GetSearchRoot(outputBox.Text);
+            if(searchRoot == null || !searchRoot.Exists)
+                return;
+            Images = null;
             searchMode = mode;
             outputList.Items.Clear();
             if (patternBox.Text.Length == 0 && daysBox.Text.Length == 0 && searchMode != Navigator.SearchMode.Image)
                 return;
-            searchRoot = navigator.GetSearchRoot(outputBox.Text);
             runningImage.Visible = true;
             searchWorker.RunWorkerAsync();
             SetViewButtonState(SearchState.Stop);
@@ -730,7 +737,8 @@ namespace ImageProcessor
         {
             if (!searchRoot.Exists)
                 return;
-            ImageListForm sif = new ImageListForm(searchRoot, navigator.GetMatchedDirNames(), navigator);
+            Images = new DisplayImageList(searchRoot, navigator.GetMatchedDirNames());
+            ImageListForm sif = new ImageListForm(Images, navigator);
             try
             {
                 sif.Show();
@@ -758,6 +766,13 @@ namespace ImageProcessor
                     conversion = (Conversion)v;
             if (conversion == Conversion.None)
                 return;
+            // if worker is already running, queue this conversion
+            if (imageAdjustmentWorker.IsBusy)
+            {
+                pendingConversion = conversion;
+                outputBox.Text = "Conversion queued";
+                return;
+            }
             OperationButtonsEnabled(false);
             imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
         }
@@ -767,6 +782,12 @@ namespace ImageProcessor
                 return;
             conversion = Conversion.Encode;
             OperationButtonsEnabled(false);
+            if (imageAdjustmentWorker.IsBusy)
+            {
+                pendingConversion = conversion;
+                outputBox.Text = "Conversion queued";
+                return;
+            }
             imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
         }
         void ConvertTojpg()
@@ -775,6 +796,12 @@ namespace ImageProcessor
                 return;
             conversion = Conversion.ToJPG;
             OperationButtonsEnabled(false);
+            if (imageAdjustmentWorker.IsBusy)
+            {
+                pendingConversion = conversion;
+                outputBox.Text = "Conversion queued";
+                return;
+            }
             imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
         }
         void ApplyConversion(object sender, DoWorkEventArgs e)
@@ -788,8 +815,17 @@ namespace ImageProcessor
             outputList.Items.Add(conversion.ToString() + " completed: " + processNodeName);
             processNodeName = "";
             conversion = Conversion.None;
+            // if a conversion was queued while the worker was busy, start it now
+            if (pendingConversion.HasValue)
+            {
+                conversion = pendingConversion.Value;
+                pendingConversion = null;
+                OperationButtonsEnabled(false);
+                imageAdjustmentWorker.RunWorkerAsync();
+                return;
+            }
         }
-        void Rename(RenameType operation)   
+        void ApplyRenameOperation(RenameType operation)   
         {
             if (selectedNode == null || operation == RenameType.None)
                 return;
@@ -829,7 +865,9 @@ namespace ImageProcessor
             }
             directoryNameBox.Text = "";
             OperationButtonsEnabled(false);
-            fileManager.DirectoryOrFilesRename(selectedNode, operation);
+            var ret = fileManager.DirectoryOrFilesRename(selectedNode, operation);
+            if (Images != null)
+                Images.DeletedFile = ret;
             OperationButtonsEnabled(true);
         }
         void OnListBoxMouseMove(object sender, MouseEventArgs e)
@@ -846,7 +884,10 @@ namespace ImageProcessor
 			Cursor=Cursors.WaitCursor;
 			TreeNode node=e.Node;
 			node.Nodes.Clear();
-			DirectoryInfo[] dia=navigator.GetDirectories(((DirectoryInfo)node.Tag));
+            var tag = node.Tag as DirectoryInfo;
+            if (tag == null)
+                return;
+            DirectoryInfo[] dia=navigator.GetDirectories(tag);
             string[] fna = new string[dia.Length];
             for(int i=0; i<dia.Length; i++)
                 fna[i] = Scramble.UnMangle(dia[i].Name);
@@ -860,7 +901,7 @@ namespace ImageProcessor
             Cursor = Cursors.Default;
 		}
         void locationTreeView_Click(object sender, EventArgs e) { itemInfoImages.ReDrawInfoImages(); } // clear old selection
-        void locationTreeView_AfterSelect(object sender, TreeViewEventArgs e) { if (e.Node != null && e.Node.Tag != null) SetActiveDirAndInfoImages((DirectoryInfo)e.Node.Tag); }
+        void locationTreeView_AfterSelect(object sender, TreeViewEventArgs e) { if (e.Node != null && e.Node.Tag as DirectoryInfo != null) SetActiveDirAndInfoImages((DirectoryInfo)e.Node.Tag); }
         void ShowImageListForm(DirectoryInfo di)
 		{
             if (di == null)
@@ -960,26 +1001,27 @@ namespace ImageProcessor
         {
             if (matchingItems == null)
                 return;
-            string res;
+            string criteria = "";
             if (patternBox.Text.Length > 0)
             {
-                res = searchMode == Navigator.SearchMode.Name ? " matching name " : 
-                    searchMode == Navigator.SearchMode.Sound ? " sound like " :
-                    searchMode == Navigator.SearchMode.File ? " matching file name " :
-                    searchMode == Navigator.SearchMode.Image ? " looks like " : "";
-                res += patternBox.Text;
+                criteria = searchMode == Navigator.SearchMode.Name ? "matching name " : 
+                    searchMode == Navigator.SearchMode.Sound ? "sound like " :
+                    searchMode == Navigator.SearchMode.File ? "matching file " :
+                    searchMode == Navigator.SearchMode.Image ? "looks like " : "";
+                criteria += patternBox.Text + Environment.NewLine;
             }
-            else
-                res = searchMode == Navigator.SearchMode.File ? "Files " : "Directoris ";
             if (daysBox.Text.Length > 0)
-                res += Environment.NewLine + "updated within " + daysBox.Text + " days";
+                criteria += "updated within " + daysBox.Text + " days";
             bool dirOnly = searchMode == Navigator.SearchMode.Name || searchMode == Navigator.SearchMode.Sound;
             int fileCount = 0;
             var matchedDirs = matchingItems.GetMatchedDirs();
+            Debug.WriteLine("###matchedDirs.Count=" + matchedDirs.Count);
             if (matchedDirs.Count > 0)
             {
                 foreach (var matchingDir in matchedDirs)
                 {
+                    if(outputList.Items.Contains(matchingDir))
+                        Debug.WriteLine("###list contains " + matchingDir.Name);
                     outputList.Items.Add(matchingDir);
                     if (!dirOnly)
                         foreach (var matchingFile in matchingDir.Files)
@@ -988,13 +1030,9 @@ namespace ImageProcessor
                             fileCount++;
                         }
                 }
-                searchResultBox.Text = (dirOnly ? matchedDirs.Count + " names" : fileCount + " items") + " in " + searchRoot.FullName + 
-                    Environment.NewLine + res;
             }
-            else
-            {
-                searchResultBox.Text = "No items in " + searchRoot.FullName + Environment.NewLine + res;
-            }
+            searchResultBox.Text = (dirOnly ? matchedDirs.Count + " names" : fileCount + " items") + " in " + searchRoot.FullName +
+                Environment.NewLine + criteria;
             SetViewButtonState(SearchState.Display);
             patternBox.Text = daysBox.Text = "";
             runningImage.Visible = false;
@@ -1031,14 +1069,12 @@ namespace ImageProcessor
         }
         void patternBox_TextChanged(object sender, EventArgs e)
         {
-            string days = daysBox.Text;
-            string search = patternBox.Text = patternBox.Text.Trim();
             if (userAction)
             {
                 searchImagePath = "";
                 findImagePanel.Invalidate();
             }
-            EnableSearchButtons(search.Length + days.Length != 0);
+            EnableSearchButtons(!string.IsNullOrWhiteSpace(patternBox.Text + daysBox.Text.Length));
         }
         void NavigatorForm_FormClosing(object sender, FormClosingEventArgs e)
         {

@@ -7,11 +7,12 @@ using System.Diagnostics;
 using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace ImageProcessor
 {
     public class ImageListForm : Form
-	{
+    {
         public enum InfoSize
         {
             Small = 50, // % of full size
@@ -23,17 +24,18 @@ namespace ImageProcessor
 		Button moveAllButton;
 		ComboBox infoModeBox;
 		private System.ComponentModel.Container components = null;
-        IAssociatedPath associatedPath;
+        INavigator associatedPath;
         ImageDirInfo sourceDir;	                // direcory to build sourceCollection from
-        string[] searchList;                    // list of items from search
-        public ImageFileInfo.ImageList Images    { get; private set; } = null; // images to be displayed 
+        public DisplayImageList Images          { get; private set; } = null; // images to be displayed 
         bool listViewOnly;                      // indicate directory with list only viewing
         ImageList displayed;                    // used to set thumbnailes size 
         public List<ImageViewForm> viewForms = new List<ImageViewForm>(); // viewForms[0] displaying active image, others - static images
+        ImageFileInfo deletedImageInfo = null;
         System.Windows.Forms.Timer listUpdateTimer;
-        int updateListFrequency = 300;          // update frequency of list change, ms
+        int updateThumbnailsDelay = 1000;        // update frequency of list change, ms
         bool redrawRequest = true;
         private CheckBox groupViewBox;
+        private Button restoreBtn;
         private ComboBox infoSizeBox;
         protected override void Dispose(bool disposing)
 		{
@@ -56,6 +58,7 @@ namespace ImageProcessor
             this.infoModeBox = new System.Windows.Forms.ComboBox();
             this.infoSizeBox = new System.Windows.Forms.ComboBox();
             this.groupViewBox = new System.Windows.Forms.CheckBox();
+            this.restoreBtn = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // imageListView
@@ -66,11 +69,11 @@ namespace ImageProcessor
             this.imageListView.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
             this.imageListView.HideSelection = false;
             this.imageListView.LabelEdit = true;
-            this.imageListView.Location = new System.Drawing.Point(0, 60);
+            this.imageListView.Location = new System.Drawing.Point(0, 58);
             this.imageListView.Margin = new System.Windows.Forms.Padding(6);
             this.imageListView.Name = "imageListView";
             this.imageListView.OwnerDraw = true;
-            this.imageListView.Size = new System.Drawing.Size(1919, 477);
+            this.imageListView.Size = new System.Drawing.Size(1775, 485);
             this.imageListView.TabIndex = 0;
             this.imageListView.UseCompatibleStateImageBehavior = false;
             this.imageListView.AfterLabelEdit += new System.Windows.Forms.LabelEditEventHandler(this.imageListView_AfterLabelEdit);
@@ -81,56 +84,67 @@ namespace ImageProcessor
             // 
             // sortNameButton
             // 
-            this.sortNameButton.Location = new System.Drawing.Point(264, -2);
+            this.sortNameButton.Location = new System.Drawing.Point(321, 2);
             this.sortNameButton.Margin = new System.Windows.Forms.Padding(6);
             this.sortNameButton.Name = "sortNameButton";
-            this.sortNameButton.Size = new System.Drawing.Size(100, 46);
+            this.sortNameButton.Size = new System.Drawing.Size(92, 44);
             this.sortNameButton.TabIndex = 2;
             this.sortNameButton.Text = "Sort";
             this.sortNameButton.Click += new System.EventHandler(this.SortByName);
             // 
             // moveAllButton
             // 
-            this.moveAllButton.Location = new System.Drawing.Point(15, 2);
+            this.moveAllButton.Location = new System.Drawing.Point(14, 2);
             this.moveAllButton.Margin = new System.Windows.Forms.Padding(6);
             this.moveAllButton.Name = "moveAllButton";
-            this.moveAllButton.Size = new System.Drawing.Size(200, 46);
+            this.moveAllButton.Size = new System.Drawing.Size(183, 44);
             this.moveAllButton.TabIndex = 9;
             this.moveAllButton.Text = "Move All To...";
             this.moveAllButton.Click += new System.EventHandler(this.MoveAll);
             // 
             // infoModeBox
             // 
-            this.infoModeBox.Location = new System.Drawing.Point(695, 6);
+            this.infoModeBox.Location = new System.Drawing.Point(716, 10);
             this.infoModeBox.Margin = new System.Windows.Forms.Padding(6);
             this.infoModeBox.Name = "infoModeBox";
-            this.infoModeBox.Size = new System.Drawing.Size(140, 33);
+            this.infoModeBox.Size = new System.Drawing.Size(129, 32);
             this.infoModeBox.TabIndex = 10;
             // 
             // infoSizeBox
             // 
-            this.infoSizeBox.Location = new System.Drawing.Point(543, 6);
+            this.infoSizeBox.Location = new System.Drawing.Point(577, 10);
             this.infoSizeBox.Margin = new System.Windows.Forms.Padding(6);
             this.infoSizeBox.Name = "infoSizeBox";
-            this.infoSizeBox.Size = new System.Drawing.Size(140, 33);
+            this.infoSizeBox.Size = new System.Drawing.Size(129, 32);
             this.infoSizeBox.TabIndex = 42;
             // 
             // groupViewBox
             // 
             this.groupViewBox.AutoSize = true;
-            this.groupViewBox.Location = new System.Drawing.Point(373, 6);
+            this.groupViewBox.Location = new System.Drawing.Point(421, 10);
             this.groupViewBox.Name = "groupViewBox";
-            this.groupViewBox.Size = new System.Drawing.Size(152, 29);
+            this.groupViewBox.Size = new System.Drawing.Size(136, 29);
             this.groupViewBox.TabIndex = 43;
             this.groupViewBox.Text = "Group view";
             this.groupViewBox.UseVisualStyleBackColor = true;
             this.groupViewBox.Click += new System.EventHandler(this.groupViewBox_Click);
             // 
+            // restoreBtn
+            // 
+            this.restoreBtn.Location = new System.Drawing.Point(208, 2);
+            this.restoreBtn.Margin = new System.Windows.Forms.Padding(6);
+            this.restoreBtn.Name = "restoreBtn";
+            this.restoreBtn.Size = new System.Drawing.Size(102, 44);
+            this.restoreBtn.TabIndex = 44;
+            this.restoreBtn.Text = "Restore";
+            this.restoreBtn.Click += new System.EventHandler(this.restoreBtn_Click);
+            // 
             // ImageListForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(11F, 24F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1940, 570);
+            this.ClientSize = new System.Drawing.Size(1978, 622);
+            this.Controls.Add(this.restoreBtn);
             this.Controls.Add(this.groupViewBox);
             this.Controls.Add(this.infoSizeBox);
             this.Controls.Add(this.infoModeBox);
@@ -154,26 +168,30 @@ namespace ImageProcessor
             redrawRequest = true;
             return ret;
         }
-        public ImageListForm(DirectoryInfo di, string[] list, IAssociatedPath paths) { Initialize(di, list, paths); } // call from found matches
-        public ImageListForm(DirectoryInfo di, IAssociatedPath paths) { Initialize(di, null, paths); } // call from News Reader
-        void Initialize(DirectoryInfo di, string[] list, IAssociatedPath paths)
+        public ImageListForm(DisplayImageList images, INavigator paths) { Initialize(null, images, paths); } // call from found matches in parent ImageListForm
+        public ImageListForm(DirectoryInfo di, INavigator paths) { Initialize(di, null, paths); } // call from News Reader
+        void Initialize(DirectoryInfo di, DisplayImageList images, INavigator paths)
         {
-            if (di == null)
+            if (di == null && images == null)
                 return;
-            if (!di.Exists)
+            if (di != null && !di.Exists)
+            {
                 MessageBox.Show(di.Name + " does not exist", "Can't open directory");
+                return;
+            }
             try
             {
                 InitializeComponent();
-                searchList = list;
-                sourceDir = new ImageDirInfo(di);
-                listViewOnly = searchList != null || Navigator.IsSpecDir(sourceDir.DirInfo, SpecName.Downloaded) || Navigator.IsSpecDir(sourceDir.DirInfo, SpecName.Work);
+                Images = images;
+                sourceDir = new ImageDirInfo(di == null ? Images.DirInfo : di);
+                listViewOnly = Images != null || Navigator.IsSpecDir(sourceDir.DirInfo, SpecName.Downloaded) || Navigator.IsSpecDir(sourceDir.DirInfo, SpecName.Work);
                 if (!listViewOnly)
                 {
                     var par = di.Parent;
                     listViewOnly = par != null && ((Navigator.IsSpecDir(par, SpecName.Work) || par.Parent != null && Navigator.IsSpecDir(par.Parent, SpecName.Work)));
                 }
-                Images = searchList == null ? new ImageFileInfo.ImageList(sourceDir, listViewOnly) : new ImageFileInfo.ImageList(sourceDir, searchList);
+                if (Images == null)
+                    Images = new DisplayImageList(sourceDir.DirInfo, listViewOnly);
                 groupViewBox.Enabled = !listViewOnly;
                 groupViewBox.Checked = Images.PreferedGroupView;
                 associatedPath = paths;
@@ -198,8 +216,8 @@ namespace ImageProcessor
                 new MenuItem("Delete", new EventHandler(DeleteSelected)) });
                 imageListView.ContextMenu = selectMenu; 
                 listUpdateTimer = new System.Windows.Forms.Timer();
-                listUpdateTimer.Interval = updateListFrequency;
-                listUpdateTimer.Tick += new EventHandler(synchronizeThumbnails);
+                listUpdateTimer.Interval = updateThumbnailsDelay;
+                listUpdateTimer.Tick += new EventHandler(updateThumbnails);
                 listUpdateTimer.Start();
                 infoModeBox.Visible = sourceDir.DirInfo.GetDirectories().Length > 7;
                 RecreateThumbnails();
@@ -213,7 +231,10 @@ namespace ImageProcessor
             if (g != null)
             {
                 dpiScaleY = g.DpiY / 96;
-                Height += (int)((ImageFileInfo.ThumbnailSize().Height - 7) * dpiScaleY) - ClientSize.Height;
+                //Debug.WriteLine("dpiScaleY=" + dpiScaleY + " imH=" + ImageFileInfo.ThumbnailSize().Height + " ClientSize.Height=" + ClientSize.Height+" Height=" + Height);
+                //Height += (int)((ImageFileInfo.ThumbnailSize().Height + 37) * dpiScaleY) - ClientSize.Height;
+                //Debug.WriteLine(" ClientSize.Height="+ ClientSize.Height+" Height=" + Height+ " imageListView.Location.Y=" + imageListView.Location.Y);
+                Height = (int)(423 + 103 * (dpiScaleY - 1.5));
                 g.Dispose();
             }
         }
@@ -233,19 +254,19 @@ namespace ImageProcessor
                 listUpdateTimer.Dispose();
             }
         }
-        void synchronizeThumbnails(object s, EventArgs e) // updates list and images on timer
+        void updateThumbnails(object s, EventArgs e) // updates list and images on timer
         {   // synchronizes visible thumbnails with image list
             try
             {
-                if (Images == null || imageListView == null)
+                if (Images == null || imageListView == null || !sourceDir.IsValid)
                     return;
                 if (!Images.ValidDirectory)
                     Images.Clear();
-                if (imageListView.VirtualListSize != Images.Count)
+                if (imageListView.VirtualListSize != Images.DisplayedCount)
                 {
                     if (viewForms[0] != null)
                         ViewImage(Images.LastAdded);
-                    imageListView.VirtualListSize = Images.Count;
+                    imageListView.VirtualListSize = Images.DisplayedCount;
                     int dc = sourceDir.DirCount();
                     Text = sourceDir.RealPath + ": " + sourceDir.ImageCount + " images " + Images.GroupCount + " groups " + (dc == 0 ? "" : ", " + dc + " directories ");
                 }
@@ -304,6 +325,7 @@ namespace ImageProcessor
                 displayed.ImageSize = new Size((int)(si.Width * scale), (int)(si.Height * scale));
                 Images.notifyEmptyDir += EmptyDirHandler;
                 imageListView.VirtualListSize = 0;
+                Debug.WriteLine("RecreateThumbnails");
                 imageListView.ArrangeIcons(ListViewAlignment.SnapToGrid);
             }
             catch { }
@@ -311,6 +333,7 @@ namespace ImageProcessor
         void FormResized(object s, System.EventArgs e)
 		{
 			imageListView.Size=new Size(ClientSize.Width, ClientSize.Height-imageListView.Location.Y);
+            Debug.WriteLine("ILV.Size=" + imageListView.Size+ " ILV.Y="+ imageListView.Location.Y + " CH=" + ClientSize.Height + " WH=" + Height);
 		}
         void imageListView_Click(object s, System.EventArgs e)
         {
@@ -320,7 +343,7 @@ namespace ImageProcessor
             ImageFileInfo d = SelectedImageFile();
             if (d != null && d.IsGroupHead)
                 d.Group.Expanded = !d.Group.Expanded;
-            Images.RebuildDisplayedList();
+            Images.UpdateImageList();
         }
         void ActivateSelectedItem(object s, System.EventArgs e)
 		{
@@ -329,7 +352,7 @@ namespace ImageProcessor
                 return;
             if (d != null && d.IsGroupHead)
                 d.Group.Expanded = !d.Group.Expanded;
-            Images.RebuildDisplayedList();
+            Images.UpdateImageList();
             try
             {
                 if (!d.IsDirInfo)
@@ -414,6 +437,9 @@ namespace ImageProcessor
                 {
                     directory.Delete();
                     sourceDir.ClearDirectory();
+                    var ilf = Parent as ImageListForm;
+                    if(ilf != null) 
+                        ilf.Images.DeletedFile = directory.FullName;
                 }
             }
             catch(Exception) { Close(); }
@@ -447,6 +473,12 @@ namespace ImageProcessor
                         deleteFileList.Add(ifi);
                     else if (ifi != null)
                         hasDirs = true;
+                }
+                if (deleteFileList.Count > 0)
+                {
+                    deletedImageInfo = deleteFileList[0];
+                    File.Delete(ImageFileName.DeletedFile);
+                    deletedImageInfo.FileInfo.CopyTo(ImageFileName.DeletedFile);
                 }
                 MoveFilesTo(deleteFileList.ToArray(), null);
                 if (hasDirs)
@@ -499,10 +531,11 @@ namespace ImageProcessor
                         if (lastDeleted < ifi.DisplayListIndex)
                             lastDeleted = ifi.DisplayListIndex;
                     }
-                int newInd = Images.Count == 0 || lastDeleted == -1 ? -1 : lastDeleted + 1 > Images.Count - 1 ? 0 : lastDeleted +1;
+                int newInd = Images.DisplayedCount == 0 || lastDeleted == -1 ? -1 : lastDeleted + 1 > Images.DisplayedCount - 1 ? 0 : lastDeleted +1;
                 var ni = Images[newInd];
                 msg = Images.MoveFiles(imagesToMove, to);
                 imageListView.VirtualListSize = 0;
+                Debug.WriteLine("MoveFilesTo");
                 imageListView.ArrangeIcons(ListViewAlignment.SnapToGrid);
                 imageListView.Invalidate();
                 if (newInd >= 0)
@@ -511,7 +544,7 @@ namespace ImageProcessor
                         viewForms[0].ShowNewImage(ni);
                     imageListView.EnsureVisible(newInd);
                 }
-                Text = sourceDir.RealPath + ": " + Images.Count + " images";
+                Text = sourceDir.RealPath + ": " + Images.DisplayedCount + " images";
             }
             catch { }
             return msg;
@@ -531,8 +564,9 @@ namespace ImageProcessor
 		{
             Images.SortFileListByRealName();
             imageListView.VirtualListSize = 0;
-		}
-		void OpenStatic(object s, System.EventArgs e)
+            Debug.WriteLine("sort");
+        }
+        void OpenStatic(object s, System.EventArgs e)
 		{
 			var ifi = SelectedImageFile();
             var vf = new ImageViewForm(this, viewForms.Count);
@@ -545,8 +579,14 @@ namespace ImageProcessor
             if(fi == null) 
                 return;
             if (fi.IsDirInfo)
+            {
                 MessageBox.Show(fi.RealName + " is a directory header: use Navigator to rename");
-            Images.Rename(fi, e.Label);
+                return;
+            }
+            var oldFile = fi.Name;
+            var mes = fi.FileRename(e.Label);
+            if (mes == null)
+                Images.DeletedFile = oldFile;
             imageListView.SelectedIndices.Clear();
         }
         void imageListView_RetrieveVirtualItem(object s, RetrieveVirtualItemEventArgs e)
@@ -599,6 +639,7 @@ namespace ImageProcessor
                     g.FillRectangle(Brushes.Cyan, 0, 0, rw, e.Bounds.Height);
                     g.DrawImage(im, (rw - iw) / 2, (rh - ih) / 2, iw, ih);
                     e.Graphics.DrawImage(bm, e.Bounds.X, e.Bounds.Y, rw, rh);
+                    //Debug.WriteLine(e.Bounds);
                 }
                 else
                     e.Graphics.DrawImage(im, e.Bounds.X + (rw - iw) / 2, e.Bounds.Y + (rh - ih) / 2, iw, ih);
@@ -610,34 +651,17 @@ namespace ImageProcessor
                 Debug.WriteLine(ex.Message + " ind=" + e.ItemIndex + " e.Bounds=" + e.Bounds);
             }
         }
-        internal void nextSetButton_Click(object sender, EventArgs e)
-        {
-            sourceDir = new ImageDirInfo(NavigateGroup(1));
-            RecreateThumbnails();
-        }
-        internal void previousSetButton_Click(object sender, EventArgs e)
-        {
-            sourceDir = new ImageDirInfo(NavigateGroup(-1));
-            RecreateThumbnails();
-        }
-        DirectoryInfo NavigateGroup(int delta)
-        {
-            DirectoryInfo di = sourceDir.DirInfo;
-            DirectoryInfo patent = di.Parent;
-            DirectoryInfo[] siblings = patent.GetDirectories();
-            int i=0;
-            for (; i < siblings.Length; i++)
-                if (siblings[i].Name == di.Name)
-                    break;
-            i += delta;
-            if (i >= 0 && i < siblings.Length)
-                return siblings[i];
-            return di;
-        }
         private void groupViewBox_Click(object sender, EventArgs e)
         {
-            Images.ViewList = groupViewBox.Checked;
-            Images.RebuildDisplayedList();
+            Images.GroupView = groupViewBox.Checked;
+            Images.UpdateImageList();
+        }
+        private void restoreBtn_Click(object sender, EventArgs e)
+        {
+            FileInfo fi = new FileInfo(ImageFileName.DeletedFile);
+            if (!fi.Exists)
+                return;
+            fi.MoveTo(deletedImageInfo.FSPath);
         }
     }
 }

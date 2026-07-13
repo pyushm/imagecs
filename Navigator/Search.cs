@@ -150,7 +150,7 @@ namespace ImageProcessor
         static Comparison<MatchingFile> FileComparison = delegate (MatchingFile p1, MatchingFile p2)
         {
             double d = p1.Dif - p2.Dif;
-            return d == 0 ? string.Compare(p1.Name, p2.Name) : Math.Sign(d);
+            return d == 0 ? string.Compare(p1.Name, p2.Name, StringComparison.OrdinalIgnoreCase) : Math.Sign(d);
         };
         public class MatchingDir
         {
@@ -166,7 +166,7 @@ namespace ImageProcessor
         static Comparison<MatchingDir> DirComparison = delegate (MatchingDir p1, MatchingDir p2)
         {
             double d = p1.Dif - p2.Dif;
-            return d == 0 ? string.Compare(p1.Name, p2.Name) : Math.Sign(d);
+            return d == 0 ? string.Compare(p1.Name, p2.Name, StringComparison.OrdinalIgnoreCase) : Math.Sign(d);
         };
         public List<MatchingDir> GetMatchedDirs()
         {

@@ -15,14 +15,14 @@ namespace ImageProcessor
         Work,
         Root       // parent - has to be last
     }
-    public interface IAssociatedPath
+    public interface INavigator
     {
         string RootName { get; }
         void SetActiveDir(DirectoryInfo di);
         void SetActiveImageName(string n);
         void RunVideoFile(ImageFileInfo videoFile);
     }
-    public class Navigator : IAssociatedPath
+    public class Navigator : INavigator
 	{
         static int MatchRange = 100;  // maximum match difference percentage included into search results
         static ImageHash.Comparer imageInfoComparer = new ImageHash.Comparer(56);
@@ -65,21 +65,21 @@ namespace ImageProcessor
         public NewDirectoryNode ProcessDirecory;
         public NewImageSelection onNewImageSelection = null;
         public NewDirSelecton onNewDirSelection = null;
-        NewDirectoryNode searchDirecory = null;
+        NewDirectoryNode RunSearchInDirecory = null;
         string activeImageName = null;
         string MediaExe;
-        public const string TempFile = "_._";
         public string RootName          { get; private set; }
         public void RunVideoFile(ImageFileInfo videoFile)
-        { 
+        {
+            string tempVideoFile = "_._";
             if (videoFile.IsEncrypted)
-                DataAccess.DecryptToTemp(videoFile.FSPath, TempFile);
-            string name = videoFile.IsEncrypted ? TempFile : '\"' + videoFile.FSPath + '\"';
+                DataAccess.DecryptToTemp(videoFile.FSPath, tempVideoFile);
+            string name = videoFile.IsEncrypted ? tempVideoFile : '\"' + videoFile.FSPath + '\"';
             Process p = Process.Start(MediaExe, name);
             p.WaitForExit();
             p.Dispose();
             if (videoFile.IsEncrypted)
-                File.Delete(TempFile);
+                File.Delete(tempVideoFile);
         }
         public void SetActiveImageName(string n) { activeImageName = n; onNewImageSelection?.Invoke(activeImageName); }
         public void SetActiveDir(DirectoryInfo di) { activeImageName = new ImageDirInfo(di).RealPath; onNewDirSelection?.Invoke(di); }
@@ -142,20 +142,21 @@ namespace ImageProcessor
         public SearchResult GenerateSearchList(SearchMode mode, DirectoryInfo start, string name, string daysOld)
         {
             soundPattern = mode == SearchMode.Sound ? new SoundLike(name) : null;
-            string textPattern = mode == SearchMode.File || mode == SearchMode.Name ? name.ToLower() : null;
-            if (mode == SearchMode.Name)
+            if (mode == SearchMode.File || mode == SearchMode.Name)
             {
-                var tps = textPattern?.Split(new char[] { ',', ' ', '.', '-' }, StringSplitOptions.RemoveEmptyEntries);
-                List<string> tpsl = new List<string>();
-                foreach (string tp in tps)
-                    if (tp.Length > 1)
-                        tpsl.Add(tp);
-                textPatterns = tpsl.ToArray();
+                if (name == null)
+                    textPatterns = null;
+                else
+                {
+                    string textPattern = name.ToLower();
+                    var tps = textPattern?.Split(new char[] { ',', ' ', '.', '-' }, StringSplitOptions.RemoveEmptyEntries);
+                    List<string> tpsl = new List<string>();
+                    foreach (string tp in tps)
+                        if (tp.Length > 1)
+                            tpsl.Add(tp);
+                    textPatterns = tpsl.ToArray();
+                }
             }
-            else if (textPattern != null)
-                textPatterns = new string[] { textPattern };
-            else
-                textPatterns = null;
             if (mode == SearchMode.Image)
             {
                 if (activeImageName == null)
@@ -173,6 +174,7 @@ namespace ImageProcessor
                 mode == SearchMode.Sound ? MatchDirectory : (NewDirectoryNode)null;
             if (callback == null)
                 return null;
+            //Debug.WriteLine("###DaysOld=" + searchDaysOld+" patterns="+ textPatterns==null ? 0 : textPatterns.Length);
             return Search(start, callback);
         }
         public void CreateImageHashes(DirectoryInfo dirNode)
@@ -211,7 +213,7 @@ namespace ImageProcessor
             if (StopSearch)
                 return;
             relativePath = Scramble.UnMangleFile(relativePath);
-            searchDirecory?.Invoke(dirNode, relativePath);
+            RunSearchInDirecory?.Invoke(dirNode, relativePath);
             DirectoryInfo[] subdirs = dirNode.GetDirectories();
             foreach (DirectoryInfo subdir in subdirs)
             {
@@ -250,7 +252,7 @@ namespace ImageProcessor
             bool cmpActive = enl2.MoveNext();
             while (srcActive || cmpActive)
             {
-                int res = !srcActive ? 1 : !cmpActive ? -1 : string.Compare(enl1.Current.Name, enl2.Current.Name, true);
+                int res = !srcActive ? 1 : !cmpActive ? -1 : string.Compare(enl1.Current.Name, enl2.Current.Name, StringComparison.OrdinalIgnoreCase);
                 if (res < 0)
                 {
                     if(ImageDirHash.DirInfoFileName != enl1.Current.Name)
@@ -316,9 +318,9 @@ namespace ImageProcessor
         {
             StopSearch = false;
             searchResult.Clear();
-            searchDirecory = callback;
+            RunSearchInDirecory = callback;
             try { SearchRecursively(start, ""); }
-            finally { searchDirecory = null; }
+            finally { RunSearchInDirecory = null; }
             return searchResult;
         }
         void MatchDirectory(DirectoryInfo dirNode, string relativePath)
@@ -438,14 +440,14 @@ namespace ImageProcessor
                         difference += difDays;
                 }
                 string fn = Scramble.UnMangleFile(file.Name).ToLower();
-                string fnne = Path.GetFileNameWithoutExtension(fn);
+                //string fnne = Path.GetFileNameWithoutExtension(fn);
                 if (textPatterns != null && textPatterns.Length > 0) // multiple name patterns
                 {
                     int dif = int.MaxValue;
                     foreach (string textPattern in textPatterns)
                     {
-                        if (fnne.Contains(textPattern))
-                            dif = Math.Min(dif, fnne.Length - textPattern.Length);
+                        if (fn.Contains(textPattern))
+                            dif = Math.Min(dif, fn.Length - textPattern.Length);
                     }
                     if (textPatterns.Length > 1 && dif > 1) // in multiple search only 1 letter difference allowed
                         continue;

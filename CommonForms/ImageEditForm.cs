@@ -9,6 +9,8 @@ using System.Diagnostics;
 using CustomControls;
 using ShaderEffects;
 
+using System.Collections.Generic;
+
 namespace ImageProcessor
 {
     public class ImageEditForm : Form, IPanelHolder
@@ -870,4 +872,106 @@ namespace ImageProcessor
         Gap66 = 66,
         Gap99 = 99,
     }
+
+    //public static class ScanlineFloodFill
+    //{
+    //    private readonly record struct SpanSeed(int X, int Y, int Direction, int ParentLeft, int ParentRight);
+
+    //    /// <summary>
+    //    /// Performs a 4-connected scanline flood fill.
+    //    /// </summary>
+    //    /// <typeparam name="T">Pixel value type.</typeparam>
+    //    /// <param name="image">
+    //    /// Two-dimensional image array indexed as image[y, x].
+    //    /// </param>
+    //    /// <param name="startX">Starting X coordinate.</param>
+    //    /// <param name="startY">Starting Y coordinate.</param>
+    //    /// <param name="newColor">Replacement pixel value.</param>
+    //    /// <param name="comparer">
+    //    /// Optional equality comparer. Default equality is used when omitted.
+    //    /// </param>
+    //    public static void Fill<T>( T[,] image, int startX, int startY, T newColor, IEqualityComparer<T>? comparer = null)
+    //    {
+    //        ArgumentNullException.ThrowIfNull(image);
+    //        comparer ??= EqualityComparer<T>.Default;
+
+    //        int height = image.GetLength(0);
+    //        int width = image.GetLength(1);
+
+    //        if (startX < 0 || startX >= width || startY < 0 || startY >= height)
+    //            throw new ArgumentOutOfRangeException( nameof(startX), "Starting coordinates are outside the image.");
+
+    //        T oldColor = image[startY, startX];
+
+    //        if (comparer.Equals(oldColor, newColor))
+    //            return;
+
+    //        var stack = new Stack<SpanSeed>();
+
+    //        // Direction:
+    //        //  0 = initial seed
+    //        // +1 = seed was reached by moving downward
+    //        // -1 = seed was reached by moving upward
+    //        stack.Push(new SpanSeed( X: startX, Y: startY, Direction: 0, ParentLeft: startX, ParentRight: startX));
+
+    //        while (stack.Count > 0)
+    //        {
+    //            SpanSeed seed = stack.Pop();
+
+    //            if (!IsTarget(image, seed.X, seed.Y, width, height, oldColor, comparer))
+    //                continue;
+
+                
+    //            int left = seed.X;
+    //            int right = seed.X; 
+    //            while (left > 0 && comparer.Equals(image[seed.Y, left - 1], oldColor))
+    //                left--;  // Expand the seed left into a complete horizontal span.
+    //            while (right + 1 < width && comparer.Equals(image[seed.Y, right + 1], oldColor))
+    //                right++;  // Expand the seed right into a complete horizontal span.
+    //            for (int x = left; x <= right; x++)
+    //                image[seed.Y, x] = newColor;     // Mark the complete span immediately.
+    //            if (seed.Direction == 0)
+    //            {   // Initial span: inspect both neighboring rows completely.
+    //                ScanAdjacentRow(image, rowY: seed.Y - 1, scanLeft: left, scanRight: right, direction: -1, parentLeft: left, parentRight: right, oldColor, comparer, stack);
+    //                ScanAdjacentRow(image, rowY: seed.Y + 1, scanLeft: left, scanRight: right, direction: +1, parentLeft: left, parentRight: right, oldColor, comparer, stack);
+    //            }
+    //            else
+    //            {   // Continue in the forward direction across the complete span.
+    //                int forwardY = seed.Y + seed.Direction;
+    //                ScanAdjacentRow(image, rowY: forwardY, scanLeft: left, scanRight: right, direction: seed.Direction, parentLeft: left, parentRight: right, oldColor, comparer, stack);
+    //                int backwardY = seed.Y - seed.Direction;
+    //                if (left < seed.ParentLeft)   // Inspect backward only where this span extends beyond the horizontal range of its parent
+    //                    ScanAdjacentRow(image, rowY: backwardY, scanLeft: left, scanRight: seed.ParentLeft - 1, direction: -seed.Direction, parentLeft: left, parentRight: right, oldColor, comparer, stack);
+    //                if (right > seed.ParentRight)
+    //                    ScanAdjacentRow(image, rowY: backwardY, scanLeft: seed.ParentRight + 1, scanRight: right, direction: -seed.Direction, parentLeft: left, oldColor, comparer, stack);
+    //            }
+    //        }
+    //    }
+    //    private static void ScanAdjacentRow<T>(T[,] image, int rowY, int scanLeft, int scanRight, int direction, int parentLeft, int parentRight, T oldColor, IEqualityComparer<T> comparer, Stack<SpanSeed> stack)
+    //    {   // Scans a horizontal interval in an adjacent row and adds one seed for each contiguous run of target-colored pixels.
+    //        int height = image.GetLength(0);
+    //        int width = image.GetLength(1);
+    //        if (rowY < 0 || rowY >= height)
+    //            return;
+    //        scanLeft = Math.Max(0, scanLeft);
+    //        scanRight = Math.Min(width - 1, scanRight);
+    //        if (scanLeft > scanRight)
+    //            return;
+
+    //        int x = scanLeft;
+    //        while (x <= scanRight)
+    //        {   // Skip non-target and already-filled pixels.
+    //            while (x <= scanRight && !comparer.Equals(image[rowY, x], oldColor))
+    //                x++;
+    //            if (x > scanRight)
+    //                break;
+    //            int runSeedX = x; // One seed is enough for this contiguous run.
+    //            while (x <= scanRight && comparer.Equals(image[rowY, x], oldColor))
+    //                x++;
+    //            stack.Push(new SpanSeed(X: runSeedX, Y: rowY, Direction: direction, ParentLeft: parentLeft, ParentRight: parentRight));
+    //        }
+    //    }
+    //    private static bool IsTarget<T>(T[,] image, int x, int y, int width, int height, T oldColor, IEqualityComparer<T> comparer)
+    //    { return x >= 0 && x < width && y >= 0 && y < height && comparer.Equals(image[y, x], oldColor); }
+    //}
 }

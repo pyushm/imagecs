@@ -408,7 +408,7 @@ namespace NNTP
             {
                 bool deleted = false;
                 foreach (string name in groupsToDelete)
-                    if (string.Compare(g.Name, name, true) == 0)
+                    if (string.Compare(g.Name, name, StringComparison.Ordinal) == 0)
                     {
                         HostGroup hg = new HostGroup(g, groupDataStoreDir);
                         File.Delete(hg.StoreFileName);
@@ -433,7 +433,7 @@ namespace NNTP
             foreach (Group g in subscribedGroups)
             {
                foreach (string name in groupsToReset)
-                    if (string.Compare(g.Name, name, true) == 0)
+                    if (string.Compare(g.Name, name, StringComparison.Ordinal) == 0)
                     {
                         g.Reset();
                         break;

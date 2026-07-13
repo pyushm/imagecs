@@ -450,17 +450,18 @@ namespace ImageProcessor
             return new BitmapAccess(Source);
         }
         public BitmapAccess SetSelectionBitmap(Int32Rect cropRect, List<Point> edge, bool clearOutside)
-        { 
-            WriteableBitmap clip = new WriteableBitmap(cropRect.Width, cropRect.Height, 96, 96, PixelFormats.Pbgra32, null);
-            if (edge == null || edge.Count < 4)
-                return new BitmapAccess(clip);
-            //Debug.WriteLine(cropRect.ToString());
-            //Debug.WriteLine("clip: begin=" + clip.BackBuffer + " length=" + clip.BackBufferStride * clip.PixelHeight);
-            //Debug.WriteLine("source: begin=" + clip.BackBuffer + " length=" + source.BackBufferStride * source.PixelHeight);
-            Chank[] chanks = Chank.CreateChanks(cropRect.Height, 700, Source, clip);
-            clip.Lock();
+        {
+            WriteableBitmap clip = null;
             try
             {
+                clip = new WriteableBitmap(cropRect.Width, cropRect.Height, 96, 96, PixelFormats.Pbgra32, null);
+                if (edge == null || edge.Count < 4)
+                    return new BitmapAccess(clip);
+                //Debug.WriteLine(cropRect.ToString());
+                //Debug.WriteLine("clip: begin=" + clip.BackBuffer + " length=" + clip.BackBufferStride * clip.PixelHeight);
+                //Debug.WriteLine("source: begin=" + clip.BackBuffer + " length=" + source.BackBufferStride * source.PixelHeight);
+                Chank[] chanks = Chank.CreateChanks(cropRect.Height, 700, Source, clip);
+                clip.Lock();
                 unsafe
                 {
                     foreach (var chank in chanks)
@@ -512,7 +513,7 @@ namespace ImageProcessor
                     //});
                 }
             }
-            finally { clip.Unlock(); }
+            finally { clip?.Unlock(); }
             return new BitmapAccess(clip);
         }
         public ByteMatrix[] CreateColorMatrixes()

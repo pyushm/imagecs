@@ -380,21 +380,6 @@ namespace DirTreeCompare
                 }
                 else if (dt.IsMovie)
                     navigator.RunVideoFile(dt);
-                //    if (dt.IsEncrypted)
-                //    {
-                //        try
-                //        {
-                //            Cursor = System.Windows.Input.Cursors.Wait;
-                //            DataAccess.DecryptToTemp(fi.FullName, navigator.TempFile);
-                //            Process.Start(navigator.MediaExe, navigator.TempFile);
-                //        }
-                //        finally { Cursor = System.Windows.Input.Cursors.Arrow; }
-                //    }
-                //    else
-                //        Process.Start(navigator.MediaExe, '\"' + path + '\"');
-                //}
-                //else
-                //    System.Windows.MessageBox.Show(path + Environment.NewLine + "Length=" + fi.Length + Environment.NewLine + fi.LastWriteTime.ToLongDateString());
             }
         }
     }
