@@ -80,20 +80,6 @@
   <ItemGroup>
     <None Include="Shaders\Edge.ps" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\CodeBox\CodeBox.csproj">
-      <Project>{fafc1291-82f4-4a3a-b70f-111dbf2ec194}</Project>
-      <Name>CodeBox</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\CodeEditor\CodeEditor.csproj">
-      <Project>{379c5c68-1bb2-4f42-adc9-87e5b3c8ad7b}</Project>
-      <Name>CodeEditor</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\CodeParser\CodeParser.csproj">
-      <Project>{b4fe5238-1908-4edf-99ef-206bf29ec1e4}</Project>
-      <Name>CodeParser</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
