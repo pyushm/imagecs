@@ -1,15 +1,15 @@
+using CustomControls;
+using ShaderEffects;
 using System;
-using System.IO;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
-using System.Windows.Input;
+using System.IO;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
-using System.Diagnostics;
-using CustomControls;
-using ShaderEffects;
-
-using System.Collections.Generic;
+using System.Windows.Input;
 
 namespace ImageProcessor
 {
@@ -38,6 +38,7 @@ namespace ImageProcessor
         ImageFileInfo imageInfo;            // image file info
         string prevFSdir = null;            // path to previous saving FS directory
         // image processing members
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] 
         public ToolMode ToolMode { get; set; } // mouse mode
         int layerIndex;                     // index of selected layer in layerListView
         bool suspendUpdate = false;         // suspends image update while reseting
@@ -433,21 +434,21 @@ namespace ImageProcessor
             scaleBox.SelectedIndex = 0;
             edgeGapBox.SelectedIndex = 0;
             sensitivityBox.SelectedIndex = 2;
-            ContextMenu selectMenu = new ContextMenu();
-            selectMenu.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
-                new MenuItem("Move on top", delegate (object s, EventArgs e) { if (canvas.MoveLayerOnTop(layerIndex)) UpdateLayerList(layerIndex); } ),
-                new MenuItem("Move back", delegate (object s, EventArgs e) { if (canvas.MoveLayerBack(layerIndex)) UpdateLayerList(layerIndex); } ),
-                new MenuItem("Flip", delegate (object s, EventArgs e) { if (canvas.IsActiveLayerVisible) canvas.ActiveLayer.Flip(); }),
-                new MenuItem("Edges", delegate(object s, EventArgs e) { AddEffectLayer("Edge", new EdgeEffect()); }),
-                new MenuItem("Drawing", delegate(object s, EventArgs e) { UpdateLayerList(canvas.AddStrokeLayer("Drawing")); } ),
-                new MenuItem("Sharpness", delegate (object s, EventArgs e) { AddEffectLayer("Sharpness", new GradientContrastEffect()); }),
-                new MenuItem("Remove odd", delegate (object s, EventArgs e) { AddNoOddsLayer(); }),
-                new MenuItem("To background", delegate (object s, EventArgs e) { CopyToBackground(1); }),
-                new MenuItem("To back 1/2", delegate (object s, EventArgs e) { CopyToBackground(2); }),
-                //new MenuItem("To back 1/4", delegate (object s, EventArgs e) { CopyToBackground(4); }),
-                //new MenuItem("To back 1/8", delegate (object s, EventArgs e) { CopyToBackground(8); }),
-                new MenuItem("Delete", new EventHandler(DeleteLayer)) });
-            layerListView.ContextMenu = selectMenu;
+            ContextMenuStrip selectMenu = new ContextMenuStrip();
+            selectMenu.Items.AddRange(new System.Windows.Forms.ToolStripMenuItem[] {
+                new ToolStripMenuItem("Move on top", null, delegate (object s, EventArgs e) { if (canvas.MoveLayerOnTop(layerIndex)) UpdateLayerList(layerIndex); } ),
+                new ToolStripMenuItem("Move back", null, delegate (object s, EventArgs e) { if (canvas.MoveLayerBack(layerIndex)) UpdateLayerList(layerIndex); } ),
+                new ToolStripMenuItem("Flip", null, delegate (object s, EventArgs e) { if (canvas.IsActiveLayerVisible) canvas.ActiveLayer.Flip(); }),
+                new ToolStripMenuItem("Edges", null, delegate(object s, EventArgs e) { AddEffectLayer("Edge", new EdgeEffect()); }),
+                new ToolStripMenuItem("Drawing", null, delegate(object s, EventArgs e) { UpdateLayerList(canvas.AddStrokeLayer("Drawing")); } ),
+                new ToolStripMenuItem("Sharpness", null, delegate (object s, EventArgs e) { AddEffectLayer("Sharpness", new GradientContrastEffect()); }),
+                new ToolStripMenuItem("Remove odd", null, delegate (object s, EventArgs e) { AddNoOddsLayer(); }),
+                new ToolStripMenuItem("To background", null, delegate (object s, EventArgs e) { CopyToBackground(1); }),
+                new ToolStripMenuItem("To back 1/2", null, delegate (object s, EventArgs e) { CopyToBackground(2); }),
+                //new ToolStripMenuItem("To back 1/4", null, delegate (object s, EventArgs e) { CopyToBackground(4); }),
+                //new ToolStripMenuItem("To back 1/8", null, delegate (object s, EventArgs e) { CopyToBackground(8); }),
+                new ToolStripMenuItem("Delete", null, new EventHandler(DeleteLayer)) });
+            layerListView.ContextMenuStrip = selectMenu;
             layerListView.HideSelection = false;
             Load += ImageEditForm_Load;
         }

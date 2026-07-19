@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "BasicViewer": {
+      "commandName": "Project",
+      "commandLineArgs": "-privateaccess",
+      "workingDirectory": "C:\\data\\OldC\\bin\\"
+    }
+  }
+}

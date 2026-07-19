@@ -271,7 +271,7 @@ namespace ImageProcessor
             // 
             // runningImage
             // 
-            this.runningImage.Image = global::ImageProcessor.Properties.Resources.wspinner_1_;
+            this.runningImage.Image = global::CommonForms.Properties.Resources.wspinner_1_;
             this.runningImage.Location = new System.Drawing.Point(20, 21);
             this.runningImage.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.runningImage.Name = "runningImage";
@@ -482,7 +482,7 @@ namespace ImageProcessor
             // 
             // runningSimilarIcon
             // 
-            this.runningSimilarIcon.Image = global::ImageProcessor.Properties.Resources.wspinner_1_;
+            this.runningSimilarIcon.Image = global::CommonForms.Properties.Resources.wspinner_1_;
             this.runningSimilarIcon.Location = new System.Drawing.Point(28, 87);
             this.runningSimilarIcon.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.runningSimilarIcon.Name = "runningSimilarIcon";
@@ -493,7 +493,7 @@ namespace ImageProcessor
             // 
             // runningInfoIcon
             // 
-            this.runningInfoIcon.Image = global::ImageProcessor.Properties.Resources.wspinner_1_;
+            this.runningInfoIcon.Image = global::CommonForms.Properties.Resources.wspinner_1_;
             this.runningInfoIcon.Location = new System.Drawing.Point(28, 35);
             this.runningInfoIcon.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
             this.runningInfoIcon.Name = "runningInfoIcon";
@@ -582,7 +582,7 @@ namespace ImageProcessor
                 findNameButton.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.Name);
                 findFileBtn.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.File);
                 findSoundBtn.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.Sound);
-                findLookBtn.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.Image);
+                //findLookBtn.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.Image);
                 makePrivateBtn.Click += (object s, EventArgs e) => ConvertToPrivate();
                 compressBtn.Click += (object s, EventArgs e) => ConvertTojpg();
                 reduceButton.Click += (object s, EventArgs e) => ResizeImages();
@@ -700,7 +700,7 @@ namespace ImageProcessor
             Images = null;
             searchMode = mode;
             outputList.Items.Clear();
-            if (patternBox.Text.Length == 0 && daysBox.Text.Length == 0 && searchMode != Navigator.SearchMode.Image)
+            if (patternBox.Text.Length == 0 && daysBox.Text.Length == 0 /*&& searchMode != Navigator.SearchMode.Image*/)
                 return;
             runningImage.Visible = true;
             searchWorker.RunWorkerAsync();
@@ -1007,7 +1007,7 @@ namespace ImageProcessor
                 criteria = searchMode == Navigator.SearchMode.Name ? "matching name " : 
                     searchMode == Navigator.SearchMode.Sound ? "sound like " :
                     searchMode == Navigator.SearchMode.File ? "matching file " :
-                    searchMode == Navigator.SearchMode.Image ? "looks like " : "";
+                    /*searchMode == Navigator.SearchMode.Image ? "looks like " : */"";
                 criteria += patternBox.Text + Environment.NewLine;
             }
             if (daysBox.Text.Length > 0)
@@ -1041,9 +1041,9 @@ namespace ImageProcessor
         {
             try
             {
-                DirectoryInfo di = new DirectoryInfo(outputBox.Text);
-                if (di.Exists)
-                    navigator.CreateImageHashes(di);
+                //DirectoryInfo di = new DirectoryInfo(outputBox.Text);
+                //if (di.Exists)
+                //    navigator.CreateImageHashes(di);
             }
             catch (Exception ex)
             {

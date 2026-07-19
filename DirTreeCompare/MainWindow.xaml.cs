@@ -4,11 +4,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Forms;
+//using System.Windows.Forms;
 using System.Windows.Media;
 using ImageProcessor;
 using System.ComponentModel;
 using System.Threading;
+using Color = System.Windows.Media.Color;
 
 namespace DirTreeCompare
 {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -8,6 +9,7 @@ namespace CustomControls
     public class ValueControl : MultiIndicatorControl
     {   // allows selecting several individual values 
         protected override int PointDimension { get { return 1; } }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] 
         public Color[] Colors { get; set; }     // control background
         public ValueControl()    { }
         //protected override Point[] IndicatorLocations(Point[] vals)

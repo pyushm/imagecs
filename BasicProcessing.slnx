@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="BasicViewer/BasicViewer.csproj" Id="dfe9b7c6-160a-4b90-b962-08ec14b2bf19" />
+  <Project Path="CommonForms/CommonForms.csproj" Id="d3287622-d327-4934-8bf0-eda9b998955a" />
+  <Project Path="DirTreeCompare/DirTreeCompare.csproj" Id="6f6e53bf-6ab2-4df8-b506-8ecee926a039" />
+  <Project Path="DrawingPanel/DrawingPanel.csproj" Id="69a40064-c6f0-4f85-ae3b-a4974fb35700" />
+  <Project Path="ImageConvertor/ImageConvertor.csproj" Id="af842189-1867-4afd-8c33-206ba6f20361" />
+  <Project Path="ImageMatrixes/ImageMatrixes.csproj" />
+  <Project Path="MultiIndicatorControls/MultiIndicatorControls.csproj" Id="8a3baebf-a1f6-4772-8880-7537290b2fc1" />
+  <Project Path="Navigator/Navigator.csproj" Id="6bd691eb-8287-4f17-b273-987f21c9988a" />
+  <Project Path="ShaderEffect/ShaderEffect.csproj" />
+</Solution>

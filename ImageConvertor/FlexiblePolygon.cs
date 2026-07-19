@@ -361,13 +361,13 @@ namespace ImageProcessor
     public class PolygonSmoother
     {
         [ThreadStatic]
-        Brush smoothMarkerBrush = new SolidColorBrush(Colors.White);
+        static Brush smoothMarkerBrush = new SolidColorBrush(Colors.White);
         [ThreadStatic]
-        Brush sharpMarkerBrush = new SolidColorBrush(Colors.Gray);
+        static Brush sharpMarkerBrush = new SolidColorBrush(Colors.Gray);
         [ThreadStatic]
-        Brush selectedMarkerBrush = new SolidColorBrush(Colors.DarkRed);
+        static Brush selectedMarkerBrush = new SolidColorBrush(Colors.DarkRed);
         [ThreadStatic]
-        double smoothness;
+        static double smoothness;
         readonly public double l2max;
         readonly public double BezierPointsDistance = 2;    // length of polygon segment built from BezierSegment
         public double MarkerSize { get; private set; }

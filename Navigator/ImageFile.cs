@@ -422,11 +422,11 @@ namespace ImageProcessor
                     thumbnail = mediaImage;
                     SetCynchronized(DateTime.Now);
                     break;
-                case DataType.EncMLI:
-                    byte[] ta = VisualLayerData.LoadSerializedThumbnail(FSPath, IsEncrypted);
-                    thumbnail = ta == null ? multiLayerImage : CreateThumbnail(new Bitmap(new MemoryStream(ta)));
-                    SetCynchronized(DateTime.Now);
-                    break;
+                //case DataType.EncMLI:
+                //    byte[] ta = VisualLayerData.LoadSerializedThumbnail(FSPath, IsEncrypted);
+                //    thumbnail = ta == null ? multiLayerImage : CreateThumbnail(new Bitmap(new MemoryStream(ta)));
+                //    SetCynchronized(DateTime.Now);
+                //    break;
                 default:
                     thumbnail = localFilesImage;
                     SetCynchronized(DateTime.Now);

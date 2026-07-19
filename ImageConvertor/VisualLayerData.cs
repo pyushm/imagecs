@@ -28,45 +28,45 @@ namespace ImageProcessor
     [Serializable]
     public class VisualLayerData
     {   // changing fields of this class will make storred data unreadable (cleate a new class instead)
-        public static VisualLayerData[] LayersFromFile(string fullPath, bool encrypted)
-        {
-            FileStream fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            BinaryFormatter f = new BinaryFormatter();
-            f.Binder = new VisualLayerBinder();
-            object o = f.Deserialize(fs);
-            VisualLayerData[] vlda = (VisualLayerData[])o;
-            for (int ind = 0; ind < vlda.Length; ind++)
-            {
-                if (vlda[ind].Data == null)
-                    continue;
-                byte[] dec = DataAccess.ReadBytes(vlda[ind].Data, encrypted);
-                vlda[ind].SetData(dec);
-            }
-            return vlda;
-        }
-        public static byte[] LoadSerializedThumbnail(string fullPath, bool encrypted)
-        {
-            FileStream fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            BinaryFormatter f = new BinaryFormatter();
-            f.Binder = new VisualLayerBinder();
-            object o = f.Deserialize(fs);
-            VisualLayerData[] vlda = (VisualLayerData[])o;
-            int ind = -1;
-            int indb = -1;
-            for (int i = 0; i < vlda.Length; i++)
-            {
-                if (vlda[i].IsThumbnail)
-                    ind = i;
-                if (vlda[i].IsBitmap && indb<0)
-                    indb = i;
-            }
-            if (ind < 0)
-                ind = indb;
-            if (ind < 0 || vlda[ind].Data == null)
-                return null;
-            byte[] dec = DataAccess.ReadBytes(vlda[ind].Data, encrypted);
-            return dec;
-        }
+        //public static VisualLayerData[] LayersFromFile(string fullPath, bool encrypted)
+        //{
+        //    FileStream fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        //    BinaryFormatter f = new BinaryFormatter();
+        //    f.Binder = new VisualLayerBinder();
+        //    object o = f.Deserialize(fs);
+        //    VisualLayerData[] vlda = (VisualLayerData[])o;
+        //    for (int ind = 0; ind < vlda.Length; ind++)
+        //    {
+        //        if (vlda[ind].Data == null)
+        //            continue;
+        //        byte[] dec = DataAccess.ReadBytes(vlda[ind].Data, encrypted);
+        //        vlda[ind].SetData(dec);
+        //    }
+        //    return vlda;
+        //}
+        //public static byte[] LoadSerializedThumbnail(string fullPath, bool encrypted)
+        //{
+        //    FileStream fs = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        //    BinaryFormatter f = new BinaryFormatter();
+        //    f.Binder = new VisualLayerBinder();
+        //    object o = f.Deserialize(fs);
+        //    VisualLayerData[] vlda = (VisualLayerData[])o;
+        //    int ind = -1;
+        //    int indb = -1;
+        //    for (int i = 0; i < vlda.Length; i++)
+        //    {
+        //        if (vlda[i].IsThumbnail)
+        //            ind = i;
+        //        if (vlda[i].IsBitmap && indb<0)
+        //            indb = i;
+        //    }
+        //    if (ind < 0)
+        //        ind = indb;
+        //    if (ind < 0 || vlda[ind].Data == null)
+        //        return null;
+        //    byte[] dec = DataAccess.ReadBytes(vlda[ind].Data, encrypted);
+        //    return dec;
+        //}
         VisualLayerType mode;
         Size size;
         Matrix matrix;
@@ -88,21 +88,21 @@ namespace ImageProcessor
         }
         public void SetData(byte[] d) { data = d; }
         public BitmapAccess GetImageAccess() { return IsBitmap ? new BitmapAccess(new MemoryStream(data), 0, "") : null; }
-        public List<FlexiblePolygon> GetStrokes()
-        {
-            if (mode != VisualLayerType.Drawing)
-                return null;
-            BinaryFormatter bf = new BinaryFormatter();
-            bf.Binder = new VisualLayerBinder();
-            StorePointCollection[] strokeData = (StorePointCollection[])bf.Deserialize(new MemoryStream(data));
-            List<FlexiblePolygon> polygons = new List<FlexiblePolygon>(strokeData.Length);
-            foreach (var spc in strokeData)
-            {
-                StorePointDecoder decoder = new StorePointDecoder(spc);
-                polygons.Add(new FlexiblePolygon(decoder, PixelSize));
-            }
-            return polygons;
-        }
+        //public List<FlexiblePolygon> GetStrokes()
+        //{
+        //    if (mode != VisualLayerType.Drawing)
+        //        return null;
+        //    BinaryFormatter bf = new BinaryFormatter();
+        //    bf.Binder = new VisualLayerBinder();
+        //    StorePointCollection[] strokeData = (StorePointCollection[])bf.Deserialize(new MemoryStream(data));
+        //    List<FlexiblePolygon> polygons = new List<FlexiblePolygon>(strokeData.Length);
+        //    foreach (var spc in strokeData)
+        //    {
+        //        StorePointDecoder decoder = new StorePointDecoder(spc);
+        //        polygons.Add(new FlexiblePolygon(decoder, PixelSize));
+        //    }
+        //    return polygons;
+        //}
         public MatrixControl MatrixControl { get { return new MatrixControl(Math.Sign(matrix.M11), Math.Abs(matrix.M11), matrix.M12, matrix.M21, matrix.M22, new Point(matrix.OffsetX, matrix.OffsetY)); } }
         public override string ToString()
         {

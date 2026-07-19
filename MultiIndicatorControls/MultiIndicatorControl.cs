@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
-using System.Drawing;
-using System.Windows.Forms;
+//using System.Drawing;
+//using System.Windows.Forms;
 
 namespace CustomControls
 {
@@ -26,7 +26,7 @@ namespace CustomControls
         protected const int mSize = 4;          // indicator marker size
         protected const int iSize = 2 * mSize;  // indicator capture size
         protected int activePoint = -1;         // index of active control indicator
-        Timer valueChangeTimer;                 // timer firing ValueChanged event only after value is the same after valueChangeDelay
+        System.Windows.Forms.Timer valueChangeTimer;                 // timer firing ValueChanged event only after value is the same after valueChangeDelay
         int valueChangeDelay = 1;
         bool timerToStop;                       // request timer to stop on leaving control
         protected Point[] iLocPrev;		        // indicator value at previous valueChangeTimer tick
@@ -37,11 +37,11 @@ namespace CustomControls
         protected int NValues                   { get { return nPoints * PointDimension; } } // number of output values
         public int LastPointInd                 { get { return nPoints - 1; } }
         protected virtual int PointDimension    { get { return 0; } } // number of coordinates of control point
-        [Category("Behavior"), Description("Range of output values")]
+        [Category("Behavior"), Description("Range of output values"), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] 
         public float Range                      { get { return range; } set { range = value; } }
-        [Category("Behavior"), Description("Minimal output value")]
+        [Category("Behavior"), Description("Minimal output value"), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public float Offset { get { return offset; } set { offset = value; } }
-        [Category("Appearance"), Description("The type of color conrol")]
+        [Category("Appearance"), Description("The type of color conrol"), DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string Title { get { return title; } set { title = value; } }
         public float[] Values
         {
@@ -118,7 +118,7 @@ namespace CustomControls
             this.MouseUp += new MouseEventHandler(_MouseUp);
             this.MouseLeave += new EventHandler(_MouseLeave);
             base.Size = new Size(100, 80);
-            valueChangeTimer = new Timer();
+            valueChangeTimer = new System.Windows.Forms.Timer();
             valueChangeTimer.Interval = valueChangeDelay;
             valueChangeTimer.Tick += new EventHandler(ValidateSameValue);
         }
@@ -168,6 +168,7 @@ namespace CustomControls
             }
             return border.Location;
         }
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public abstract float[] ControlPoints { set; }
         protected abstract void SetIndicatorValues(Point p);
         protected virtual void SetBrushes() { }

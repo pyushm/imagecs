@@ -52,7 +52,7 @@ namespace ImageProcessor
             Name,
             Sound,
             File,
-            Image
+            //Image
         }
         public enum FileCompare
         {
@@ -67,8 +67,8 @@ namespace ImageProcessor
         public NewDirSelecton onNewDirSelection = null;
         NewDirectoryNode RunSearchInDirecory = null;
         string activeImageName = null;
-        string MediaExe;
-        public string RootName          { get; private set; }
+        const string MediaExe = "C:/Program Files (x86)/VideoLAN/VLC/vlc.exe";
+        public string RootName { get; private set; } = "../stuff/";
         public void RunVideoFile(ImageFileInfo videoFile)
         {
             string tempVideoFile = "_._";
@@ -93,9 +93,9 @@ namespace ImageProcessor
         }
         public Navigator()
         {
-            Common.XMLStore settings = new Common.XMLStore(Path.Combine(Directory.GetCurrentDirectory(), "Customization.xml"));
-            RootName = settings.GetString("location.root", "../stuff/");
-            MediaExe = settings.GetString("path.media");
+            //Common.XMLStore settings = new Common.XMLStore(Path.Combine(Directory.GetCurrentDirectory(), "Customization.xml"));
+            //RootName = settings.GetString("location.root", "../stuff/");
+            //MediaExe = settings.GetString("path.media");
             searchResult = new SearchResult();
             string[] dirNames = Enum.GetNames(typeof(SpecName));
             specialDirectories = new DirectoryInfo[dirNames.Length];
@@ -157,19 +157,19 @@ namespace ImageProcessor
                     textPatterns = tpsl.ToArray();
                 }
             }
-            if (mode == SearchMode.Image)
-            {
-                if (activeImageName == null)
-                    return null;
-                imageInfoComparer.SetPattern(activeImageName);
-                //Debug.WriteLine("************************** image pattern " + activeImageName + "***************************");
-                //Debug.WriteLine(imageInfoComparer.Pattern.ToString());
-                //Debug.Write(imageInfoComparer.Pattern.ToBWMString());
-            }
+            //if (mode == SearchMode.Image)
+            //{
+            //    if (activeImageName == null)
+            //        return null;
+            //    imageInfoComparer.SetPattern(activeImageName);
+            //    //Debug.WriteLine("************************** image pattern " + activeImageName + "***************************");
+            //    //Debug.WriteLine(imageInfoComparer.Pattern.ToString());
+            //    //Debug.Write(imageInfoComparer.Pattern.ToBWMString());
+            //}
             try { searchDaysOld = int.Parse(daysOld); }
             catch { searchDaysOld = int.MaxValue; }
             NewDirectoryNode callback = mode == SearchMode.File ? MatchFileName :
-                mode == SearchMode.Image ? MatchImage :
+                //mode == SearchMode.Image ? MatchImage :
                 mode == SearchMode.Name ? MatchDirectory :
                 mode == SearchMode.Sound ? MatchDirectory : (NewDirectoryNode)null;
             if (callback == null)
@@ -177,30 +177,30 @@ namespace ImageProcessor
             //Debug.WriteLine("###DaysOld=" + searchDaysOld+" patterns="+ textPatterns==null ? 0 : textPatterns.Length);
             return Search(start, callback);
         }
-        public void CreateImageHashes(DirectoryInfo dirNode)
-        {
-            if (!IsSpecDir(dirNode) && !IsSpecDir(dirNode.Parent))
-            {
-                ImageDirHash dii = new ImageDirHash(dirNode);
-                dii.Update();
-            }
-            DirectoryInfo[] subdirs = dirNode.GetDirectories();
-            Parallel.ForEach(subdirs, (subdir) =>
-            { CreateImageHashesRecursively(subdir); });
-        }
-        public void CreateImageHashesRecursively(DirectoryInfo dirNode)
-        {
-            if (StopSearch)
-                return;
-            if (!IsSpecDir(dirNode) && !IsSpecDir(dirNode.Parent))
-            {
-                ImageDirHash dii = new ImageDirHash(dirNode);
-                dii.Update();
-            }
-            DirectoryInfo[] subdirs = dirNode.GetDirectories();
-            foreach (DirectoryInfo subdir in subdirs)
-                CreateImageHashesRecursively(subdir);
-        }
+        //public void CreateImageHashes(DirectoryInfo dirNode)
+        //{
+        //    if (!IsSpecDir(dirNode) && !IsSpecDir(dirNode.Parent))
+        //    {
+        //        ImageDirHash dii = new ImageDirHash(dirNode);
+        //        dii.Update();
+        //    }
+        //    DirectoryInfo[] subdirs = dirNode.GetDirectories();
+        //    Parallel.ForEach(subdirs, (subdir) =>
+        //    { CreateImageHashesRecursively(subdir); });
+        //}
+        //public void CreateImageHashesRecursively(DirectoryInfo dirNode)
+        //{
+        //    if (StopSearch)
+        //        return;
+        //    if (!IsSpecDir(dirNode) && !IsSpecDir(dirNode.Parent))
+        //    {
+        //        ImageDirHash dii = new ImageDirHash(dirNode);
+        //        dii.Update();
+        //    }
+        //    DirectoryInfo[] subdirs = dirNode.GetDirectories();
+        //    foreach (DirectoryInfo subdir in subdirs)
+        //        CreateImageHashesRecursively(subdir);
+        //}
         public List<DirDifference> CompareDirectoryTree(DirectoryInfo d1, DirectoryInfo d2)
         {
             dirDifferences.Clear();
@@ -255,7 +255,7 @@ namespace ImageProcessor
                 int res = !srcActive ? 1 : !cmpActive ? -1 : string.Compare(enl1.Current.Name, enl2.Current.Name, StringComparison.OrdinalIgnoreCase);
                 if (res < 0)
                 {
-                    if(ImageDirHash.DirInfoFileName != enl1.Current.Name)
+                    if (ImageDirHash.DirInfoFileName != enl1.Current.Name)
                         diff.List(Relation.Only1).Add(enl1.Current.Name);
                     srcActive = enl1.MoveNext();
                     continue;
@@ -402,24 +402,24 @@ namespace ImageProcessor
             if(totalDif < MatchRange)
                 searchResult.AddDir(relativePath, totalDif);
         }
-        void MatchImage(DirectoryInfo dirNode, string relativePath)
-        {
-            ImageDirHash dii = new ImageDirHash(dirNode);
-            if (dii.ImageInfos == null)
-                return;
-            SearchResult.MatchingDir matchingDir = new SearchResult.MatchingDir(relativePath);
-            foreach (var item in dii.ImageInfos)
-            {
-                int dif = imageInfoComparer.HashDifference(item.Value);
-                if (dif < imageInfoComparer.MaxDifference)
-                {
-                    matchingDir.AddFile(Path.Combine(relativePath, item.Key), dif);
-                    //Debug.WriteLine(imageInfoComparer.Pattern.ToDifString(item.Value) + '\t' + dif + '\t' + item.Key);
-                }
-            }
-            if(!matchingDir.IsEmpty)
-                searchResult.AddDir(matchingDir);
-        }
+        //void MatchImage(DirectoryInfo dirNode, string relativePath)
+        //{
+        //    ImageDirHash dii = new ImageDirHash(dirNode);
+        //    if (dii.ImageInfos == null)
+        //        return;
+        //    SearchResult.MatchingDir matchingDir = new SearchResult.MatchingDir(relativePath);
+        //    foreach (var item in dii.ImageInfos)
+        //    {
+        //        int dif = imageInfoComparer.HashDifference(item.Value);
+        //        if (dif < imageInfoComparer.MaxDifference)
+        //        {
+        //            matchingDir.AddFile(Path.Combine(relativePath, item.Key), dif);
+        //            //Debug.WriteLine(imageInfoComparer.Pattern.ToDifString(item.Value) + '\t' + dif + '\t' + item.Key);
+        //        }
+        //    }
+        //    if(!matchingDir.IsEmpty)
+        //        searchResult.AddDir(matchingDir);
+        //}
         void MatchFileName(DirectoryInfo dirNode, string relativePath)
         {
             FileInfo[] files;

@@ -64,34 +64,34 @@ namespace ImageProcessor
         protected override Size MeasureCore(Size s) => LayoutSize.Size;
         internal void SetStoredMatrixContro(MatrixControl stored) => MatrixControl = stored;
         public VisualLayerData CreateVisualLayerData(byte[] data) => new VisualLayerData(Type, Name, LayoutSize, MatrixControl, data);
-        public byte[] SerializeImage(bool exact)
-        {
-            using (MemoryStream dataStream = new MemoryStream())
-            {
-                if (Type == VisualLayerType.Bitmap || Type == VisualLayerType.Derivative)
-                {
-                    BitmapLayer bl = this as BitmapLayer;
-                    RenderTargetBitmap rtb = new RenderTargetBitmap(LayoutSize.Width, LayoutSize.Height, 96, 96, PixelFormats.Default);
-                    RenderToBitmap(rtb);
-                    return BitmapAccess.SerializeFrame(BitmapFrame.Create(rtb), exact);
-                }
-                if (Type == VisualLayerType.Drawing)
-                {
-                    DrawingLayer sl = this as DrawingLayer;
-                    if (sl != null)
-                    {
-                        List<FlexiblePolygon> polygons = sl.Polygons;
-                        StorePointCollection[] sda = new StorePointCollection[polygons.Count];
-                        for (int i = 0; i < sda.Length; i++)
-                            sda[i] = new StorePointCollection(polygons[i]);
-                        BinaryFormatter f = new BinaryFormatter();
-                        f.Serialize(dataStream, sda);
-                        return dataStream.ToArray();
-                    }
-                }
-            }
-            return null;
-        }
+        //public byte[] SerializeImage(bool exact)
+        //{
+        //    using (MemoryStream dataStream = new MemoryStream())
+        //    {
+        //        if (Type == VisualLayerType.Bitmap || Type == VisualLayerType.Derivative)
+        //        {
+        //            BitmapLayer bl = this as BitmapLayer;
+        //            RenderTargetBitmap rtb = new RenderTargetBitmap(LayoutSize.Width, LayoutSize.Height, 96, 96, PixelFormats.Default);
+        //            RenderToBitmap(rtb);
+        //            return BitmapAccess.SerializeFrame(BitmapFrame.Create(rtb), exact);
+        //        }
+        //        if (Type == VisualLayerType.Drawing)
+        //        {
+        //            DrawingLayer sl = this as DrawingLayer;
+        //            if (sl != null)
+        //            {
+        //                List<FlexiblePolygon> polygons = sl.Polygons;
+        //                StorePointCollection[] sda = new StorePointCollection[polygons.Count];
+        //                for (int i = 0; i < sda.Length; i++)
+        //                    sda[i] = new StorePointCollection(polygons[i]);
+        //                BinaryFormatter f = new BinaryFormatter();
+        //                f.Serialize(dataStream, sda);
+        //                return dataStream.ToArray();
+        //            }
+        //        }
+        //    }
+        //    return null;
+        //}
         public void RenderToBitmap(RenderTargetBitmap rtb)
         {
             for (int i = 0; i < VisualChildrenCount; i++)

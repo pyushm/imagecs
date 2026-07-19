@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Windows;
-using System.IO;
 using System.Diagnostics;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using ShaderEffects;
@@ -432,27 +430,27 @@ namespace ImageProcessor
                 }
                 else if (info.IsMultiLayer)
                 {
-                    VisualLayerData[] vlda = VisualLayerData.LayersFromFile(info.FSPath, info.IsEncrypted);
-                    for (int ind = 0; ind < vlda.Length; ind++)
-                    {
-                        if (vlda[ind].IsThumbnail || vlda[ind].Data == null)
-                            continue;
-                        if (vlda[ind].Data.Length == 0)
-                            return DataAccess.Warning;
-                        try
-                        {
-                            vl = vlda[ind].IsBitmap ? (VisualLayer)new BitmapLayer(vlda[ind].Name, vlda[ind].GetImageAccess()) :
-                                 vlda[ind].IsDrawing ? new DrawingLayer(vlda[ind].Name, vlda[ind].PixelSize, vlda[ind].GetStrokes()) : null;
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine("  >>Restore Exception: " + ex.Message);
-                            Debug.WriteLine(ex.StackTrace);
-                            vl = null;
-                        }
-                        vl?.SetStoredMatrixContro(vlda[ind].MatrixControl);
-                        AddVisualLayer(vl);
-                    }
+                    //VisualLayerData[] vlda = VisualLayerData.LayersFromFile(info.FSPath, info.IsEncrypted);
+                    //for (int ind = 0; ind < vlda.Length; ind++)
+                    //{
+                    //    if (vlda[ind].IsThumbnail || vlda[ind].Data == null)
+                    //        continue;
+                    //    if (vlda[ind].Data.Length == 0)
+                    //        return DataAccess.Warning;
+                    //    try
+                    //    {
+                    //        vl = vlda[ind].IsBitmap ? (VisualLayer)new BitmapLayer(vlda[ind].Name, vlda[ind].GetImageAccess()) :
+                    //             vlda[ind].IsDrawing ? new DrawingLayer(vlda[ind].Name, vlda[ind].PixelSize, vlda[ind].GetStrokes()) : null;
+                    //    }
+                    //    catch (Exception ex)
+                    //    {
+                    //        Debug.WriteLine("  >>Restore Exception: " + ex.Message);
+                    //        Debug.WriteLine(ex.StackTrace);
+                    //        vl = null;
+                    //    }
+                    //    vl?.SetStoredMatrixContro(vlda[ind].MatrixControl);
+                    //    AddVisualLayer(vl);
+                    //}
                 }
                 else if (info.IsMovie)
                 {
@@ -485,9 +483,10 @@ namespace ImageProcessor
         public bool SaveRendering(string path, int sizeLimit)
         {
             ImageFileName info = new ImageFileName(path);
-            var ret = info.IsImage ? SaveSingleImage(path, sizeLimit, info.IsExact, info.IsEncrypted) : SaveLayers(path, info.IsExact);
-            if (ret.Length != 0) 
-                System.Windows.Forms.MessageBox.Show(ret, "Saving " + path + " failed");
+            var ret = info.IsImage ? SaveSingleImage(path, sizeLimit, info.IsExact, info.IsEncrypted) : null;
+            //var ret = info.IsImage ? SaveSingleImage(path, sizeLimit, info.IsExact, info.IsEncrypted) : SaveLayers(path, info.IsExact);
+            if (ret == null || ret.Length != 0)
+                System.Windows.MessageBox.Show(ret, "Saving " + path + " failed");
             return ret.Length == 0;
         }
         public string SaveSingleImage(string fileName, int sizeLimit, bool exact, bool encrypt)
@@ -524,38 +523,38 @@ namespace ImageProcessor
             UpdateLayout();
             return warn;
         }
-        public string SaveLayers(string fileName, bool exact)
-        {
-            try
-            {
-                VisualLayer[] vla = new VisualLayer[LayerCount];
-                for (int i = 0; i < LayerCount; i++)
-                    vla[i] = Children[i] as VisualLayer;
-                FileInfo fi = new FileInfo(fileName);
-                if (fi.Exists && ((fi.Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly))
-                    fi.Attributes = fi.Attributes ^ FileAttributes.ReadOnly;
-                VisualLayerData[] vlda = new VisualLayerData[vla.Length + 1];
-                for (int i = 0; i < vla.Length; i++)
-                {
-                    VisualLayer vl = vla[i] as VisualLayer;
-                    byte[] ba = vl.SerializeImage(exact);
-                    ba = DataAccess.WriteBytes(ba, true);
-                    vlda[i] = vl.CreateVisualLayerData(ba);
-                }
-                vlda[vla.Length] = CreateThumbnailData(exact);
-                BinaryFormatter f = new BinaryFormatter();
-                using (FileStream fs = fi.Open(FileMode.OpenOrCreate, FileAccess.Write)) { f.Serialize(fs, vlda); }
-                RenderTransform = Transform.Identity;
-                UpdateLayout(); 
-                return "";
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.Message);
-                Debug.WriteLine(ex.StackTrace);
-                return ex.Message;
-            }
-        }
+        //public string SaveLayers(string fileName, bool exact)
+        //{
+        //    try
+        //    {
+        //        VisualLayer[] vla = new VisualLayer[LayerCount];
+        //        for (int i = 0; i < LayerCount; i++)
+        //            vla[i] = Children[i] as VisualLayer;
+        //        FileInfo fi = new FileInfo(fileName);
+        //        if (fi.Exists && ((fi.Attributes & FileAttributes.ReadOnly) == FileAttributes.ReadOnly))
+        //            fi.Attributes = fi.Attributes ^ FileAttributes.ReadOnly;
+        //        VisualLayerData[] vlda = new VisualLayerData[vla.Length + 1];
+        //        for (int i = 0; i < vla.Length; i++)
+        //        {
+        //            VisualLayer vl = vla[i] as VisualLayer;
+        //            byte[] ba = vl.SerializeImage(exact);
+        //            ba = DataAccess.WriteBytes(ba, true);
+        //            vlda[i] = vl.CreateVisualLayerData(ba);
+        //        }
+        //        vlda[vla.Length] = CreateThumbnailData(exact);
+        //        BinaryFormatter f = new BinaryFormatter();
+        //        using (FileStream fs = fi.Open(FileMode.OpenOrCreate, FileAccess.Write)) { f.Serialize(fs, vlda); }
+        //        RenderTransform = Transform.Identity;
+        //        UpdateLayout(); 
+        //        return "";
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Debug.WriteLine(ex.Message);
+        //        Debug.WriteLine(ex.StackTrace);
+        //        return ex.Message;
+        //    }
+        //}
         VisualLayerData CreateThumbnailData(bool exact)
         {
             int ms = 200;

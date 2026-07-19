@@ -1,22 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <UseWindowsForms>true</UseWindowsForms>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <SupportedOSPlatformVersion>10.0.26100.0</SupportedOSPlatformVersion>
     <Nullable>disable</Nullable>
-    <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
     <PlatformTarget>x64</PlatformTarget>
+    <ApplicationIcon>BasicViewer.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DrawingPanel\DrawingPanel.csproj" />
+    <Content Include="BasicViewer.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CommonForms\CommonForms.csproj" />
     <ProjectReference Include="..\ImageConvertor\ImageConvertor.csproj" />
-    <ProjectReference Include="..\ImageMatrixes\ImageMatrixes.csproj" />
-    <ProjectReference Include="..\MultiIndicatorControls\MultiIndicatorControls.csproj" />
     <ProjectReference Include="..\Navigator\Navigator.csproj" />
-    <ProjectReference Include="..\ShaderEffect\ShaderEffect.csproj" />
   </ItemGroup>
 
 </Project>

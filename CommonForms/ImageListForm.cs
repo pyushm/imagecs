@@ -208,13 +208,13 @@ namespace ImageProcessor
                 infoModeBox.SelectedIndexChanged += delegate (object s, System.EventArgs e) { RecreateThumbnails(); };
                 infoSizeBox.SelectedIndexChanged += delegate (object s, System.EventArgs e) { RecreateThumbnails(); };
                 FormResized(null, null);
-                ContextMenu selectMenu = new ContextMenu();
-                selectMenu.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
-                new MenuItem("Open static", new EventHandler(OpenStatic)),
-                new MenuItem("Move to ...", new EventHandler(MoveSelected)),
-                new MenuItem("Copy to ...", new EventHandler(CopySelected)),
-                new MenuItem("Delete", new EventHandler(DeleteSelected)) });
-                imageListView.ContextMenu = selectMenu; 
+                ContextMenuStrip selectMenu = new ContextMenuStrip();
+                selectMenu.Items.AddRange(new System.Windows.Forms.ToolStripMenuItem[] {
+                new ToolStripMenuItem("Open static", null, new EventHandler(OpenStatic)),
+                new ToolStripMenuItem("Move to ...", null, new EventHandler(MoveSelected)),
+                new ToolStripMenuItem("Copy to ...", null, new EventHandler(CopySelected)),
+                new ToolStripMenuItem("Delete", null, new EventHandler(DeleteSelected)) });
+                imageListView.ContextMenuStrip = selectMenu; 
                 listUpdateTimer = new System.Windows.Forms.Timer();
                 listUpdateTimer.Interval = updateThumbnailsDelay;
                 listUpdateTimer.Tick += new EventHandler(updateThumbnails);
@@ -406,7 +406,6 @@ namespace ImageProcessor
                 return d.FSPath; 
            return "";
         }
-        [System.Runtime.ExceptionServices.HandleProcessCorruptedStateExceptions] // added to capture access violation by try block
         void EmptyDirHandler()
         {
             try

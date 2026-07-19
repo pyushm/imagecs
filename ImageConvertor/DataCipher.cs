@@ -8,8 +8,10 @@ namespace ImageProcessor
 {
     public class DataCipher
     {
+        const int iterations = 1000;
         static string passwordFile = "password";
-        static SymmetricAlgorithm alg = Rijndael.Create();
+        //static SymmetricAlgorithm alg = Rijndael.Create();
+        static SymmetricAlgorithm alg = Aes.Create();
         static int[] deltaKey = new int[alg.KeySize / 8];
         static int[] deltaIV = new int[alg.BlockSize / 8];
         static byte[] salt = new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64, 0x76, 0x65, 0x64, 0x65, 0x76 };
@@ -31,12 +33,18 @@ namespace ImageProcessor
         }
         public static void ChangePassword(string oldp, string newp)
         {
-            Rfc2898DeriveBytes ndb = new Rfc2898DeriveBytes(newp, salt);
-            Rfc2898DeriveBytes odb = new Rfc2898DeriveBytes(oldp, salt);
-            byte[] nkey = ndb.GetBytes(alg.KeySize / 8);
-            byte[] niv = ndb.GetBytes(alg.BlockSize / 8);
-            byte[] okey = odb.GetBytes(alg.KeySize / 8);
-            byte[] oiv = odb.GetBytes(alg.BlockSize / 8);
+            //Rfc2898DeriveBytes ndb = new Rfc2898DeriveBytes(newp, salt);
+            //Rfc2898DeriveBytes odb = new Rfc2898DeriveBytes(oldp, salt);
+            byte[] ndb = Rfc2898DeriveBytes.Pbkdf2(newp, salt, iterations, HashAlgorithmName.SHA1, deltaKey.Length + deltaIV.Length);
+            byte[] odb = Rfc2898DeriveBytes.Pbkdf2(oldp, salt, iterations, HashAlgorithmName.SHA1, deltaKey.Length + deltaIV.Length);
+            //byte[] nkey = ndb.GetBytes(alg.KeySize / 8);
+            //byte[] niv = ndb.GetBytes(alg.BlockSize / 8);
+            //byte[] okey = odb.GetBytes(alg.KeySize / 8);
+            //byte[] oiv = odb.GetBytes(alg.BlockSize / 8);
+            byte[] nkey = ndb[..deltaKey.Length];
+            byte[] niv = ndb[deltaKey.Length..(deltaKey.Length+ deltaIV.Length)];
+            byte[] okey = odb[..deltaKey.Length];
+            byte[] oiv = odb[deltaKey.Length..(deltaKey.Length + deltaIV.Length)];
             for (int i = 0; i < deltaKey.Length; i++)
                 deltaKey[i] += okey[i] - nkey[i];
             for (int i = 0; i < deltaIV.Length; i++)
@@ -50,11 +58,11 @@ namespace ImageProcessor
         {
             if (password == null || password.Length < 4)
                 return null;
-            Rfc2898DeriveBytes pdb = new Rfc2898DeriveBytes(password, salt);
-            byte[] key = pdb.GetBytes(alg.KeySize / 8);
+            byte[] pdb = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA1, deltaKey.Length + deltaIV.Length);
+            byte[] key = pdb[..deltaKey.Length];
             for (int i = 0; i < key.Length; i++)
                 key[i] = (byte)(key[i] + deltaKey[i]);
-            byte[] iv = pdb.GetBytes(alg.BlockSize / 8);
+            byte[] iv = pdb[deltaKey.Length..(deltaKey.Length + deltaIV.Length)];
             for (int i = 0; i < iv.Length; i++)
                 iv[i] = (byte)(iv[i] + deltaIV[i]);
             DataCipher ds = new DataCipher(key, iv);
