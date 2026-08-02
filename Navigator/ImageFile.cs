@@ -27,9 +27,10 @@ namespace ImageProcessor
         PrevName,
     }
     public static class Scramble
-    {
-        const char mangleChar = '\u13B7';
-        public static bool IsMangled(string text) { return text != null && text.Length > 0 && text[0] == mangleChar; }
+    {   // Scramble: RawMangle ASCI characters by ROT13 and prepend mangleChar to indicate scrambled name
+        public const char mangleChar = '\uAB87'; // lowercase of original mangle character \u13B7 
+        public static bool IsMangled(string text) { return text != null && text.Length > 0 && char.ToLowerInvariant(text[0]) == mangleChar; }
+        static bool allowMangle(string text) { return !string.IsNullOrEmpty(text) && !IsMangled(text) && text[0] != ImageFileName.infoFileChar; }    
         public static string UnMangleFile(string filePath) // returns path with last component of path (dir or file) replaced by human readable name
         {
             if (filePath == null || filePath.Length == 0)
@@ -39,40 +40,24 @@ namespace ImageProcessor
         }
         public static string MangleFile(string filePath) // returns path with last component of path (dir or file) replaced by scrambled name
         {
-            if (!DataAccess.PrivateAccessEnforced || filePath == null || filePath.Length == 0)
+            if (!DataAccess.Private || filePath == null || filePath.Length == 0)
                 return filePath;
             string fileName = Path.GetFileNameWithoutExtension(filePath);
-            return Path.Combine(Path.GetDirectoryName(filePath), Mangle(fileName) + Path.GetExtension(filePath));
+            return Path.Combine(Path.GetDirectoryName(filePath), MangleForced(fileName) + Path.GetExtension(filePath));
         }
-        public static string UnMangle(string src)   // returns unscrambled src if src scrambled; otherwise returns src
+        public static string UnMangle(string src) { return !IsMangled(src)? src : RawMangle(src.Substring(1)); }
+        public static string ManglePrivate(string src) { return DataAccess.Private ? MangleForced(src) : src; }
+        public static string MangleForced(string src) { return allowMangle(src) ? mangleChar + RawMangle(src) : src; }
+        static string RawMangle(string src)  // returns scrambled src if src not scrambled; otherwise returns src
         {
-            if (!IsMangled(src))
-                return src;
-            char[] res = new char[src.Length - 1];
-            for (int i = 1; i < src.Length; i++)
-            {
-                if ((src[i] >= 'A' && src[i] <= 'M') || (src[i] >= 'a' && src[i] <= 'm'))
-                    res[i - 1] = (char)(src[i] + 13);
-                else if ((src[i] >= 'N' && src[i] <= 'Z') || (src[i] >= 'n' && src[i] <= 'z'))
-                    res[i - 1] = (char)(src[i] - 13);
-                else res[i - 1] = src[i];
-            }
-            return new string(res);
-        }
-        public static string Mangle(string src) { return DataAccess.PrivateAccessEnforced ? RawMangle(src) : src; }
-        public static string RawMangle(string src)  // returns scrambled src if src not scrambled; otherwise returns src
-        {
-            if (string.IsNullOrEmpty(src) || IsMangled(src))
-                return src;
-            char[] res = new char[src.Length + 1];
-            res[0] = mangleChar;
+            char[] res = new char[src.Length];
             for (int i = 0; i < src.Length; i++)
             {
                 if ((src[i] >= 'A' && src[i] <= 'M') || (src[i] >= 'a' && src[i] <= 'm'))
-                    res[i + 1] = (char)(src[i] + 13);
+                    res[i] = (char)(src[i] + 13);
                 else if ((src[i] >= 'N' && src[i] <= 'Z') || (src[i] >= 'n' && src[i] <= 'z'))
-                    res[i + 1] = (char)(src[i] - 13);
-                else res[i + 1] = src[i];
+                    res[i] = (char)(src[i] - 13);
+                else res[i] = src[i];
             }
             return new string(res);
         }
@@ -116,7 +101,7 @@ namespace ImageProcessor
                     return name;
             return name.Substring(ind + 1);
         }
-        const string infoImagePrefix = "@";
+        public const char infoFileChar = '@';
         const string infoImageSuffix = ".exa";
         static public readonly DirShowMode[] InfoTypes;
         static ImageFileName()
@@ -169,7 +154,7 @@ namespace ImageProcessor
             object o = knownExtensions[ext];
             return o == null ? DataType.Unknown : (DataType)o;
         }
-        static public string InfoFileName(DirShowMode m) => infoImagePrefix + m; 
+        static public string InfoFileName(DirShowMode m) => infoFileChar + m.ToString(); 
         static public string InfoFileWithExtension(DirShowMode m) => InfoFileName(m) + infoImageSuffix; 
         static public Image[] InfoImages(DirectoryInfo di)
         {   // to show image ingo files for directory selection or extended info view
@@ -180,7 +165,7 @@ namespace ImageProcessor
             Array.Sort(fia, FileInfoComparison);
             foreach (FileInfo fi in fia)
             {
-                if(fi.Name[0] == infoImagePrefix[0] || fi.Name[1] == infoImagePrefix[0])
+                if(fi.Name[0] == infoFileChar || fi.Name[1] == infoFileChar)
                 try
                 {
                     ImageFileName dt = new ImageFileName(fi.Name);
@@ -283,8 +268,8 @@ namespace ImageProcessor
         static Image localFilesImage = LoadSpecialImage("localImage.png");
         static Image multiLayerImage = LoadSpecialImage("multiLayerImage.png");
         static public Image notLoadedImage = LoadSpecialImage("notLoadedImage.png");
-        const int infoImageWidth = 144;
-        const int infoImageHeight = 208;
+        public const int infoImageWidth = 144;
+        public const int infoImageHeight = 208;
         static Image LoadSpecialImage(string fileName)
         {
             FileStream fs = null;
@@ -453,7 +438,7 @@ namespace ImageProcessor
                 FileInfo.Refresh();
                 string ext = Path.GetExtension(FSPath);
                 RealName = newName;
-                FSName = Scramble.Mangle(RealName);
+                FSName = Scramble.ManglePrivate(RealName);
                 string newFullPath = Path.Combine(FileInfo.Directory.FullName, FSName + ext);
                 FileInfo.MoveTo(newFullPath);
                 NeedThumbnail = true;

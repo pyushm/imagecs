@@ -119,8 +119,8 @@ namespace ImageProcessor
         static string lastImageFile = "lastImageFile";
         public static string NullCipher = "Can't access private data: encryption not set";
         public static string Warning { get; private set; }
-        public static bool AllowPrivateAccess(string password) { cipher = DataCipher.Create(password); return PrivateAccessEnforced; }
-        public static bool PrivateAccessEnforced => cipher != null; // enforces conversion to private state for any file change 
+        public static bool AllowPrivateAccess(string password) { cipher = DataCipher.Create(password); return Private; }
+        public static bool Private => cipher != null; // enforces conversion to private state for any file change 
         public static byte[] ReadBytes(byte[] src, bool encrypted)
         {
             Warning = "";

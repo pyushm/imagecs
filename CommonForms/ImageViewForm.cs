@@ -720,13 +720,13 @@ namespace ImageProcessor
         { 
             if (im == null)
                 return;
-            float areaSize = nextImagePanel.Size.Width/2 * g.DpiX / 96;
-            float scale = Math.Min(areaSize / (im.Width + 2), areaSize / (im.Height + 2));
+            float areaSize = nextImagePanel.Size.Width;// * g.DpiX / 96;
+            float scale = Math.Min(nextImagePanel.Size.Width / (im.Width + 2f), nextImagePanel.Size.Height / (im.Height + 2f));
             float iw = im.Width * scale;
             float ih = im.Height * scale;
-            float d = (iw - ih) / 2;
-            PointF del = d < 0 ? new PointF(-d, 0) : new PointF(0, d);
-            g.DrawImage(im, del.X, del.Y, iw, ih);
+            float dx = (nextImagePanel.Size.Width - iw) / 2;
+            float dy = (nextImagePanel.Size.Height - ih) / 2;
+            g.DrawImage(im, dx, dy, iw, ih);
         }
         void SetWindowTitle()
         {
@@ -838,14 +838,14 @@ namespace ImageProcessor
         {
             SaveFileDialog saveAsDialog = new SaveFileDialog();
             saveAsDialog.FileName = currentImageInfo.RealName;
-            saveAsDialog.Filter = DataAccess.PrivateAccessEnforced ? "regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
+            saveAsDialog.Filter = DataAccess.Private ? "regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
             saveAsDialog.FilterIndex = currentImageInfo.IsMultiLayer ? 3 : currentImageInfo.IsExact ? 2 : 1;
             saveAsDialog.RestoreDirectory = true;
             saveAsDialog.InitialDirectory = Path.GetDirectoryName(currentImageInfo.FSPath);
             saveAsDialog.OverwritePrompt = true;
             if (saveAsDialog.ShowDialog() == DialogResult.OK)
             {
-                var ifi = new ImageFileInfo(new FileInfo(DataAccess.PrivateAccessEnforced ? Scramble.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName));
+                var ifi = new ImageFileInfo(new FileInfo(DataAccess.Private ? Scramble.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName));
                 SaveImage(ifi, GetMaxSize);
             }
         }
@@ -883,7 +883,7 @@ namespace ImageProcessor
             {
                 object o = Enum.Parse(typeof(DirShowMode), str);
                 infoMode = o is DirShowMode;
-                ToolMode = infoMode ? ToolMode.InfoImage : ToolMode.Default;
+                ToolMode = infoMode ? ToolMode.InfoImage : ToolMode.Basic;
                 if (infoMode)
                 {
                     infoType = (DirShowMode)o;

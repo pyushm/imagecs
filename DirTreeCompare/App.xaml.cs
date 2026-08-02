@@ -1,17 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
+using System.Windows.Controls;
 
 namespace DirTreeCompare
 {
-    /// <summary>
-    /// Interaction logic for App.xaml
-    /// </summary>
     public partial class App : System.Windows.Application
     {
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            Resources[typeof(ListBoxItem)] = CreateCompactStyle(typeof(ListBoxItem));
+            Resources[typeof(TreeViewItem)] = CreateCompactStyle(typeof(TreeViewItem)); 
+            base.OnStartup(e);
+        }
+        private static Style CreateCompactStyle(Type itemType)
+        {
+            var style = new Style(itemType);
+            style.Setters.Add(new Setter(System.Windows.Controls.Control.PaddingProperty, new Thickness(2, 0, 2, 0)));
+            style.Setters.Add(new Setter(FrameworkElement.MinHeightProperty, 0.0));
+            style.Setters.Add(new Setter(System.Windows.Controls.Control.VerticalContentAlignmentProperty, VerticalAlignment.Center));
+            return style;
+        }
     }
 }

@@ -10,6 +10,17 @@ using ShaderEffects;
 
 namespace ImageProcessor
 {
+    public enum ToolMode
+    {   // user set mouse controll modes; Basic is default and does not have associated graphic tool
+        Basic,          // basic transforms (shift, scale, rotate)
+        Distortion3D,   // handles scale, rotate, aspect, shear, ViewDistortion with parallelogram 
+        FreeSelection,  // creates FlexiblePolygon from free selection
+        RectSelection,  // creates FlexiblePolygon  from rectangle
+        ContourEdit,    // editing FlexiblePolygon drawing
+        InfoImage,      // choice of info images cut rectangles
+        Crop,           // cut part of image
+        Morph,          // image morph
+    }
     public interface IPanelHolder
     {
         ToolMode ToolMode { get; }
@@ -703,7 +714,7 @@ namespace ImageProcessor
                     {
                         mouseAction = panelHolder.ToolMode == ToolMode.Distortion3D ? ActiveLayer.MatrixControl.OperationFromPoint(position) :
                             panelHolder.ToolMode == ToolMode.Morph ? morphControl.OperationFromPoint(position) :
-                            panelHolder.ToolMode == ToolMode.Default ? MouseAction.OperationFromMouse :
+                            panelHolder.ToolMode == ToolMode.Basic ? MouseAction.OperationFromMouse :
                             MouseOperation.None;
                     }
                     if (mouseAction == MouseOperation.Move || mouseAction == MouseOperation.None) // if higher than active layer clicked, set clicked layer as active

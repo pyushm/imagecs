@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Windows.Forms;
 using System.IO;
+using System.Diagnostics;
 
 namespace ImageProcessor
 {
@@ -8,10 +9,13 @@ namespace ImageProcessor
     {   // visual reprentation of selected item
         Image[] infoImages;
         Control displayArea;
+        int dx, dy; 
         public DirectoryInfoImages(Control displayArea_)
         {
             displayArea = displayArea_;
             displayArea.Paint += new PaintEventHandler(DrawInfoImages);
+            dx = displayArea.Width / 2;
+            dy = (int)(ImageFileInfo.infoImageHeight / (float)ImageFileInfo.infoImageWidth * displayArea.Width);
         }
         ~DirectoryInfoImages() { DisposeInfoImages(); }
         public DirectoryInfo ReDrawInfoImages(DirectoryInfo di = null)
@@ -38,20 +42,13 @@ namespace ImageProcessor
         {
             if (infoImages == null)
                 return;
-            int y = 0;
-            int x = 0;
-            float dpiScale = e.Graphics.DpiY/96;
+            int y = 0, x = 0;
             foreach (Image im in infoImages)
-            {
                 if (im != null)
                 {
-                    e.Graphics.DrawImage(im, x, y);
-                    if (im.Width > 100)
-                        y += (int)(im.Height * dpiScale);
-                    else
-                        x += (int)(im.Width * dpiScale);
+                    if (im.Width > 100) { e.Graphics.DrawImage(im, x, y, displayArea.Width, dy); y += dy; }
+                    else { e.Graphics.DrawImage(im, x, y, dx, dx); x += dx; }
                 }
-            }
         }
     }
 }

@@ -22,6 +22,7 @@ namespace ImageProcessor
     {
         None = 0,
         Encode = 1,             // mangle name and encrypt file
+        MangleChar = 2,         // replace manglr char with lowercase
         ToJPG = 3,              // compress to JPG format
         LimitSize1 = 1100,      // image dimension limit: xxxxyyyy or ssss for both
         LimitSize2 = 1560,      // image dimension limit: xxxxyyyy or ssss for both
@@ -33,7 +34,7 @@ namespace ImageProcessor
 		bool stopFlag;
 		Navigator navigator;
         Conversion covertion = Conversion.None;
-        bool sync;
+        //bool sync;
         public event NotifyMessage notifyStatus;
         public event NotifyMessage notifyResults;
         public event NotifyMessages notifyFinal;
@@ -45,16 +46,16 @@ namespace ImageProcessor
 		public void Stop()					{ stopFlag=true; }
         public void ApplyAdjustmentRecursively(DirectoryInfo start, Conversion operation_, bool sync_)
         {
-            sync = sync_;
+            //sync = sync_;
             covertion = operation_;
             navigator.ProcessDirecory = ConvertFiles;
             try { navigator.ApplyRecursively(start, ""); }
-            catch (Exception ex) { ReportResults(ex.Message+Environment.NewLine+ex.StackTrace); }
+            catch (Exception ex) { ReportResults("***********" + ex.Message+Environment.NewLine+ex.StackTrace); }
             finally
             {
                 navigator.ProcessDirecory = null;
-                if (!sync)
-                    notifyFinal?.Invoke(messages);
+                //if (!sync)
+                //    notifyFinal?.Invoke(messages);    causes cross-thread error
             }
         }
         public string ResizeImage(string fullPath, bool exact, int sizeLimit, bool encrypted)
@@ -80,14 +81,24 @@ namespace ImageProcessor
         {   // called from recursive dierectory processing in Navigator
             if (stopFlag || covertion == Conversion.None)
                 return;
-            if (sync)
-                ReportStatus(covertion.ToString() + " in " + directory.FullName);
+            ReportStatus(covertion.ToString() + " in " + directory.FullName);
             if (covertion == Conversion.Encode && relativePath.Length > 0 && !Scramble.IsMangled(directory.Name))
             {   // mangle dir name
-                string newDirName = Scramble.Mangle(directory.Name);
-                if(newDirName != directory.Name)
+                string newDirName = Scramble.ManglePrivate(directory.Name);
+                if (newDirName != directory.Name)
                     directory.MoveTo(Path.Combine(directory.Parent.FullName, newDirName));
             }
+            //if (covertion == Conversion.MangleChar && relativePath.Length > 0 && directory.Name[0] == '\u13B7')
+            //{   // mangle dir name
+            //    var old = directory.Name;
+            //    string newDirName = '\uAB87' + directory.Name.Substring(1);
+            //    if (newDirName != directory.Name)
+            //    {
+            //        var np = Path.Combine(directory.Parent.FullName, newDirName);
+            //        directory.MoveTo(np);
+            //        ReportResults(Scramble.UnMangle(newDirName) + ": " + old + " -> " + np);
+            //    }
+            //}
             FileInfo[] filesToProcess = directory.GetFiles();
             foreach (FileInfo file in filesToProcess)
             {
@@ -134,11 +145,43 @@ namespace ImageProcessor
                         }
                         catch (Exception ex)
                         {
-#if DEBUG
-                            Console.WriteLine(ex.Message);
-                            Console.WriteLine(ex.StackTrace);
-#endif
                             ReportResults(name + ": " + ex.Message);
+                            Debug.WriteLine(ex.StackTrace);
+                        }
+                    }
+                    //if (covertion == Conversion.MangleChar && (file.Name[0] == '@' || file.Name[1] == '@'))
+                    //{
+                    //    string newName = null;
+                    //    var sn = file.Name;
+                    //    newName = sn.Replace("exa.exa", "exa");
+                    //    if(newName==sn)
+                    //        newName = sn.Replace("jpe.jpe", "jpe");
+                    //    // Path.GetFileNameWithoutExtension(file.Name);
+                    //    //if (sn.Contains("Preview.exa")) newName = "@Preview.exa";
+                    //    //else if (sn.Contains("Preview.jpe")) newName = "@Preview.jpe";
+                    //    //else if (sn.Contains("Sys.exa")) newName = "@Sys.exa";
+                    //    //else if (sn.Contains("Vag.exa")) newName = "@Vag.exa"; // Int
+                    //    //else if (sn.Contains("Sys.jpe")) newName = "@Sys.jpe";
+                    //    //else if (sn.Contains("Vag.jpe")) newName = "@Vag.jpe";
+                    //    //else if (sn.Contains("Detail.exa")) newName = "@Detail.exa";//Qrgnvy
+                    //    //else if (sn.Contains("Detail.jpe")) newName = "@Detail.jpe";
+                    //    if (!string.IsNullOrEmpty(newName) && newName != sn)
+                    //    {
+                    //        var nf = Path.Combine(directory.FullName, newName);// + file.Extension);
+                    //        file.MoveTo(nf);
+                    //        ReportResults('\t' + sn + " -> " + newName);
+                    //    }
+                    //}
+                    if (covertion == Conversion.MangleChar && file.Name[0] == '\u13B7')
+                    {
+                        var old = file.FullName;
+                        string newFileName;
+                        newFileName = Scramble.mangleChar + file.Name.Substring(1);
+                        if (newFileName != file.Name)
+                        {
+                            var nf = Path.Combine(directory.FullName, newFileName);
+                            file.MoveTo(nf);
+                            ReportResults('\t' + old + " -> " + nf);
                         }
                     }
                     if (covertion == Conversion.ToJPG)
@@ -163,17 +206,14 @@ namespace ImageProcessor
                         }
                         catch (Exception ex)
                         {
-#if DEBUG
-                            Console.WriteLine(ex.Message);
-                            Console.WriteLine(ex.StackTrace);
-#endif
                             ReportResults(name + ": " + ex.Message);
+                            Debug.WriteLine(ex.StackTrace);
                         }
                     }
                 }
-                catch
+                catch(Exception ex)
                 {
-                    throw new Exception(file.ToString());
+                    ReportResults(file.FullName + ": " + ex.Message);
                 }
             }
         }
@@ -185,7 +225,7 @@ namespace ImageProcessor
                 string dn = NewDirName.Trim();
                 if (dn.Length > 0)
                 {
-                    string ndn = Path.Combine(directory.Parent.FullName, Scramble.Mangle(dn));
+                    string ndn = Path.Combine(directory.Parent.FullName, Scramble.ManglePrivate(dn));
                     directory.MoveTo(ndn);
                     return oldName;
 
@@ -223,20 +263,27 @@ namespace ImageProcessor
                         catch (Exception ex) { messages.Add(name + ": " + ex.Message); }
                     }
                 }
-                catch
+                catch(Exception ex)
                 {
+                    Debug.WriteLine(file.FullName + ": " + ex.Message);
                     throw new Exception(file.ToString());
                 }
             }
             return null;
         }
-        void ReportStatus(string message)	 { notifyStatus?.Invoke(message); }
-		public void ReportResults(string message)
+        void ReportStatus(string message)	 
         {
-            if(sync)
-                notifyResults?.Invoke(message);
-            else
-                messages.Add(message);
+            Debug.WriteLine(message);
+            //if (sync) 
+            //    notifyStatus?.Invoke(message); 
         }
-	}
+        public void ReportResults(string message)
+        {
+            Debug.WriteLine(message);
+            //if (sync)
+            //    notifyResults?.Invoke(message);
+            //else
+            //    messages.Add(message);
+        }
+    }
 }

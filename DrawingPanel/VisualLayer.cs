@@ -10,17 +10,6 @@ using ShaderEffects;
 
 namespace ImageProcessor
 {
-    public enum ToolMode
-    {   // user set mouse controll modes; Basic is default and does not have associated graphic tool
-        Default,        // basic transforms (shift, scale, rotate)
-        Distortion3D,   // handles scale, rotate, aspect, shear, ViewDistortion with parallelogram 
-        FreeSelection,  // creates FlexiblePolygon from free selection
-        RectSelection,  // creates FlexiblePolygon  from rectangle
-        ContourEdit,    // editing FlexiblePolygon drawing
-        InfoImage,      // choice of info images cut rectangles
-        Crop,           // cut part of image
-        Morph,          // image morph
-    }
     public class VisualLayer : UIElement
     {   // collection of visual items comprizing one UIElement (similar to DrawingGroup, but working with DependencyProperties)
         protected VisualCollection children;

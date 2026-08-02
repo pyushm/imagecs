@@ -7,10 +7,10 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Runtime.Serialization;
 namespace ImageProcessor
 {
-    [Serializable]
-    public class ImageDirHash
-    {   // ImageHash's of all image files in drectory
-        public const string DirInfoFileName = "Ꮇ@unfu.dat"; //"@hash.dat";
+    //[Serializable]
+    //public class ImageDirHash
+    //{   // ImageHash's of all image files in drectory
+        // public const string DirInfoFileName = "Ꮇ@unfu.dat"; //"@hash.dat";
         //    DirectoryInfo dir;  // full directory path
         //    public bool Updated { get { return ImageInfos != null && ImageInfos.Count > 0 && !ImageInfos.FirstOrDefault().Value.IsEmpty && infoFile.LastWriteTime >= dir.LastWriteTime; } }
         //    FileInfo infoFile;  // stored info File associated with dir info
@@ -82,5 +82,5 @@ namespace ImageProcessor
         //            fs.Close();
         //        return iid;
         //    }
-        }
+        //}
     }

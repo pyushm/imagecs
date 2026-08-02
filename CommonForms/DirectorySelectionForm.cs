@@ -16,6 +16,7 @@ namespace ImageProcessor
         {
             navigator = new Navigator();
             InitializeComponent();
+            locationTreeView.ItemHeight = 22;
             TreeNode node = locationTreeView.Nodes.Add(Navigator.Root.Name);
             node.Tag = Navigator.Root;
             node.Nodes.Add("fake");
@@ -65,20 +66,20 @@ namespace ImageProcessor
                 MessageBox.Show("No directory selected");
                 return;
             }
-            var realDir = new DirectoryInfo(inputOutputBox.Text); // unmangled full paff of destination dir
+            var realDir = new DirectoryInfo(inputOutputBox.Text); // unmangled full path of destination dir
             var pp = realDir.Parent != null && realDir.Parent.Parent != null ? realDir.Parent.Parent : null;
             if (pp == null || !Navigator.IsSpecDir(pp, SpecName.AllDevicy)) 
                 dirSelection = realDir;
             else
             {
-                var FSdir = new DirectoryInfo(Path.Combine(realDir.Parent.FullName, Scramble.RawMangle(realDir.Name))); // scrambled
-                dirSelection = DataAccess.PrivateAccessEnforced ? FSdir : realDir;
-                var otherDir = DataAccess.PrivateAccessEnforced ? realDir : FSdir;
-                if (otherDir.Exists)
-                {   // prevents creating directory with same real name
-                    string msg = DataAccess.PrivateAccessEnforced ? "Unmangled dir " + realDir.Name + " exists" : "Mangled dir " + FSdir.Name + " exists";
-                    MessageBox.Show(msg, "Can't create directory: duplicate name detected");
-                    return;
+                if (DataAccess.Private)
+                {
+                    dirSelection = new DirectoryInfo(Path.Combine(realDir.Parent.FullName, Scramble.MangleForced(realDir.Name))); // scrambled
+                    if (realDir.Exists)
+                    {   // prevents creating directory with same real name
+                        MessageBox.Show("Unmangled dir " + realDir.Name + " exists", "Can't create directory: duplicate name detected");
+                        return;
+                    }
                 }
                 if (!dirSelection.Exists)
                 {

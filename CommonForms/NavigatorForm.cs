@@ -1,19 +1,10 @@
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Windows.Forms;
-using System.IO;
 using System.Diagnostics;
-using System.Drawing;
-using System.Windows.Media.Imaging;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Globalization;
-using System.Security.Policy;
 
 namespace ImageProcessor
 {
     public class NavigatorForm : Form
-	{
+    {
         enum SearchState
         {
             Stop,
@@ -25,13 +16,13 @@ namespace ImageProcessor
         Button addPrefixButton;
         Button changeNameButton;
         ListBox outputList;
-		TextBox outputBox;
+        TextBox outputBox;
         TextBox oldTextBox;
-		Panel infoImagePanel;
+        Panel infoImagePanel;
         TreeView locationTreeView;
         bool privateAccessRequested;
-        Navigator navigator;				// object handling directory tree
-		DirectoryInfo selectedNode = null;	// currently selected directory
+        Navigator navigator;                // object handling directory tree
+        DirectoryInfo selectedNode = null;	// currently selected directory
         string processNodeName = "";
         FileManager fileManager;            // resize and rename images
         DirectoryInfoImages itemInfoImages;	// shows info images
@@ -44,7 +35,6 @@ namespace ImageProcessor
         SearchResult matchingItems;
         Navigator.SearchMode searchMode;
         DirectoryInfo searchRoot;
-        //DirectoryInfo infoImageDir = null;
         private Button findNameButton;
         private Label label2;
         private TextBox patternBox;
@@ -56,11 +46,10 @@ namespace ImageProcessor
         private TabPage tabPage1;
         private TabPage tabPage2;
         private Panel findImagePanel;
-        private Button findLookBtn;
         private Button findSoundBtn;
         private Button findFileBtn;
         private Button displayResultsBtn;
-        string searchImagePath="";
+        string searchImagePath = "";
         Conversion conversion = Conversion.None;
         Conversion? pendingConversion = null; // queue conversion request here ifimageAdjustmentWorker is busy
         delegate void OnSearchClick();
@@ -80,492 +69,532 @@ namespace ImageProcessor
         private Label label5;
         private Button compressBtn;
         private ComboBox reduceSizeBox;
+        private Button mangleCharButton;
+        private Label label1;
+        private RadioButton changedBtn;
+        private RadioButton viewedBtn;
         Dictionary<string, string[]> matchingImages = new Dictionary<string, string[]>();
-        protected override void Dispose( bool disposing )
-		{
-			if( disposing )
-			{
-				if (components != null) 
-				{
-					components.Dispose();
-				}
-			}
-			base.Dispose( disposing );
-		}
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (components != null)
+                {
+                    components.Dispose();
+                }
+            }
+            base.Dispose(disposing);
+        }
 
-		#region Windows Form Designer generated code
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
-		private void InitializeComponent()
-		{
-            this.infoImagePanel = new System.Windows.Forms.Panel();
-            this.outputList = new System.Windows.Forms.ListBox();
-            this.locationTreeView = new System.Windows.Forms.TreeView();
-            this.addPrefixButton = new System.Windows.Forms.Button();
-            this.oldTextBox = new System.Windows.Forms.TextBox();
-            this.changeNameButton = new System.Windows.Forms.Button();
-            this.outputBox = new System.Windows.Forms.TextBox();
-            this.searchWorker = new System.ComponentModel.BackgroundWorker();
-            this.findNameButton = new System.Windows.Forms.Button();
-            this.label2 = new System.Windows.Forms.Label();
-            this.patternBox = new System.Windows.Forms.TextBox();
-            this.label4 = new System.Windows.Forms.Label();
-            this.daysBox = new System.Windows.Forms.TextBox();
-            this.runningImage = new System.Windows.Forms.PictureBox();
-            this.searchResultBox = new System.Windows.Forms.TextBox();
-            this.tabControl1 = new System.Windows.Forms.TabControl();
-            this.tabPage1 = new System.Windows.Forms.TabPage();
-            this.displayResultsBtn = new System.Windows.Forms.Button();
-            this.findLookBtn = new System.Windows.Forms.Button();
-            this.findSoundBtn = new System.Windows.Forms.Button();
-            this.findFileBtn = new System.Windows.Forms.Button();
-            this.findImagePanel = new System.Windows.Forms.Panel();
-            this.tabPage2 = new System.Windows.Forms.TabPage();
-            this.label5 = new System.Windows.Forms.Label();
-            this.renameResultBox = new System.Windows.Forms.TextBox();
-            this.newTextBox = new System.Windows.Forms.TextBox();
-            this.directoryNameBox = new System.Windows.Forms.TextBox();
-            this.renameDirBtn = new System.Windows.Forms.Button();
-            this.tabPage3 = new System.Windows.Forms.TabPage();
-            this.compressBtn = new System.Windows.Forms.Button();
-            this.reduceButton = new System.Windows.Forms.Button();
-            this.makePrivateBtn = new System.Windows.Forms.Button();
-            this.runningSimilarIcon = new System.Windows.Forms.PictureBox();
-            this.runningInfoIcon = new System.Windows.Forms.PictureBox();
-            this.findSimilarImagesBtn = new System.Windows.Forms.Button();
-            this.imageInfoBtn = new System.Windows.Forms.Button();
-            this.reduceSizeBox = new System.Windows.Forms.ComboBox();
-            ((System.ComponentModel.ISupportInitialize)(this.runningImage)).BeginInit();
-            this.tabControl1.SuspendLayout();
-            this.tabPage1.SuspendLayout();
-            this.tabPage2.SuspendLayout();
-            this.tabPage3.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.runningSimilarIcon)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.runningInfoIcon)).BeginInit();
-            this.SuspendLayout();
+        #region Windows Form Designer generated code
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
+        {
+            infoImagePanel = new Panel();
+            outputList = new ListBox();
+            locationTreeView = new TreeView();
+            addPrefixButton = new Button();
+            oldTextBox = new TextBox();
+            changeNameButton = new Button();
+            outputBox = new TextBox();
+            searchWorker = new BackgroundWorker();
+            findNameButton = new Button();
+            label2 = new Label();
+            patternBox = new TextBox();
+            label4 = new Label();
+            daysBox = new TextBox();
+            runningImage = new PictureBox();
+            searchResultBox = new TextBox();
+            tabControl1 = new TabControl();
+            tabPage1 = new TabPage();
+            changedBtn = new RadioButton();
+            viewedBtn = new RadioButton();
+            label1 = new Label();
+            displayResultsBtn = new Button();
+            findSoundBtn = new Button();
+            findFileBtn = new Button();
+            findImagePanel = new Panel();
+            tabPage2 = new TabPage();
+            label5 = new Label();
+            renameResultBox = new TextBox();
+            newTextBox = new TextBox();
+            directoryNameBox = new TextBox();
+            renameDirBtn = new Button();
+            tabPage3 = new TabPage();
+            mangleCharButton = new Button();
+            reduceSizeBox = new ComboBox();
+            compressBtn = new Button();
+            reduceButton = new Button();
+            makePrivateBtn = new Button();
+            runningSimilarIcon = new PictureBox();
+            runningInfoIcon = new PictureBox();
+            findSimilarImagesBtn = new Button();
+            imageInfoBtn = new Button();
+            ((ISupportInitialize)runningImage).BeginInit();
+            tabControl1.SuspendLayout();
+            tabPage1.SuspendLayout();
+            tabPage2.SuspendLayout();
+            tabPage3.SuspendLayout();
+            ((ISupportInitialize)runningSimilarIcon).BeginInit();
+            ((ISupportInitialize)runningInfoIcon).BeginInit();
+            SuspendLayout();
             // 
             // infoImagePanel
             // 
-            this.infoImagePanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.infoImagePanel.Location = new System.Drawing.Point(484, 463);
-            this.infoImagePanel.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.infoImagePanel.Name = "infoImagePanel";
-            this.infoImagePanel.Size = new System.Drawing.Size(282, 952);
-            this.infoImagePanel.TabIndex = 7;
-            this.infoImagePanel.DoubleClick += new System.EventHandler(this.infoImagePanel_DoubleClick);
+            infoImagePanel.BorderStyle = BorderStyle.FixedSingle;
+            infoImagePanel.Location = new Point(390, 463);
+            infoImagePanel.Margin = new Padding(3, 6, 3, 6);
+            infoImagePanel.Name = "infoImagePanel";
+            infoImagePanel.Size = new Size(258, 875);
+            infoImagePanel.TabIndex = 7;
+            infoImagePanel.DoubleClick += infoImagePanel_DoubleClick;
             // 
             // outputList
             // 
-            this.outputList.ItemHeight = 25;
-            this.outputList.Location = new System.Drawing.Point(790, 463);
-            this.outputList.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.outputList.Name = "outputList";
-            this.outputList.Size = new System.Drawing.Size(468, 954);
-            this.outputList.TabIndex = 8;
-            this.outputList.SelectedIndexChanged += new System.EventHandler(this.DisplayFoundItem);
-            this.outputList.DoubleClick += new System.EventHandler(this.ActivateFoundItem);
-            this.outputList.MouseMove += new System.Windows.Forms.MouseEventHandler(this.OnListBoxMouseMove);
+            outputList.Location = new Point(658, 463);
+            outputList.Margin = new Padding(3, 6, 3, 6);
+            outputList.Name = "outputList";
+            outputList.Size = new Size(381, 879);
+            outputList.TabIndex = 8;
+            outputList.SelectedIndexChanged += DisplayFoundItem;
+            outputList.DoubleClick += ActivateFoundItem;
+            outputList.MouseMove += OnListBoxMouseMove;
             // 
             // locationTreeView
             // 
-            this.locationTreeView.Location = new System.Drawing.Point(16, 63);
-            this.locationTreeView.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.locationTreeView.Name = "locationTreeView";
-            this.locationTreeView.ShowNodeToolTips = true;
-            this.locationTreeView.Size = new System.Drawing.Size(444, 1352);
-            this.locationTreeView.TabIndex = 10;
-            this.locationTreeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.RetrievNodes);
-            this.locationTreeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.locationTreeView_AfterSelect);
-            this.locationTreeView.Click += new System.EventHandler(this.locationTreeView_Click);
+            locationTreeView.Location = new Point(13, 63);
+            locationTreeView.Margin = new Padding(3, 6, 3, 6);
+            locationTreeView.Name = "locationTreeView";
+            locationTreeView.ShowNodeToolTips = true;
+            locationTreeView.Size = new Size(371, 1279);
+            locationTreeView.TabIndex = 10;
+            locationTreeView.BeforeExpand += RetrievNodes;
+            locationTreeView.AfterSelect += locationTreeView_AfterSelect;
+            locationTreeView.Click += locationTreeView_Click;
             // 
             // addPrefixButton
             // 
-            this.addPrefixButton.Location = new System.Drawing.Point(484, 88);
-            this.addPrefixButton.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.addPrefixButton.Name = "addPrefixButton";
-            this.addPrefixButton.Size = new System.Drawing.Size(228, 40);
-            this.addPrefixButton.TabIndex = 15;
-            this.addPrefixButton.Text = "Add prefix";
+            addPrefixButton.Location = new Point(403, 88);
+            addPrefixButton.Margin = new Padding(3, 6, 3, 6);
+            addPrefixButton.Name = "addPrefixButton";
+            addPrefixButton.Size = new Size(190, 40);
+            addPrefixButton.TabIndex = 15;
+            addPrefixButton.Text = "Add prefix";
             // 
             // oldTextBox
             // 
-            this.oldTextBox.Location = new System.Drawing.Point(8, 152);
-            this.oldTextBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.oldTextBox.Name = "oldTextBox";
-            this.oldTextBox.Size = new System.Drawing.Size(356, 31);
-            this.oldTextBox.TabIndex = 5;
+            oldTextBox.Location = new Point(7, 152);
+            oldTextBox.Margin = new Padding(3, 6, 3, 6);
+            oldTextBox.Name = "oldTextBox";
+            oldTextBox.Size = new Size(297, 31);
+            oldTextBox.TabIndex = 5;
             // 
             // changeNameButton
             // 
-            this.changeNameButton.Location = new System.Drawing.Point(96, 88);
-            this.changeNameButton.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.changeNameButton.Name = "changeNameButton";
-            this.changeNameButton.Size = new System.Drawing.Size(244, 40);
-            this.changeNameButton.TabIndex = 22;
-            this.changeNameButton.Text = "Change part of name";
-            this.changeNameButton.TextAlign = System.Drawing.ContentAlignment.TopCenter;
+            changeNameButton.Location = new Point(80, 88);
+            changeNameButton.Margin = new Padding(3, 6, 3, 6);
+            changeNameButton.Name = "changeNameButton";
+            changeNameButton.Size = new Size(203, 40);
+            changeNameButton.TabIndex = 22;
+            changeNameButton.Text = "Change part of name";
+            changeNameButton.TextAlign = ContentAlignment.TopCenter;
             // 
             // outputBox
             // 
-            this.outputBox.Location = new System.Drawing.Point(16, 15);
-            this.outputBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.outputBox.Name = "outputBox";
-            this.outputBox.Size = new System.Drawing.Size(1246, 31);
-            this.outputBox.TabIndex = 19;
-            this.outputBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.outputBox_KeyDown);
-            this.outputBox.MouseDown += new System.Windows.Forms.MouseEventHandler(this.outputBox_MouseDown);
+            outputBox.Location = new Point(13, 15);
+            outputBox.Margin = new Padding(3, 6, 3, 6);
+            outputBox.Name = "outputBox";
+            outputBox.Size = new Size(1039, 31);
+            outputBox.TabIndex = 19;
+            outputBox.KeyDown += outputBox_KeyDown;
+            outputBox.MouseDown += outputBox_MouseDown;
             // 
             // searchWorker
             // 
-            this.searchWorker.DoWork += new System.ComponentModel.DoWorkEventHandler(this.StartSearch);
-            this.searchWorker.RunWorkerCompleted += new System.ComponentModel.RunWorkerCompletedEventHandler(this.SearchCompleted);
+            searchWorker.DoWork += StartSearchAsync;
+            searchWorker.RunWorkerCompleted += SearchCompleted;
             // 
             // findNameButton
             // 
-            this.findNameButton.Location = new System.Drawing.Point(68, 12);
-            this.findNameButton.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.findNameButton.Name = "findNameButton";
-            this.findNameButton.Size = new System.Drawing.Size(172, 40);
-            this.findNameButton.TabIndex = 0;
-            this.findNameButton.Text = "Name";
+            findNameButton.Location = new Point(67, 12);
+            findNameButton.Margin = new Padding(3, 6, 3, 6);
+            findNameButton.Name = "findNameButton";
+            findNameButton.Size = new Size(88, 40);
+            findNameButton.TabIndex = 0;
+            findNameButton.Text = "Names";
             // 
             // label2
             // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(12, 121);
-            this.label2.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(68, 25);
-            this.label2.TabIndex = 28;
-            this.label2.Text = "Name";
+            label2.AutoSize = true;
+            label2.Location = new Point(17, 68);
+            label2.Name = "label2";
+            label2.Size = new Size(69, 25);
+            label2.TabIndex = 28;
+            label2.Text = "pattern";
             // 
             // patternBox
             // 
-            this.patternBox.Location = new System.Drawing.Point(88, 115);
-            this.patternBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.patternBox.Name = "patternBox";
-            this.patternBox.Size = new System.Drawing.Size(328, 31);
-            this.patternBox.TabIndex = 20;
-            this.patternBox.TextChanged += new System.EventHandler(this.patternBox_TextChanged);
+            patternBox.Location = new Point(92, 64);
+            patternBox.Margin = new Padding(3, 6, 3, 6);
+            patternBox.Multiline = true;
+            patternBox.Name = "patternBox";
+            patternBox.Size = new Size(255, 62);
+            patternBox.TabIndex = 20;
+            patternBox.TextChanged += patternBox_TextChanged;
             // 
             // label4
             // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(12, 171);
-            this.label4.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(96, 25);
-            this.label4.TabIndex = 29;
-            this.label4.Text = "Days old";
+            label4.AutoSize = true;
+            label4.Location = new Point(218, 138);
+            label4.Name = "label4";
+            label4.Size = new Size(29, 25);
+            label4.TabIndex = 29;
+            label4.Text = "@";
             // 
             // daysBox
             // 
-            this.daysBox.Location = new System.Drawing.Point(120, 165);
-            this.daysBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.daysBox.Name = "daysBox";
-            this.daysBox.Size = new System.Drawing.Size(68, 31);
-            this.daysBox.TabIndex = 27;
-            this.daysBox.TextChanged += new System.EventHandler(this.patternBox_TextChanged);
+            daysBox.Location = new Point(253, 135);
+            daysBox.Margin = new Padding(3, 6, 3, 6);
+            daysBox.Name = "daysBox";
+            daysBox.Size = new Size(49, 31);
+            daysBox.TabIndex = 27;
+            daysBox.TextChanged += patternBox_TextChanged;
             // 
             // runningImage
             // 
-            this.runningImage.Image = global::CommonForms.Properties.Resources.wspinner_1_;
-            this.runningImage.Location = new System.Drawing.Point(20, 21);
-            this.runningImage.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.runningImage.Name = "runningImage";
-            this.runningImage.Size = new System.Drawing.Size(32, 31);
-            this.runningImage.TabIndex = 31;
-            this.runningImage.TabStop = false;
-            this.runningImage.Visible = false;
+            runningImage.Image = CommonForms.Properties.Resources.wspinner_1_;
+            runningImage.Location = new Point(17, 21);
+            runningImage.Margin = new Padding(3, 6, 3, 6);
+            runningImage.Name = "runningImage";
+            runningImage.Size = new Size(27, 31);
+            runningImage.TabIndex = 31;
+            runningImage.TabStop = false;
+            runningImage.Visible = false;
             // 
             // searchResultBox
             // 
-            this.searchResultBox.Location = new System.Drawing.Point(12, 225);
-            this.searchResultBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.searchResultBox.Multiline = true;
-            this.searchResultBox.Name = "searchResultBox";
-            this.searchResultBox.ReadOnly = true;
-            this.searchResultBox.Size = new System.Drawing.Size(404, 104);
-            this.searchResultBox.TabIndex = 34;
+            searchResultBox.Location = new Point(10, 225);
+            searchResultBox.Margin = new Padding(3, 6, 3, 6);
+            searchResultBox.Multiline = true;
+            searchResultBox.Name = "searchResultBox";
+            searchResultBox.ReadOnly = true;
+            searchResultBox.Size = new Size(337, 104);
+            searchResultBox.TabIndex = 34;
             // 
             // tabControl1
             // 
-            this.tabControl1.Controls.Add(this.tabPage1);
-            this.tabControl1.Controls.Add(this.tabPage2);
-            this.tabControl1.Controls.Add(this.tabPage3);
-            this.tabControl1.Location = new System.Drawing.Point(476, 65);
-            this.tabControl1.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.tabControl1.Name = "tabControl1";
-            this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(792, 394);
-            this.tabControl1.TabIndex = 25;
+            tabControl1.Appearance = TabAppearance.FlatButtons;
+            tabControl1.Controls.Add(tabPage1);
+            tabControl1.Controls.Add(tabPage2);
+            tabControl1.Controls.Add(tabPage3);
+            tabControl1.Location = new Point(390, 65);
+            tabControl1.Margin = new Padding(3, 6, 3, 6);
+            tabControl1.Name = "tabControl1";
+            tabControl1.SelectedIndex = 0;
+            tabControl1.Size = new Size(667, 394);
+            tabControl1.TabIndex = 25;
             // 
             // tabPage1
             // 
-            this.tabPage1.Controls.Add(this.displayResultsBtn);
-            this.tabPage1.Controls.Add(this.findLookBtn);
-            this.tabPage1.Controls.Add(this.findSoundBtn);
-            this.tabPage1.Controls.Add(this.findFileBtn);
-            this.tabPage1.Controls.Add(this.findImagePanel);
-            this.tabPage1.Controls.Add(this.searchResultBox);
-            this.tabPage1.Controls.Add(this.runningImage);
-            this.tabPage1.Controls.Add(this.findNameButton);
-            this.tabPage1.Controls.Add(this.daysBox);
-            this.tabPage1.Controls.Add(this.label4);
-            this.tabPage1.Controls.Add(this.label2);
-            this.tabPage1.Controls.Add(this.patternBox);
-            this.tabPage1.Location = new System.Drawing.Point(8, 39);
-            this.tabPage1.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.tabPage1.Name = "tabPage1";
-            this.tabPage1.Padding = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.tabPage1.Size = new System.Drawing.Size(776, 347);
-            this.tabPage1.TabIndex = 0;
-            this.tabPage1.Text = "Search";
-            this.tabPage1.UseVisualStyleBackColor = true;
+            tabPage1.Controls.Add(changedBtn);
+            tabPage1.Controls.Add(viewedBtn);
+            tabPage1.Controls.Add(label1);
+            tabPage1.Controls.Add(displayResultsBtn);
+            tabPage1.Controls.Add(findSoundBtn);
+            tabPage1.Controls.Add(findFileBtn);
+            tabPage1.Controls.Add(findImagePanel);
+            tabPage1.Controls.Add(searchResultBox);
+            tabPage1.Controls.Add(runningImage);
+            tabPage1.Controls.Add(findNameButton);
+            tabPage1.Controls.Add(daysBox);
+            tabPage1.Controls.Add(label4);
+            tabPage1.Controls.Add(label2);
+            tabPage1.Controls.Add(patternBox);
+            tabPage1.Location = new Point(4, 37);
+            tabPage1.Margin = new Padding(3, 6, 3, 6);
+            tabPage1.Name = "tabPage1";
+            tabPage1.Padding = new Padding(3, 6, 3, 6);
+            tabPage1.Size = new Size(659, 353);
+            tabPage1.TabIndex = 0;
+            tabPage1.Text = "Search";
+            tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // changedBtn
+            // 
+            changedBtn.AutoSize = true;
+            changedBtn.Location = new Point(114, 137);
+            changedBtn.Name = "changedBtn";
+            changedBtn.Size = new Size(105, 29);
+            changedBtn.TabIndex = 42;
+            changedBtn.Text = "changed";
+            changedBtn.UseVisualStyleBackColor = true;
+            // 
+            // viewedBtn
+            // 
+            viewedBtn.AutoSize = true;
+            viewedBtn.Checked = true;
+            viewedBtn.Location = new Point(22, 137);
+            viewedBtn.Name = "viewedBtn";
+            viewedBtn.Size = new Size(92, 29);
+            viewedBtn.TabIndex = 41;
+            viewedBtn.TabStop = true;
+            viewedBtn.Text = "viewed";
+            viewedBtn.UseVisualStyleBackColor = true;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(298, 137);
+            label1.Name = "label1";
+            label1.Size = new Size(49, 25);
+            label1.TabIndex = 40;
+            label1.Text = "days";
             // 
             // displayResultsBtn
             // 
-            this.displayResultsBtn.Location = new System.Drawing.Point(212, 163);
-            this.displayResultsBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.displayResultsBtn.Name = "displayResultsBtn";
-            this.displayResultsBtn.Size = new System.Drawing.Size(208, 40);
-            this.displayResultsBtn.TabIndex = 39;
-            this.displayResultsBtn.Text = "Display Names";
-            // 
-            // findLookBtn
-            // 
-            this.findLookBtn.Location = new System.Drawing.Point(252, 63);
-            this.findLookBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.findLookBtn.Name = "findLookBtn";
-            this.findLookBtn.Size = new System.Drawing.Size(172, 40);
-            this.findLookBtn.TabIndex = 38;
-            this.findLookBtn.Text = "Looks like";
+            displayResultsBtn.Location = new Point(17, 172);
+            displayResultsBtn.Margin = new Padding(3, 6, 3, 6);
+            displayResultsBtn.Name = "displayResultsBtn";
+            displayResultsBtn.Size = new Size(332, 40);
+            displayResultsBtn.TabIndex = 39;
+            displayResultsBtn.Text = "Display Found Names";
             // 
             // findSoundBtn
             // 
-            this.findSoundBtn.Location = new System.Drawing.Point(68, 63);
-            this.findSoundBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.findSoundBtn.Name = "findSoundBtn";
-            this.findSoundBtn.Size = new System.Drawing.Size(172, 40);
-            this.findSoundBtn.TabIndex = 37;
-            this.findSoundBtn.Text = "Sound like";
+            findSoundBtn.Location = new Point(267, 12);
+            findSoundBtn.Margin = new Padding(3, 6, 3, 6);
+            findSoundBtn.Name = "findSoundBtn";
+            findSoundBtn.Size = new Size(80, 40);
+            findSoundBtn.TabIndex = 37;
+            findSoundBtn.Text = "Sound";
             // 
             // findFileBtn
             // 
-            this.findFileBtn.Location = new System.Drawing.Point(252, 12);
-            this.findFileBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.findFileBtn.Name = "findFileBtn";
-            this.findFileBtn.Size = new System.Drawing.Size(172, 40);
-            this.findFileBtn.TabIndex = 36;
-            this.findFileBtn.Text = "File";
+            findFileBtn.Location = new Point(161, 12);
+            findFileBtn.Margin = new Padding(3, 6, 3, 6);
+            findFileBtn.Name = "findFileBtn";
+            findFileBtn.Size = new Size(100, 40);
+            findFileBtn.TabIndex = 36;
+            findFileBtn.Text = "Files";
             // 
             // findImagePanel
             // 
-            this.findImagePanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.findImagePanel.Location = new System.Drawing.Point(432, 6);
-            this.findImagePanel.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.findImagePanel.Name = "findImagePanel";
-            this.findImagePanel.Size = new System.Drawing.Size(342, 331);
-            this.findImagePanel.TabIndex = 35;
+            findImagePanel.BorderStyle = BorderStyle.FixedSingle;
+            findImagePanel.Location = new Point(360, 6);
+            findImagePanel.Margin = new Padding(3, 6, 3, 6);
+            findImagePanel.Name = "findImagePanel";
+            findImagePanel.Size = new Size(285, 331);
+            findImagePanel.TabIndex = 35;
             // 
             // tabPage2
             // 
-            this.tabPage2.Controls.Add(this.label5);
-            this.tabPage2.Controls.Add(this.renameResultBox);
-            this.tabPage2.Controls.Add(this.newTextBox);
-            this.tabPage2.Controls.Add(this.directoryNameBox);
-            this.tabPage2.Controls.Add(this.renameDirBtn);
-            this.tabPage2.Controls.Add(this.oldTextBox);
-            this.tabPage2.Controls.Add(this.addPrefixButton);
-            this.tabPage2.Controls.Add(this.changeNameButton);
-            this.tabPage2.Location = new System.Drawing.Point(8, 39);
-            this.tabPage2.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.tabPage2.Name = "tabPage2";
-            this.tabPage2.Padding = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.tabPage2.Size = new System.Drawing.Size(776, 347);
-            this.tabPage2.TabIndex = 1;
-            this.tabPage2.Text = "Rename";
-            this.tabPage2.UseVisualStyleBackColor = true;
+            tabPage2.Controls.Add(label5);
+            tabPage2.Controls.Add(renameResultBox);
+            tabPage2.Controls.Add(newTextBox);
+            tabPage2.Controls.Add(directoryNameBox);
+            tabPage2.Controls.Add(renameDirBtn);
+            tabPage2.Controls.Add(oldTextBox);
+            tabPage2.Controls.Add(addPrefixButton);
+            tabPage2.Controls.Add(changeNameButton);
+            tabPage2.Location = new Point(4, 37);
+            tabPage2.Margin = new Padding(3, 6, 3, 6);
+            tabPage2.Name = "tabPage2";
+            tabPage2.Padding = new Padding(3, 6, 3, 6);
+            tabPage2.Size = new Size(659, 353);
+            tabPage2.TabIndex = 1;
+            tabPage2.Text = "Rename";
+            tabPage2.UseVisualStyleBackColor = true;
             // 
             // label5
             // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(368, 160);
-            this.label5.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(48, 25);
-            this.label5.TabIndex = 42;
-            this.label5.Text = "==>";
+            label5.AutoSize = true;
+            label5.Location = new Point(307, 160);
+            label5.Name = "label5";
+            label5.Size = new Size(48, 25);
+            label5.TabIndex = 42;
+            label5.Text = "==>";
             // 
             // renameResultBox
             // 
-            this.renameResultBox.Location = new System.Drawing.Point(4, 198);
-            this.renameResultBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.renameResultBox.Multiline = true;
-            this.renameResultBox.Name = "renameResultBox";
-            this.renameResultBox.ReadOnly = true;
-            this.renameResultBox.Size = new System.Drawing.Size(772, 125);
-            this.renameResultBox.TabIndex = 40;
+            renameResultBox.Location = new Point(3, 198);
+            renameResultBox.Margin = new Padding(3, 6, 3, 6);
+            renameResultBox.Multiline = true;
+            renameResultBox.Name = "renameResultBox";
+            renameResultBox.ReadOnly = true;
+            renameResultBox.Size = new Size(644, 125);
+            renameResultBox.TabIndex = 40;
             // 
             // newTextBox
             // 
-            this.newTextBox.Location = new System.Drawing.Point(420, 152);
-            this.newTextBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.newTextBox.Name = "newTextBox";
-            this.newTextBox.Size = new System.Drawing.Size(356, 31);
-            this.newTextBox.TabIndex = 37;
+            newTextBox.Location = new Point(350, 152);
+            newTextBox.Margin = new Padding(3, 6, 3, 6);
+            newTextBox.Name = "newTextBox";
+            newTextBox.Size = new Size(297, 31);
+            newTextBox.TabIndex = 37;
             // 
             // directoryNameBox
             // 
-            this.directoryNameBox.Location = new System.Drawing.Point(236, 31);
-            this.directoryNameBox.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.directoryNameBox.Name = "directoryNameBox";
-            this.directoryNameBox.Size = new System.Drawing.Size(540, 31);
-            this.directoryNameBox.TabIndex = 36;
+            directoryNameBox.Location = new Point(197, 31);
+            directoryNameBox.Margin = new Padding(3, 6, 3, 6);
+            directoryNameBox.Name = "directoryNameBox";
+            directoryNameBox.Size = new Size(451, 31);
+            directoryNameBox.TabIndex = 36;
             // 
             // renameDirBtn
             // 
-            this.renameDirBtn.Location = new System.Drawing.Point(4, 29);
-            this.renameDirBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.renameDirBtn.Name = "renameDirBtn";
-            this.renameDirBtn.Size = new System.Drawing.Size(232, 40);
-            this.renameDirBtn.TabIndex = 35;
-            this.renameDirBtn.Text = "New directory name";
+            renameDirBtn.Location = new Point(3, 29);
+            renameDirBtn.Margin = new Padding(3, 6, 3, 6);
+            renameDirBtn.Name = "renameDirBtn";
+            renameDirBtn.Size = new Size(193, 40);
+            renameDirBtn.TabIndex = 35;
+            renameDirBtn.Text = "New directory name";
             // 
             // tabPage3
             // 
-            this.tabPage3.Controls.Add(this.reduceSizeBox);
-            this.tabPage3.Controls.Add(this.compressBtn);
-            this.tabPage3.Controls.Add(this.reduceButton);
-            this.tabPage3.Controls.Add(this.makePrivateBtn);
-            this.tabPage3.Controls.Add(this.runningSimilarIcon);
-            this.tabPage3.Controls.Add(this.runningInfoIcon);
-            this.tabPage3.Controls.Add(this.findSimilarImagesBtn);
-            this.tabPage3.Controls.Add(this.imageInfoBtn);
-            this.tabPage3.Location = new System.Drawing.Point(8, 39);
-            this.tabPage3.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.tabPage3.Name = "tabPage3";
-            this.tabPage3.Size = new System.Drawing.Size(776, 347);
-            this.tabPage3.TabIndex = 2;
-            this.tabPage3.Text = "Processes";
-            this.tabPage3.UseVisualStyleBackColor = true;
+            tabPage3.Controls.Add(mangleCharButton);
+            tabPage3.Controls.Add(reduceSizeBox);
+            tabPage3.Controls.Add(compressBtn);
+            tabPage3.Controls.Add(reduceButton);
+            tabPage3.Controls.Add(makePrivateBtn);
+            tabPage3.Controls.Add(runningSimilarIcon);
+            tabPage3.Controls.Add(runningInfoIcon);
+            tabPage3.Controls.Add(findSimilarImagesBtn);
+            tabPage3.Controls.Add(imageInfoBtn);
+            tabPage3.Location = new Point(4, 37);
+            tabPage3.Margin = new Padding(3, 6, 3, 6);
+            tabPage3.Name = "tabPage3";
+            tabPage3.Size = new Size(659, 353);
+            tabPage3.TabIndex = 2;
+            tabPage3.Text = "Processes";
+            tabPage3.UseVisualStyleBackColor = true;
             // 
-            // compressBtn
+            // mangleCharButton
             // 
-            this.compressBtn.Location = new System.Drawing.Point(68, 192);
-            this.compressBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.compressBtn.Name = "compressBtn";
-            this.compressBtn.Size = new System.Drawing.Size(260, 40);
-            this.compressBtn.TabIndex = 43;
-            this.compressBtn.Text = "Compress PNG images";
-            // 
-            // reduceButton
-            // 
-            this.reduceButton.Location = new System.Drawing.Point(68, 262);
-            this.reduceButton.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.reduceButton.Name = "reduceButton";
-            this.reduceButton.Size = new System.Drawing.Size(115, 38);
-            this.reduceButton.TabIndex = 42;
-            this.reduceButton.Text = "Resize to";
-            this.reduceButton.TextAlign = System.Drawing.ContentAlignment.TopCenter;
-            // 
-            // makePrivateBtn
-            // 
-            this.makePrivateBtn.Location = new System.Drawing.Point(68, 135);
-            this.makePrivateBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.makePrivateBtn.Name = "makePrivateBtn";
-            this.makePrivateBtn.Size = new System.Drawing.Size(260, 40);
-            this.makePrivateBtn.TabIndex = 39;
-            this.makePrivateBtn.Text = "Convert to private";
-            // 
-            // runningSimilarIcon
-            // 
-            this.runningSimilarIcon.Image = global::CommonForms.Properties.Resources.wspinner_1_;
-            this.runningSimilarIcon.Location = new System.Drawing.Point(28, 87);
-            this.runningSimilarIcon.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.runningSimilarIcon.Name = "runningSimilarIcon";
-            this.runningSimilarIcon.Size = new System.Drawing.Size(32, 31);
-            this.runningSimilarIcon.TabIndex = 38;
-            this.runningSimilarIcon.TabStop = false;
-            this.runningSimilarIcon.Visible = false;
-            // 
-            // runningInfoIcon
-            // 
-            this.runningInfoIcon.Image = global::CommonForms.Properties.Resources.wspinner_1_;
-            this.runningInfoIcon.Location = new System.Drawing.Point(28, 35);
-            this.runningInfoIcon.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.runningInfoIcon.Name = "runningInfoIcon";
-            this.runningInfoIcon.Size = new System.Drawing.Size(32, 31);
-            this.runningInfoIcon.TabIndex = 37;
-            this.runningInfoIcon.TabStop = false;
-            this.runningInfoIcon.Visible = false;
-            // 
-            // findSimilarImagesBtn
-            // 
-            this.findSimilarImagesBtn.Location = new System.Drawing.Point(68, 83);
-            this.findSimilarImagesBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.findSimilarImagesBtn.Name = "findSimilarImagesBtn";
-            this.findSimilarImagesBtn.Size = new System.Drawing.Size(260, 40);
-            this.findSimilarImagesBtn.TabIndex = 36;
-            this.findSimilarImagesBtn.Text = "Find similar images";
-            // 
-            // imageInfoBtn
-            // 
-            this.imageInfoBtn.Location = new System.Drawing.Point(68, 31);
-            this.imageInfoBtn.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.imageInfoBtn.Name = "imageInfoBtn";
-            this.imageInfoBtn.Size = new System.Drawing.Size(260, 40);
-            this.imageInfoBtn.TabIndex = 35;
-            this.imageInfoBtn.Text = "Update ImageInfo";
+            mangleCharButton.Location = new Point(57, 217);
+            mangleCharButton.Margin = new Padding(3, 6, 3, 6);
+            mangleCharButton.Name = "mangleCharButton";
+            mangleCharButton.Size = new Size(217, 40);
+            mangleCharButton.TabIndex = 46;
+            mangleCharButton.Text = "Modify Mangle Symbol";
             // 
             // reduceSizeBox
             // 
-            this.reduceSizeBox.FormattingEnabled = true;
-            this.reduceSizeBox.Location = new System.Drawing.Point(184, 266);
-            this.reduceSizeBox.Name = "reduceSizeBox";
-            this.reduceSizeBox.Size = new System.Drawing.Size(144, 33);
-            this.reduceSizeBox.TabIndex = 45;
+            reduceSizeBox.FormattingEnabled = true;
+            reduceSizeBox.Location = new Point(153, 266);
+            reduceSizeBox.Margin = new Padding(2, 3, 2, 3);
+            reduceSizeBox.Name = "reduceSizeBox";
+            reduceSizeBox.Size = new Size(121, 33);
+            reduceSizeBox.TabIndex = 45;
+            // 
+            // compressBtn
+            // 
+            compressBtn.Location = new Point(57, 168);
+            compressBtn.Margin = new Padding(3, 6, 3, 6);
+            compressBtn.Name = "compressBtn";
+            compressBtn.Size = new Size(217, 40);
+            compressBtn.TabIndex = 43;
+            compressBtn.Text = "Compress PNG images";
+            // 
+            // reduceButton
+            // 
+            reduceButton.Location = new Point(57, 262);
+            reduceButton.Margin = new Padding(3, 6, 3, 6);
+            reduceButton.Name = "reduceButton";
+            reduceButton.Size = new Size(96, 38);
+            reduceButton.TabIndex = 42;
+            reduceButton.Text = "Resize to";
+            reduceButton.TextAlign = ContentAlignment.TopCenter;
+            // 
+            // makePrivateBtn
+            // 
+            makePrivateBtn.Location = new Point(57, 126);
+            makePrivateBtn.Margin = new Padding(3, 6, 3, 6);
+            makePrivateBtn.Name = "makePrivateBtn";
+            makePrivateBtn.Size = new Size(217, 40);
+            makePrivateBtn.TabIndex = 39;
+            makePrivateBtn.Text = "Convert to private";
+            // 
+            // runningSimilarIcon
+            // 
+            runningSimilarIcon.Image = CommonForms.Properties.Resources.wspinner_1_;
+            runningSimilarIcon.Location = new Point(23, 87);
+            runningSimilarIcon.Margin = new Padding(3, 6, 3, 6);
+            runningSimilarIcon.Name = "runningSimilarIcon";
+            runningSimilarIcon.Size = new Size(27, 31);
+            runningSimilarIcon.TabIndex = 38;
+            runningSimilarIcon.TabStop = false;
+            runningSimilarIcon.Visible = false;
+            // 
+            // runningInfoIcon
+            // 
+            runningInfoIcon.Image = CommonForms.Properties.Resources.wspinner_1_;
+            runningInfoIcon.Location = new Point(23, 35);
+            runningInfoIcon.Margin = new Padding(3, 6, 3, 6);
+            runningInfoIcon.Name = "runningInfoIcon";
+            runningInfoIcon.Size = new Size(27, 31);
+            runningInfoIcon.TabIndex = 37;
+            runningInfoIcon.TabStop = false;
+            runningInfoIcon.Visible = false;
+            // 
+            // findSimilarImagesBtn
+            // 
+            findSimilarImagesBtn.Location = new Point(57, 78);
+            findSimilarImagesBtn.Margin = new Padding(3, 6, 3, 6);
+            findSimilarImagesBtn.Name = "findSimilarImagesBtn";
+            findSimilarImagesBtn.Size = new Size(217, 40);
+            findSimilarImagesBtn.TabIndex = 36;
+            findSimilarImagesBtn.Text = "Find similar images";
+            // 
+            // imageInfoBtn
+            // 
+            imageInfoBtn.Location = new Point(57, 31);
+            imageInfoBtn.Margin = new Padding(3, 6, 3, 6);
+            imageInfoBtn.Name = "imageInfoBtn";
+            imageInfoBtn.Size = new Size(217, 40);
+            imageInfoBtn.TabIndex = 35;
+            imageInfoBtn.Text = "Update ImageInfo";
             // 
             // NavigatorForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 25F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1252, 1430);
-            this.Controls.Add(this.tabControl1);
-            this.Controls.Add(this.outputBox);
-            this.Controls.Add(this.locationTreeView);
-            this.Controls.Add(this.outputList);
-            this.Controls.Add(this.infoImagePanel);
-            this.Margin = new System.Windows.Forms.Padding(4, 6, 4, 6);
-            this.MaximumSize = new System.Drawing.Size(1278, 1598);
-            this.MinimumSize = new System.Drawing.Size(1278, 881);
-            this.Name = "NavigatorForm";
-            this.Text = "Image Selector";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.NavigatorForm_FormClosing);
-            ((System.ComponentModel.ISupportInitialize)(this.runningImage)).EndInit();
-            this.tabControl1.ResumeLayout(false);
-            this.tabPage1.ResumeLayout(false);
-            this.tabPage1.PerformLayout();
-            this.tabPage2.ResumeLayout(false);
-            this.tabPage2.PerformLayout();
-            this.tabPage3.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.runningSimilarIcon)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.runningInfoIcon)).EndInit();
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            AutoScaleDimensions = new SizeF(10F, 25F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(1047, 1350);
+            Controls.Add(tabControl1);
+            Controls.Add(outputBox);
+            Controls.Add(locationTreeView);
+            Controls.Add(outputList);
+            Controls.Add(infoImagePanel);
+            Margin = new Padding(3, 6, 3, 6);
+            MaximumSize = new Size(1069, 1598);
+            MinimumSize = new Size(1069, 881);
+            Name = "NavigatorForm";
+            Text = "Image Selector";
+            FormClosing += NavigatorForm_FormClosing;
+            ((ISupportInitialize)runningImage).EndInit();
+            tabControl1.ResumeLayout(false);
+            tabPage1.ResumeLayout(false);
+            tabPage1.PerformLayout();
+            tabPage2.ResumeLayout(false);
+            tabPage2.PerformLayout();
+            tabPage3.ResumeLayout(false);
+            ((ISupportInitialize)runningSimilarIcon).EndInit();
+            ((ISupportInitialize)runningInfoIcon).EndInit();
+            ResumeLayout(false);
+            PerformLayout();
 
-		}
-		#endregion
-        public NavigatorForm(bool accessRequested = false)              
-		{
+        }
+        #endregion
+        public NavigatorForm(bool accessRequested = false)
+        {
             try
             {
                 navigator = new Navigator();
-                navigator.onNewImageSelection = NewImageSelected;
-                navigator.onNewDirSelection = SetActiveDirAndInfoImages; 
                 InitializeComponent();
+                navigator.onNewImageSelection = NewImageSelected;
+                navigator.onNewDirSelection = SetActiveDirAndInfoImages;
                 privateAccessRequested = accessRequested;
                 if (accessRequested)
                     RequestPassword();
@@ -579,19 +608,23 @@ namespace ImageProcessor
                 similarImagesWorker.DoWork += new DoWorkEventHandler(FindSimilarImages);
                 similarImagesWorker.RunWorkerCompleted += new RunWorkerCompletedEventHandler(FindSimilarImagesCompleted);
                 outputBox.ForeColor = Color.LightSalmon;
-                findNameButton.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.Name);
+                findNameButton.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.Names);
                 findFileBtn.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.File);
                 findSoundBtn.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.Sound);
                 //findLookBtn.Click += (object s, EventArgs e) => StartSearch(Navigator.SearchMode.Image);
                 makePrivateBtn.Click += (object s, EventArgs e) => ConvertToPrivate();
                 compressBtn.Click += (object s, EventArgs e) => ConvertTojpg();
                 reduceButton.Click += (object s, EventArgs e) => ResizeImages();
+                mangleCharButton.Click += (object s, EventArgs e) => ChangeMangleChar();
                 reduceButton.Text = "Reduce to";
                 changeNameButton.Click += (object s, EventArgs e) => ApplyRenameOperation(RenameType.FileName);
                 addPrefixButton.Click += (object s, EventArgs e) => ApplyRenameOperation(RenameType.AddPrefix);
                 renameDirBtn.Click += (object s, EventArgs e) => ApplyRenameOperation(RenameType.Directory);
                 imageInfoBtn.Click += (object s, EventArgs e) => { runningInfoIcon.Visible = true; infoWorker.RunWorkerAsync(); imageInfoBtn.Enabled = false; };
                 findSimilarImagesBtn.Click += (object s, EventArgs e) => { runningSimilarIcon.Visible = true; similarImagesWorker.RunWorkerAsync(); findSimilarImagesBtn.Enabled = false; }; ;
+                //outputList.DrawMode = DrawMode.OwnerDrawFixed;
+                outputList.ItemHeight = 20;
+                locationTreeView.ItemHeight = 22;
                 locationTreeView.DoubleClick += (object s, EventArgs e) => { if (selectedNode != null) ShowImageListForm(selectedNode); };
                 displayResultsBtn.Click += (object o, EventArgs e) => { onSearchClick?.Invoke(); };
                 foreach (int v in Enum.GetValues(typeof(Conversion)))
@@ -608,9 +641,9 @@ namespace ImageProcessor
                 nodeRoot.Nodes.Add("fake");
                 itemInfoImages = new DirectoryInfoImages(infoImagePanel);
                 findImagePanel.Paint += new PaintEventHandler(DrawSearchImage);
-                findLookBtn.Enabled = false;
+                //findLookBtn.Enabled = false;
                 fileManager = new FileManager(navigator);
-                fileManager.notifyResults += new NotifyMessage(ShowResults);
+                fileManager.notifyResults += new NotifyMessage(ShowResults);// temporary suspended: causes cross-thread error
                 fileManager.notifyFinal += new NotifyMessages(ShowFinalResults);
                 fileManager.notifyStatus += new NotifyMessage(ShowStatus);
                 toolTip1 = new ToolTip();
@@ -624,24 +657,24 @@ namespace ImageProcessor
                 EnableSearchButtons(false);
                 Text = "Image viewer v3.2";
             }
-            catch (Exception ex )
+            catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, "NavigatorForm");
             }
         }
-        ~NavigatorForm()				    { Dispose(false); }
+        ~NavigatorForm() { Dispose(false); }
         void SetActiveDirAndInfoImages(DirectoryInfo di)
-        { 
+        {
             selectedNode = itemInfoImages.ReDrawInfoImages(di);
             outputBox.Text = di == null ? "" : selectedNode != null ? (new ImageDirInfo(selectedNode)).RealPath : di.FullName + " does NOT EXIST";
         }
-		void ShowResults(string message)	{ outputList.Items.Add(message); }
+        void ShowResults(string message) { outputList.Items.Add(message); }
         void ShowFinalResults(List<string> messages)
         {
             foreach (string s in messages)
                 outputList.Items.Add(s);
         }
-        void ShowStatus(string message)		{ outputBox.Text=message; }
+        void ShowStatus(string message) { outputBox.Text = message; }
         void EnableSearchButtons(bool state)
         {
             findNameButton.Enabled = state;
@@ -668,7 +701,7 @@ namespace ImageProcessor
         {
             if (searchImagePath.Length == 0)
             {
-                findLookBtn.Enabled = false;
+                //findLookBtn.Enabled = false;
                 return;
             }
             try
@@ -677,25 +710,26 @@ namespace ImageProcessor
                 Image im = ifi.UpdateThumbnail();
                 if (im != null)
                 {
-                    float areaSize = 173 * e.Graphics.DpiX / 96;
-                    float scale = Math.Min(areaSize / im.Width, areaSize / im.Height);
+                    float areaSize = findImagePanel.Size.Width;// * g.DpiX / 96;
+                    float scale = Math.Min(findImagePanel.Size.Width / (im.Width + 1f), findImagePanel.Size.Height / (im.Height + 1f));
                     float iw = im.Width * scale;
                     float ih = im.Height * scale;
-                    float d = (iw - ih) / 2;
-                    PointF del = d < 0 ? new PointF(-d, 0) : new PointF(0, d);
-                    e.Graphics.DrawImage(im, del.X, del.Y, iw, ih);
-                    findLookBtn.Enabled = true;
+                    float dx = (findImagePanel.Size.Width - iw) / 2;
+                    float dy = (findImagePanel.Size.Height - ih) / 2;
+                    e.Graphics.DrawImage(im, dx, dy, iw, ih);
                 }
             }
-            catch (Exception ex) {
-                Debug.WriteLine(ex.Message); }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+            }
         }
         void StartSearch(Navigator.SearchMode mode)
-        {
+        {   // user clicks with different nodes
             if (searchWorker.IsBusy)
                 return;
             searchRoot = navigator.GetSearchRoot(outputBox.Text);
-            if(searchRoot == null || !searchRoot.Exists)
+            if (searchRoot == null || !searchRoot.Exists)
                 return;
             Images = null;
             searchMode = mode;
@@ -709,7 +743,7 @@ namespace ImageProcessor
         void FindSimilarImages(object sender, DoWorkEventArgs e)
         {
             DirectoryInfo dii = new DirectoryInfo(outputBox.Text);
-            DirectoryInfo[] dirList=null;
+            DirectoryInfo[] dirList = null;
             if (Navigator.IsSpecDir(dii.Parent, SpecName.AllDevicy))
                 dirList = dii.GetDirectories();
             else if (Navigator.IsSpecDir(dii.Parent.Parent, SpecName.AllDevicy))
@@ -733,7 +767,7 @@ namespace ImageProcessor
             runningSimilarIcon.Visible = false;
             findSimilarImagesBtn.Enabled = true;
         }
-        void DisplayFoundItems()            
+        void DisplayFoundItems()
         {
             if (!searchRoot.Exists)
                 return;
@@ -747,21 +781,24 @@ namespace ImageProcessor
             {
                 MessageBox.Show(ex.Message);
             }
-        }        
-        void StopSearch()                   { navigator.StopSearch = true; }
+        }
+        void StopSearch() { navigator.StopSearch = true; }
         void OperationButtonsEnabled(bool state)
         {
+            mangleCharButton.Enabled = state;
             reduceButton.Enabled = state;
+            findSimilarImagesBtn.Enabled = state;
+            compressBtn.Enabled = state;
             changeNameButton.Enabled = state;
             makePrivateBtn.Enabled = state;
             addPrefixButton.Enabled = state;
         }
-        void ResizeImages()                 
+        void ResizeImages()
         {
             if (selectedNode == null || !int.TryParse((string)reduceSizeBox.SelectedItem, out int res))
                 return;
             conversion = Conversion.None;
-            foreach(var v in Enum.GetValues(typeof(Conversion)))
+            foreach (var v in Enum.GetValues(typeof(Conversion)))
                 if (res == (int)v)
                     conversion = (Conversion)v;
             if (conversion == Conversion.None)
@@ -804,8 +841,23 @@ namespace ImageProcessor
             }
             imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
         }
+        void ChangeMangleChar()
+        {
+            if (selectedNode == null)
+                return;
+            conversion = Conversion.MangleChar;
+            OperationButtonsEnabled(false);
+            if (imageAdjustmentWorker.IsBusy)
+            {
+                pendingConversion = conversion;
+                outputBox.Text = "Conversion queued";
+                return;
+            }
+            imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
+        }
         void ApplyConversion(object sender, DoWorkEventArgs e)
         {
+            //selectedNode = new DirectoryInfo(@"E:\C\data\OldC\stuff\Work");// AllDevicy");
             processNodeName = selectedNode.Name;
             fileManager.ApplyAdjustmentRecursively(selectedNode, conversion, false);
         }
@@ -821,11 +873,11 @@ namespace ImageProcessor
                 conversion = pendingConversion.Value;
                 pendingConversion = null;
                 OperationButtonsEnabled(false);
-                imageAdjustmentWorker.RunWorkerAsync();
+                imageAdjustmentWorker.RunWorkerAsync(); // calls ApplyConversion
                 return;
             }
         }
-        void ApplyRenameOperation(RenameType operation)   
+        void ApplyRenameOperation(RenameType operation)
         {
             if (selectedNode == null || operation == RenameType.None)
                 return;
@@ -833,7 +885,7 @@ namespace ImageProcessor
             {
                 if (Navigator.IsSpecDir(selectedNode))
                 {
-                    MessageBox.Show("Special directory "+ selectedNode.Name+" can't be renamed");
+                    MessageBox.Show("Special directory " + selectedNode.Name + " can't be renamed");
                     return;
                 }
                 fileManager.NewDirName = directoryNameBox.Text.Trim();
@@ -853,8 +905,8 @@ namespace ImageProcessor
                 }
                 oldTextBox.Text = "";
                 fileManager.TextReplacement = newTextBox.Text;
-                if(newTextBox.Text.Trim() != newTextBox.Text)
-                    if(MessageBox.Show("Is there a white space in the replacement?", "", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                if (newTextBox.Text.Trim() != newTextBox.Text)
+                    if (MessageBox.Show("Is there a white space in the replacement?", "", MessageBoxButtons.YesNo) == DialogResult.Yes)
                         fileManager.TextReplacement = newTextBox.Text.Trim();
                 if (operation == RenameType.AddPrefix && fileManager.TextReplacement.Length == 0)
                 {
@@ -879,17 +931,17 @@ namespace ImageProcessor
             if ((nIdx >= 0) && (nIdx < outputList.Items.Count))
                 toolTip1.SetToolTip(outputList, outputList.Items[nIdx].ToString());
         }
-		void RetrievNodes(object sender, TreeViewCancelEventArgs e)
-		{
-			Cursor=Cursors.WaitCursor;
-			TreeNode node=e.Node;
-			node.Nodes.Clear();
+        void RetrievNodes(object sender, TreeViewCancelEventArgs e)
+        {
+            Cursor = Cursors.WaitCursor;
+            TreeNode node = e.Node;
+            node.Nodes.Clear();
             var tag = node.Tag as DirectoryInfo;
             if (tag == null)
                 return;
-            DirectoryInfo[] dia=navigator.GetDirectories(tag);
+            DirectoryInfo[] dia = navigator.GetDirectories(tag);
             string[] fna = new string[dia.Length];
-            for(int i=0; i<dia.Length; i++)
+            for (int i = 0; i < dia.Length; i++)
                 fna[i] = Scramble.UnMangle(dia[i].Name);
             Array.Sort(fna, dia, new ImageFileInfo.NameComparer());
             for (int i = 0; i < dia.Length; i++)
@@ -899,11 +951,11 @@ namespace ImageProcessor
                 subNode.Nodes.Add("fake");
             }
             Cursor = Cursors.Default;
-		}
+        }
         void locationTreeView_Click(object sender, EventArgs e) { itemInfoImages.ReDrawInfoImages(); } // clear old selection
         void locationTreeView_AfterSelect(object sender, TreeViewEventArgs e) { if (e.Node != null && e.Node.Tag as DirectoryInfo != null) SetActiveDirAndInfoImages((DirectoryInfo)e.Node.Tag); }
         void ShowImageListForm(DirectoryInfo di)
-		{
+        {
             if (di == null)
                 return;
             if (!di.Exists)
@@ -916,13 +968,13 @@ namespace ImageProcessor
             invoked.Add(sif);
             try
             {
-				sif.Show();
-			}
-			catch(Exception ex)
-			{
+                sif.Show();
+            }
+            catch (Exception ex)
+            {
                 MessageBox.Show(ex.Message);
             }
-		}
+        }
         FileSystemInfo SearchSelectedItem()               // both dir and image in human readable form 
         {
             if (outputList == null || outputList.SelectedItem == null || searchRoot == null)
@@ -964,7 +1016,7 @@ namespace ImageProcessor
             SetActiveDirAndInfoImages(di);
         }
         void ActivateFoundItem(object s, EventArgs e)
-		{
+        {
             FileSystemInfo fsi = SearchSelectedItem();
             if (fsi == null)
                 return;
@@ -972,7 +1024,7 @@ namespace ImageProcessor
             {
                 if ((fsi.Attributes & FileAttributes.Directory) == FileAttributes.Directory)
                 {
-                    if(selectedNode != null)
+                    if (selectedNode != null)
                         ShowImageListForm(selectedNode);
                 }
                 else
@@ -993,9 +1045,9 @@ namespace ImageProcessor
             }
             catch { }
         }
-        void StartSearch(object sender, DoWorkEventArgs e)
+        void StartSearchAsync(object sender, DoWorkEventArgs e)
         {
-            matchingItems = navigator.GenerateSearchList(searchMode, searchRoot, patternBox.Text, daysBox.Text);
+            matchingItems = navigator.GenerateSearchList(searchMode, searchRoot, patternBox.Text, daysBox.Text, viewedBtn.Checked);
         }
         void SearchCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
@@ -1004,7 +1056,7 @@ namespace ImageProcessor
             string criteria = "";
             if (patternBox.Text.Length > 0)
             {
-                criteria = searchMode == Navigator.SearchMode.Name ? "matching name " : 
+                criteria = searchMode == Navigator.SearchMode.Names ? "matching name " :
                     searchMode == Navigator.SearchMode.Sound ? "sound like " :
                     searchMode == Navigator.SearchMode.File ? "matching file " :
                     /*searchMode == Navigator.SearchMode.Image ? "looks like " : */"";
@@ -1012,16 +1064,15 @@ namespace ImageProcessor
             }
             if (daysBox.Text.Length > 0)
                 criteria += "updated within " + daysBox.Text + " days";
-            bool dirOnly = searchMode == Navigator.SearchMode.Name || searchMode == Navigator.SearchMode.Sound;
+            bool dirOnly = searchMode != Navigator.SearchMode.File;
             int fileCount = 0;
             var matchedDirs = matchingItems.GetMatchedDirs();
-            Debug.WriteLine("###matchedDirs.Count=" + matchedDirs.Count);
+            //Debug.WriteLine("###matchedDirs.Count=" + matchedDirs.Count);
             if (matchedDirs.Count > 0)
             {
                 foreach (var matchingDir in matchedDirs)
                 {
-                    if(outputList.Items.Contains(matchingDir))
-                        Debug.WriteLine("###list contains " + matchingDir.Name);
+                    Debug.WriteLineIf(outputList.Items.Contains(matchingDir), "###list contains " + matchingDir.Name);
                     outputList.Items.Add(matchingDir);
                     if (!dirOnly)
                         foreach (var matchingFile in matchingDir.Files)
@@ -1053,7 +1104,7 @@ namespace ImageProcessor
                 //    pd.Show();
                 //}
                 //else
-                    Debug.WriteLine(ex.Message);
+                Debug.WriteLine(ex.Message);
             }
         }
         void InfoUpdateCompleted(object sender, RunWorkerCompletedEventArgs e)
@@ -1078,7 +1129,7 @@ namespace ImageProcessor
         }
         void NavigatorForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            foreach(var form in invoked)
+            foreach (var form in invoked)
             {
                 if (form != null && !form.IsDisposed)
                     form.Close();

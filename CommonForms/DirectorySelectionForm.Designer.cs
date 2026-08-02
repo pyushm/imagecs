@@ -28,58 +28,63 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.locationTreeView = new System.Windows.Forms.TreeView();
-            this.infoImagePanel = new System.Windows.Forms.Panel();
-            this.moveToButton = new System.Windows.Forms.Button();
-            this.inputOutputBox = new System.Windows.Forms.TextBox();
-            this.SuspendLayout();
+            locationTreeView = new TreeView();
+            infoImagePanel = new Panel();
+            moveToButton = new Button();
+            inputOutputBox = new TextBox();
+            SuspendLayout();
             // 
             // locationTreeView
             // 
-            this.locationTreeView.Location = new System.Drawing.Point(0, 28);
-            this.locationTreeView.Name = "locationTreeView";
-            this.locationTreeView.Size = new System.Drawing.Size(224, 485);
-            this.locationTreeView.TabIndex = 11;
-            this.locationTreeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.RetrievNodes);
-            this.locationTreeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.DisplaySelectedNode);
+            locationTreeView.Location = new Point(0, 54);
+            locationTreeView.Margin = new Padding(5, 6, 5, 6);
+            locationTreeView.Name = "locationTreeView";
+            locationTreeView.Size = new Size(371, 875);
+            locationTreeView.TabIndex = 11;
+            locationTreeView.BeforeExpand += RetrievNodes;
+            locationTreeView.AfterSelect += DisplaySelectedNode;
             // 
             // infoImagePanel
             // 
-            this.infoImagePanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.infoImagePanel.Location = new System.Drawing.Point(230, 28);
-            this.infoImagePanel.Name = "infoImagePanel";
-            this.infoImagePanel.Size = new System.Drawing.Size(142, 485);
-            this.infoImagePanel.TabIndex = 12;
+            infoImagePanel.BorderStyle = BorderStyle.FixedSingle;
+            infoImagePanel.Location = new Point(383, 54);
+            infoImagePanel.Margin = new Padding(5, 6, 5, 6);
+            infoImagePanel.Name = "infoImagePanel";
+            infoImagePanel.Size = new Size(258, 875);
+            infoImagePanel.TabIndex = 12;
             // 
             // moveToButton
             // 
-            this.moveToButton.Location = new System.Drawing.Point(317, 2);
-            this.moveToButton.Name = "moveToButton";
-            this.moveToButton.Size = new System.Drawing.Size(55, 22);
-            this.moveToButton.TabIndex = 22;
-            this.moveToButton.Text = "Move";
-            this.moveToButton.Click += new System.EventHandler(this.moveToButton_Click);
+            moveToButton.Location = new Point(531, 6);
+            moveToButton.Margin = new Padding(5, 6, 5, 6);
+            moveToButton.Name = "moveToButton";
+            moveToButton.Size = new Size(110, 42);
+            moveToButton.TabIndex = 22;
+            moveToButton.Text = "Move";
+            moveToButton.Click += moveToButton_Click;
             // 
             // inputOutputBox
             // 
-            this.inputOutputBox.Location = new System.Drawing.Point(0, 3);
-            this.inputOutputBox.Name = "inputOutputBox";
-            this.inputOutputBox.Size = new System.Drawing.Size(314, 20);
-            this.inputOutputBox.TabIndex = 23;
+            inputOutputBox.Location = new Point(0, 11);
+            inputOutputBox.Margin = new Padding(5, 6, 5, 6);
+            inputOutputBox.Name = "inputOutputBox";
+            inputOutputBox.Size = new Size(521, 31);
+            inputOutputBox.TabIndex = 23;
             // 
             // DirectorySelectionForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(374, 516);
-            this.Controls.Add(this.inputOutputBox);
-            this.Controls.Add(this.moveToButton);
-            this.Controls.Add(this.infoImagePanel);
-            this.Controls.Add(this.locationTreeView);
-            this.Name = "DirectorySelectionForm";
-            this.Text = "DirectorySelectionForm";
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            AutoScaleDimensions = new SizeF(10F, 25F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(651, 934);
+            Controls.Add(inputOutputBox);
+            Controls.Add(moveToButton);
+            Controls.Add(infoImagePanel);
+            Controls.Add(locationTreeView);
+            Margin = new Padding(5, 6, 5, 6);
+            Name = "DirectorySelectionForm";
+            Text = "DirectorySelectionForm";
+            ResumeLayout(false);
+            PerformLayout();
 
         }
 

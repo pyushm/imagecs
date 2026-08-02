@@ -186,7 +186,7 @@ namespace ImageProcessor
             {
                 if (!ValidDirectory)
                     return false;
-                prevImageCount = ImageCount;
+                //prevImageCount = ImageCount;
                 isFirst = ImageCount == 0;
                 lock (this)
                 {
@@ -247,7 +247,7 @@ namespace ImageProcessor
                     {
                         if (abortSynchronization)
                             break;
-                        if (!ifi.priority || (ifi.IsEncrypted && !DataAccess.PrivateAccessEnforced))
+                        if (!ifi.priority || (ifi.IsEncrypted && !DataAccess.Private))
                             continue;
                         ifi.UpdateThumbnail();
                         loaded++;
@@ -273,7 +273,7 @@ namespace ImageProcessor
             while (thumbnailUpdateIndex < ImageCount)
             {
                 ImageFileInfo ifi = fileList[thumbnailUpdateIndex];
-                if (ifi.NeedThumbnail && (!ifi.IsEncrypted || DataAccess.PrivateAccessEnforced))
+                if (ifi.NeedThumbnail && (!ifi.IsEncrypted || DataAccess.Private))
                 {
                     //Debug.WriteLine("hidden " + d.Name + " updated " + max);
                     if (abortSynchronization)
@@ -297,7 +297,7 @@ namespace ImageProcessor
                 {
                     string dirFullName = Path.Combine(directory.FullName, srcList[i]);
                     directories[i] = Directory.Exists(dirFullName) ? new DirectoryInfo(dirFullName) : null;
-                    if (DataAccess.PrivateAccessEnforced && directories[i] == null)
+                    if (DataAccess.Private && directories[i] == null)
                     {
                         dirFullName = Path.Combine(directory.FullName, Scramble.MangleFile(srcList[i]));
                         directories[i] = Directory.Exists(dirFullName) ? new DirectoryInfo(dirFullName) : null;
@@ -508,7 +508,7 @@ namespace ImageProcessor
                             string dest = Path.Combine(toDirectory.FullName, Scramble.MangleFile(Path.GetFileName(ifi.FSPath)));
                             File.Move(ifi.FSPath, dest);
                         }
-                        else if (DataAccess.PrivateAccessEnforced && !ifi.IsEncrypted)
+                        else if (DataAccess.Private && !ifi.IsEncrypted)
                         {   // when PrivateAccessAllowed move images with encription and name mangling
                             string name = ifi.IsMovie ? ifi.FSName + ".vid" : ifi.IsExact ? ifi.FSName + ".exa" : ifi.FSName + ".jpe";
                             byte[] src = File.ReadAllBytes(ifi.FSPath);
@@ -557,7 +557,7 @@ namespace ImageProcessor
         }
         FileInfo GetInfoFile(DirectoryInfo di)
         {
-            bool useMangled = DataAccess.PrivateAccessEnforced;
+            bool useMangled = DataAccess.Private;
             string nInfo = ImageFileName.InfoFileName(viewInfoType);
             string nMangled = Scramble.MangleFile(nInfo);
             FileInfo info = null;

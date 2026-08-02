@@ -16,8 +16,8 @@ namespace ImageProcessor
     public class ImageEditForm : Form, IPanelHolder
     {
         ColorTransform backgroundColorTransform = new ColorTransform(); // Color transform of background layer
-        string[] imageModes = new string[] { ToolMode.Default.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.Morph.ToString() };
-        string[] drawingModes = new string[] { ToolMode.Default.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.ContourEdit.ToString() };
+        string[] imageModes = new string[] { ToolMode.Basic.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.Morph.ToString() };
+        string[] drawingModes = new string[] { ToolMode.Basic.ToString(), ToolMode.Distortion3D.ToString(), ToolMode.ContourEdit.ToString() };
         private System.ComponentModel.Container components = null;
         private ValueControl saturationControl;
         private RangeControl brightnessControl;
@@ -661,7 +661,7 @@ namespace ImageProcessor
                 UpdateLayerList(canvas.AddVisualLayer(vl, canvas.BackgroundLayer.MatrixControl.RenderScale));
                 canvas.Cursor = System.Windows.Input.Cursors.Arrow;
                 Cursor = System.Windows.Forms.Cursors.Default;
-                SetMode(ToolMode.Default);
+                SetMode(ToolMode.Basic);
             }
             catch (Exception ex)
             {
@@ -679,7 +679,7 @@ namespace ImageProcessor
             }
             SaveFileDialog saveAsDialog = new SaveFileDialog();
             saveAsDialog.FileName = imageInfo.RealName;
-            saveAsDialog.Filter = DataAccess.PrivateAccessEnforced ? "Regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "Regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
+            saveAsDialog.Filter = DataAccess.Private ? "Regular|*.jpe|Exact|*.exa|MultiLayer|*.drw" : "Regular|*.jpg|Exact|*.png|MultiLayer|*.draw"; // safe format relies on this order 
             saveAsDialog.FilterIndex = imageInfo.IsMultiLayer ? 3 : imageInfo.IsExact ? 2 : 1;
             saveAsDialog.RestoreDirectory = true;
             saveAsDialog.OverwritePrompt = true;
@@ -688,11 +688,11 @@ namespace ImageProcessor
             {
                 try
                 {
-                    string path = DataAccess.PrivateAccessEnforced ? Scramble.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName;
+                    string path = DataAccess.Private ? Scramble.MangleFile(saveAsDialog.FileName) : saveAsDialog.FileName;
                     prevFSdir = Path.GetDirectoryName(path);
                     if (canvas.SaveRendering(path, 0))
                         ShowNewImage(new ImageFileInfo(new FileInfo(path)));
-                    SetMode(ToolMode.Default);
+                    SetMode(ToolMode.Basic);
                 }
                 catch (Exception ex)
                 {

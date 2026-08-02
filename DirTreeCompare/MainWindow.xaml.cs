@@ -39,7 +39,7 @@ namespace DirTreeCompare
             DockPanel dp = new DockPanel();
             cb = new System.Windows.Controls.CheckBox();
             TextBlock tb = new TextBlock();
-            tb.Text = Scramble.UnMangleFile(info.Name);
+            tb.Text = Scramble.UnMangleFile(info.Name);// +'('+info.Name+')';
             if(info.IsDirectory)
                 tb.TextDecorations = TextDecorations.Underline;
             tb.Background = new SolidColorBrush(color);
@@ -149,12 +149,19 @@ namespace DirTreeCompare
             opProgress.Value = 0;
             Cursor = System.Windows.Input.Cursors.Wait;
             Thread.Sleep(100);
-            DirectoryInfo d1 = null;
-            try { d1 = new DirectoryInfo(textBox1.Text); }
-            catch { System.Windows.MessageBox.Show(textBox1.Text + " is not a valid path", "Directory 1 failure"); }
-            DirectoryInfo d2 = null;
-            try { d2 = new DirectoryInfo(textBox2.Text); }
-            catch { System.Windows.MessageBox.Show(textBox2.Text + " is not a valid path", "Directory 2 failure"); }
+            DirectoryInfo d1 = new DirectoryInfo(textBox1.Text); 
+            if(!d1.Exists)
+                d1= new DirectoryInfo(Path.Combine(d1.Parent.FullName, Scramble.MangleForced(d1.Name)));
+            DirectoryInfo d2 = new DirectoryInfo(textBox2.Text);
+            if (!d2.Exists)
+                d2 = new DirectoryInfo(Path.Combine(d2.Parent.FullName, Scramble.MangleForced(d2.Name)));
+            string err = !d1.Exists ? textBox1.Text + " is not a valid path" : string.Empty;
+            err = !d2.Exists ? err + Environment.NewLine+textBox2.Text + " is not a valid path" : string.Empty;
+            if (!string.IsNullOrEmpty(err))
+            {
+                System.Windows.MessageBox.Show(err, "Directory failure");
+                return;
+            }
             string errors = "";
             if (d1 != null && d2 != null)
             {

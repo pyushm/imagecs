@@ -1,23 +1,39 @@
 using System;
-using System.Drawing;
 using System.Collections;
-using System.Windows.Forms;
-using System.IO;
-using System.Diagnostics;
-using System.Threading;
-using System.Linq;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Windows.Forms;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.TextBox;
 
 namespace ImageProcessor
 {
     public class ImageListForm : Form
     {
+        internal static class ListViewSpacing
+        {
+            private const int LVM_FIRST = 0x1000;
+            private const int LVM_SETICONSPACING = LVM_FIRST + 53;
+
+            [DllImport("user32.dll")]
+            private static extern nint SendMessage(nint hWnd, int msg, nint wParam, nint lParam);
+            public static void SetIconSpacing(ListView listView, int horizontalSpacing, int verticalSpacing)
+            {
+                ArgumentNullException.ThrowIfNull(listView);
+                int spacing = (horizontalSpacing & 0xFFFF) | ((verticalSpacing & 0xFFFF) << 16);
+                SendMessage( listView.Handle, LVM_SETICONSPACING, nint.Zero, spacing);
+            }
+        }
         public enum InfoSize
         {
             Small = 50, // % of full size
             Large = 100,
         }
+        int extraRowSpasing = 5;
         float dpiScaleY = 1;
         ListView imageListView;
 		Button sortNameButton;
@@ -168,6 +184,7 @@ namespace ImageProcessor
             redrawRequest = true;
             return ret;
         }
+        private void ListViewCreated(object sender, EventArgs e) { ListViewSpacing.SetIconSpacing(imageListView, 240, 300 + extraRowSpasing); }
         public ImageListForm(DisplayImageList images, INavigator paths) { Initialize(null, images, paths); } // call from found matches in parent ImageListForm
         public ImageListForm(DirectoryInfo di, INavigator paths) { Initialize(di, null, paths); } // call from News Reader
         void Initialize(DirectoryInfo di, DisplayImageList images, INavigator paths)
@@ -214,7 +231,8 @@ namespace ImageProcessor
                 new ToolStripMenuItem("Move to ...", null, new EventHandler(MoveSelected)),
                 new ToolStripMenuItem("Copy to ...", null, new EventHandler(CopySelected)),
                 new ToolStripMenuItem("Delete", null, new EventHandler(DeleteSelected)) });
-                imageListView.ContextMenuStrip = selectMenu; 
+                imageListView.ContextMenuStrip = selectMenu;
+                imageListView.HandleCreated += ListViewCreated; // set spacing after handle created
                 listUpdateTimer = new System.Windows.Forms.Timer();
                 listUpdateTimer.Interval = updateThumbnailsDelay;
                 listUpdateTimer.Tick += new EventHandler(updateThumbnails);
@@ -234,7 +252,7 @@ namespace ImageProcessor
                 //Debug.WriteLine("dpiScaleY=" + dpiScaleY + " imH=" + ImageFileInfo.ThumbnailSize().Height + " ClientSize.Height=" + ClientSize.Height+" Height=" + Height);
                 //Height += (int)((ImageFileInfo.ThumbnailSize().Height + 37) * dpiScaleY) - ClientSize.Height;
                 //Debug.WriteLine(" ClientSize.Height="+ ClientSize.Height+" Height=" + Height+ " imageListView.Location.Y=" + imageListView.Location.Y);
-                Height = (int)(423 + 103 * (dpiScaleY - 1.5));
+                Height = (int)(416 + 103 * (dpiScaleY - 1.5)) + extraRowSpasing;
                 g.Dispose();
             }
         }
@@ -333,7 +351,7 @@ namespace ImageProcessor
         void FormResized(object s, System.EventArgs e)
 		{
 			imageListView.Size=new Size(ClientSize.Width, ClientSize.Height-imageListView.Location.Y);
-            Debug.WriteLine("ILV.Size=" + imageListView.Size+ " ILV.Y="+ imageListView.Location.Y + " CH=" + ClientSize.Height + " WH=" + Height);
+            //Debug.WriteLine("ILV.Size=" + imageListView.Size+ " ILV.Y="+ imageListView.Location.Y + " CliH=" + ClientSize.Height + " WH=" + Height);
 		}
         void imageListView_Click(object s, System.EventArgs e)
         {
@@ -384,7 +402,7 @@ namespace ImageProcessor
             }
             imageListView.SelectedIndices.Clear();
         }
-        void ViewImage(ImageFileInfo ifi)	
+        void ViewImage(ImageFileInfo ifi)	    
 		{
             if (ifi == null || string.IsNullOrEmpty(ifi.FSPath))
                 return;

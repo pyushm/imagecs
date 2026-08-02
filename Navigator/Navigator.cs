@@ -1,9 +1,10 @@
 using System;
-using System.IO;
 using System.Collections.Generic;
-using System.Linq;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using static ImageProcessor.Navigator;
 
 namespace ImageProcessor
 {
@@ -24,6 +25,7 @@ namespace ImageProcessor
     }
     public class Navigator : INavigator
 	{
+        int searchLevel;
         static int MatchRange = 100;  // maximum match difference percentage included into search results
         static ImageHash.Comparer imageInfoComparer = new ImageHash.Comparer(56);
         static DirectoryInfo[] specialDirectories = null;
@@ -43,13 +45,14 @@ namespace ImageProcessor
         public static bool IsSpecDir(DirectoryInfo testdi, SpecName sd) { return specialDirectories == null ? false : specialDirectories[(int)sd].FullName == testdi.FullName; }
         string[] textPatterns;   // 1 item - search for pattern in string; >1 - serch exact string for each item (1 extra char at the end allowed)
         SoundLike soundPattern;
-        int searchDaysOld = int.MaxValue;
+        int viewedDayAgo = int.MaxValue;
+        int changedDayAgo = int.MaxValue;
         SearchResult searchResult;
         List<DirDifference> dirDifferences = new List<DirDifference>();
         bool stopSearch = false;
         public enum SearchMode
         {
-            Name,
+            Names,
             Sound,
             File,
             //Image
@@ -62,6 +65,7 @@ namespace ImageProcessor
             SourceOnly,
             CompareOnly
         }
+        SearchMode searchMode;
         public NewDirectoryNode ProcessDirecory;
         public NewImageSelection onNewImageSelection = null;
         public NewDirSelecton onNewDirSelection = null;
@@ -139,10 +143,11 @@ namespace ImageProcessor
                 return di;
             return Root;
         }
-        public SearchResult GenerateSearchList(SearchMode mode, DirectoryInfo start, string name, string daysOld)
+        public SearchResult GenerateSearchList(SearchMode mode, DirectoryInfo start, string name, string daysOld, bool viewed)
         {
+            searchMode = mode;
             soundPattern = mode == SearchMode.Sound ? new SoundLike(name) : null;
-            if (mode == SearchMode.File || mode == SearchMode.Name)
+            if (mode == SearchMode.File || mode == SearchMode.Names)
             {
                 if (name == null)
                     textPatterns = null;
@@ -166,16 +171,61 @@ namespace ImageProcessor
             //    //Debug.WriteLine(imageInfoComparer.Pattern.ToString());
             //    //Debug.Write(imageInfoComparer.Pattern.ToBWMString());
             //}
-            try { searchDaysOld = int.Parse(daysOld); }
-            catch { searchDaysOld = int.MaxValue; }
+            int days = int.MaxValue;
+            try { days = int.Parse(daysOld); }
+            catch { days = int.MaxValue; }
+            if(viewed)
+                viewedDayAgo = days;
+            else
+                changedDayAgo = days;
             NewDirectoryNode callback = mode == SearchMode.File ? MatchFileName :
                 //mode == SearchMode.Image ? MatchImage :
-                mode == SearchMode.Name ? MatchDirectory :
-                mode == SearchMode.Sound ? MatchDirectory : (NewDirectoryNode)null;
+                mode is SearchMode.Names or SearchMode.Sound ? MatchDirectory : (NewDirectoryNode)null;
             if (callback == null)
                 return null;
             //Debug.WriteLine("###DaysOld=" + searchDaysOld+" patterns="+ textPatterns==null ? 0 : textPatterns.Length);
-            return Search(start, callback);
+            StopSearch = false;
+            searchResult.Clear();
+            RunSearchInDirecory = callback;
+            searchLevel = 0;
+            try { SearchRecursively(start, ""); }
+            finally { RunSearchInDirecory = null; }
+            return searchResult;
+            //return Search(start, callback);
+        }
+        public void SearchRecursively(DirectoryInfo dirNode, string relativePath)
+        {
+            if (StopSearch)
+                return;
+            relativePath = Scramble.UnMangleFile(relativePath);
+            RunSearchInDirecory?.Invoke(dirNode, relativePath);
+            DirectoryInfo[] subdirs = dirNode.GetDirectories();
+            //Debug.WriteLine(searchLevel.ToString() + '\t' + Scramble.UnMangle(dirNode.Name.ToLower()) + '\t' + relativePath);
+            searchLevel++;
+            foreach (DirectoryInfo subdir in subdirs)
+            {
+                string mn = Scramble.UnMangle(subdir.Name);
+                string newRelativePath = Path.Combine(relativePath, mn);
+                SearchRecursively(subdir, newRelativePath);
+            }
+            searchLevel--;
+        }
+        public List<DirDifference> CompareDirectoryTree(DirectoryInfo d1, DirectoryInfo d2)
+        {
+            dirDifferences.Clear();
+            if (d1 != null && d2 != null)
+                CompareRecursively(d1, d2);
+            return dirDifferences;
+        }
+        public void ApplyRecursively(DirectoryInfo dirNode, string relativePath)
+        {
+            ProcessDirecory?.Invoke(dirNode, relativePath);
+            DirectoryInfo[] subdirs = dirNode.GetDirectories();
+            foreach (DirectoryInfo subdir in subdirs)
+            {
+                string newRelativePath = Path.Combine(relativePath, subdir.Name);
+                ApplyRecursively(subdir, newRelativePath);
+            }
         }
         //public void CreateImageHashes(DirectoryInfo dirNode)
         //{
@@ -201,73 +251,49 @@ namespace ImageProcessor
         //    foreach (DirectoryInfo subdir in subdirs)
         //        CreateImageHashesRecursively(subdir);
         //}
-        public List<DirDifference> CompareDirectoryTree(DirectoryInfo d1, DirectoryInfo d2)
-        {
-            dirDifferences.Clear();
-            if (d1 != null && d2 != null)
-                CompareRecursively(d1, d2);
-            return dirDifferences;
-        }
-        public void SearchRecursively(DirectoryInfo dirNode, string relativePath)
-        {
-            if (StopSearch)
-                return;
-            relativePath = Scramble.UnMangleFile(relativePath);
-            RunSearchInDirecory?.Invoke(dirNode, relativePath);
-            DirectoryInfo[] subdirs = dirNode.GetDirectories();
-            foreach (DirectoryInfo subdir in subdirs)
-            {
-                string mn = Scramble.UnMangle(subdir.Name);
-                string newRelativePath = Path.Combine(relativePath, mn);
-                SearchRecursively(subdir, newRelativePath);
-            }
-        }
-        public void ApplyRecursively(DirectoryInfo dirNode, string relativePath)
-        {
-            ProcessDirecory?.Invoke(dirNode, relativePath);
-            DirectoryInfo[] subdirs = dirNode.GetDirectories();
-            foreach (DirectoryInfo subdir in subdirs)
-            {
-                string newRelativePath = Path.Combine(relativePath, subdir.Name);
-                ApplyRecursively(subdir, newRelativePath);
-            }
-        }
         #region Private Methods
-        DirDifference CompareFiles(DirectoryInfo d1, DirectoryInfo d2)
+        DirDifference CompareLists(FileSystemInfo[] l1, FileSystemInfo[] l2, bool subDirs)
         {
-            return CompareFileLists(d1.GetFiles(), d2.GetFiles(), false);
-        }
-        DirDifference CompareSubDirectories(DirectoryInfo d1, DirectoryInfo d2)
-        {
-            return CompareFileLists(d1.GetDirectories(), d2.GetDirectories(), true);
-        }
-        DirDifference CompareFileLists(FileSystemInfo[] l1, FileSystemInfo[] l2, bool subDirs)
-        {
+            var comparer = StringComparer.OrdinalIgnoreCase; // Ordinal
             DirDifference diff = new DirDifference();
-            IOrderedEnumerable<FileSystemInfo> sortedL1 = l1.OrderBy(file => file.Name);
-            IOrderedEnumerable<FileSystemInfo> sortedL2 = l2.OrderBy(file => file.Name);
-            IEnumerator<FileSystemInfo> enl1 = sortedL1.GetEnumerator();
-            IEnumerator<FileSystemInfo> enl2 = sortedL2.GetEnumerator();
-            bool srcActive = enl1.MoveNext();
-            bool cmpActive = enl2.MoveNext();
-            while (srcActive || cmpActive)
+            var sortedL1 = l1.Where(file => file.Extension != ".dat").OrderBy(file => file.Name, comparer);
+            var sortedL2 = l2.Where(file => file.Extension != ".dat").OrderBy(file => file.Name, comparer);
+            var enl1 = sortedL1.GetEnumerator();
+            var enl2 = sortedL2.GetEnumerator();
+            bool l1Active = enl1.MoveNext();
+            bool l2Active = enl2.MoveNext();
+                    //while (l1Active || l2Active)
+                    //{ // prints lists side-by-side
+                    //    if (l1Active) { Debug.Write(" <1 " + enl1.Current.Name); l1Active = enl1.MoveNext(); }
+                    //    if (l2Active) { Debug.Write(" 2> \t" + enl2.Current.Name); l2Active = enl2.MoveNext(); }
+                    //    Debug.WriteLine(' ');
+                    //}
+                    //enl1 = sortedL1.GetEnumerator();
+                    //enl2 = sortedL2.GetEnumerator();
+                    //l1Active = enl1.MoveNext();
+                    //l2Active = enl2.MoveNext();
+            while (l1Active || l2Active)
             {
-                int res = !srcActive ? 1 : !cmpActive ? -1 : string.Compare(enl1.Current.Name, enl2.Current.Name, StringComparison.OrdinalIgnoreCase);
+                int res = !l1Active ? 1 : !l2Active ? -1 : string.Compare(enl1.Current.Name, enl2.Current.Name, StringComparison.OrdinalIgnoreCase);// OrdinalIgnoreCase);
+                        //if (l1Active) { Debug.Write(" <- " + enl1.Current.Name); }
+                        //if (l2Active) { Debug.Write(" -> \t" + enl2.Current.Name); }
                 if (res < 0)
                 {
-                    if (ImageDirHash.DirInfoFileName != enl1.Current.Name)
-                        diff.List(Relation.Only1).Add(enl1.Current.Name);
-                    srcActive = enl1.MoveNext();
+                    diff.List(Relation.Only1).Add(enl1.Current.Name);
+        //Debug.WriteLine("\t " + res+ " \tOnly1 <- "+enl1.Current.Name);
+                    l1Active = enl1.MoveNext();
                     continue;
                 }
                 else if (res > 0)
                 {
-                    if (ImageDirHash.DirInfoFileName != enl2.Current.Name)
-                        diff.List(Relation.Only2).Add(enl2.Current.Name);
-                    cmpActive = enl2.MoveNext();
+                    diff.List(Relation.Only2).Add(enl2.Current.Name);
+        //Debug.WriteLine("\t " + res + " \tOnly2 <- "+enl2.Current.Name);
+                    l2Active = enl2.MoveNext();
                     continue;
                 }
-                if ((subDirs || ((FileInfo)enl1.Current).Length != ((FileInfo)enl2.Current).Length) && ImageDirHash.DirInfoFileName != enl1.Current.Name)
+        //else 
+        //    Debug.WriteLine("\t " + res);
+                if ((subDirs || ((FileInfo)enl1.Current).Length != ((FileInfo)enl2.Current).Length))
                 {
                     TimeSpan ts = enl1.Current.LastWriteTime - enl2.Current.LastWriteTime;
                     if (ts > TimeSpan.Zero)
@@ -277,8 +303,8 @@ namespace ImageProcessor
                     else
                         diff.List(Relation.DifferentLength).Add(enl1.Current.Name);
                 }
-                srcActive = enl1.MoveNext();
-                cmpActive = enl2.MoveNext();
+                l1Active = enl1.MoveNext();
+                l2Active = enl2.MoveNext();
             }
             return diff;
         }
@@ -289,12 +315,13 @@ namespace ImageProcessor
             string error = null;
             try
             {
-                fileDif = CompareFiles(d1, d2);
-                dirDif = CompareSubDirectories(d1, d2);
+                fileDif = CompareLists(d1.GetFiles(), d2.GetFiles(), false);
+                dirDif = CompareLists(d1.GetDirectories(), d2.GetDirectories(), true);
             }
             catch(Exception ex)
             {
                 error = d1.FullName + "<->" + d2.FullName + ": " + ex.Message;
+                Debug.WriteLine(error);
             }
             DirDifference totDif = new DirDifference(d1.FullName, d2.FullName, dirDif, fileDif, error);
             if (!totDif.Identical)
@@ -314,15 +341,15 @@ namespace ImageProcessor
                 CompareRecursively(newSource, newCompare);
             }
         }
-        SearchResult Search(DirectoryInfo start, NewDirectoryNode callback)
-        {
-            StopSearch = false;
-            searchResult.Clear();
-            RunSearchInDirecory = callback;
-            try { SearchRecursively(start, ""); }
-            finally { RunSearchInDirecory = null; }
-            return searchResult;
-        }
+        //SearchResult Search(DirectoryInfo start, NewDirectoryNode callback)
+        //{
+        //    StopSearch = false;
+        //    searchResult.Clear();
+        //    RunSearchInDirecory = callback;
+        //    try { SearchRecursively(start, ""); }
+        //    finally { RunSearchInDirecory = null; }
+        //    return searchResult;
+        //}
         void MatchDirectory(DirectoryInfo dirNode, string relativePath)
         {   // matches directory by name, sound, date
             if (relativePath.Length == 0)
@@ -392,14 +419,23 @@ namespace ImageProcessor
                     return;
                 totalDif += dif;
             }
-            if (searchDaysOld != int.MaxValue) // by date
+            if (viewedDayAgo != int.MaxValue) // by date
             {
-                var difDays = (DateTime.Today - dirNode.LastWriteTime).TotalDays;
-                if (difDays > searchDaysOld)
+                var lastTime = dirNode.LastAccessTime;
+                var difDays = (DateTime.Today - lastTime).TotalDays;
+                if (difDays > viewedDayAgo)
                     return;
-                totalDif += 100 * difDays / (searchDaysOld+1);
+                totalDif += 100 * difDays / (viewedDayAgo + 1);
             }
-            if(totalDif < MatchRange)
+            if (changedDayAgo != int.MaxValue) // by date
+            {
+                var lastTime = dirNode.LastWriteTime;
+                var difDays = (DateTime.Today - lastTime).TotalDays;
+                if (difDays > changedDayAgo)
+                    return;
+                totalDif += 100 * difDays / (changedDayAgo + 1);
+            }
+            if (totalDif < MatchRange)
                 searchResult.AddDir(relativePath, totalDif);
         }
         //void MatchImage(DirectoryInfo dirNode, string relativePath)
@@ -431,10 +467,10 @@ namespace ImageProcessor
             foreach (FileInfo file in files)
             {
                 double difference = 0;
-                if (searchDaysOld != int.MaxValue) // by date
+                if (viewedDayAgo != int.MaxValue) // by date
                 {
                     var difDays = (DateTime.Today - file.LastWriteTime).TotalDays;
-                    if (difDays > searchDaysOld)    // exact day limit
+                    if (difDays > viewedDayAgo)    // exact day limit
                         continue;
                     else
                         difference += difDays;

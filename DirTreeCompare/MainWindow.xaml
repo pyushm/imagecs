@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DirTreeCompare"
         mc:Ignorable="d"
-        Title="MainWindow" Height="350" Width="995">
+        Title="MainWindow" Height="1200" Width="995">
     <Grid ShowGridLines="True"> 
         <Grid.RowDefinitions>
             <RowDefinition Height="29"/>
